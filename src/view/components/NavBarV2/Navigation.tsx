@@ -69,6 +69,11 @@ export default function Navigation() {
           )}
         </div>
 
+        {/* Events Link */}
+        <a href="/events" className="nav-item">
+          <button className="nav-link">Events</button>
+        </a>
+
         {/* Contact Link */}
         <a href="/contact" className="nav-item">
           <button className="nav-link">Contact</button>

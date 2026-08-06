@@ -1,0 +1,78 @@
+@use "../../../sass/variables.scss" as *;
+@use "../../../sass/mixins.scss" as *;
+
+.events-page {
+  min-height: 100vh;
+  background: linear-gradient(
+    135deg,
+    $primary-50 0%,
+    $surface 50%,
+    $neutral-50 100%
+  );
+}
+
+.events-header {
+  background: linear-gradient(135deg, $primary-600 0%, $primary-700 100%);
+  color: white;
+  padding: $spacing-8 0 $spacing-6;
+
+  .events-header-content {
+    @include container;
+
+    h1 {
+      @include text-h1;
+      margin: 0 0 $spacing-2;
+    }
+
+    p {
+      @include text-lg;
+      opacity: 0.9;
+      margin: 0;
+    }
+  }
+}
+
+.events-content {
+  @include container;
+  padding: $spacing-6 0;
+}
+
+.events-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: $spacing-4;
+}
+
+.event-card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  padding: $spacing-5;
+
+  .event-date {
+    @include text-caption;
+    color: $primary-600;
+    font-weight: $font-weight-bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $spacing-2;
+  }
+
+  h3 {
+    @include text-h5;
+    margin: 0 0 $spacing-2;
+  }
+
+  .event-location {
+    @include text-body-sm;
+    color: $text-secondary;
+    margin-bottom: $spacing-3;
+  }
+
+  p {
+    @include text-body-sm;
+    color: $text-secondary;
+    line-height: 1.6;
+    margin: 0;
+  }
+}
