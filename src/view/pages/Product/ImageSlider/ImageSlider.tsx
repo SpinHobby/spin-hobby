@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./imageSlider.scss";
 
 export default function ImageSlider() {
   const imageSource = [

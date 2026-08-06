@@ -61,11 +61,9 @@ export function Ripple({ children, classes, onClick }: Props) {
   }
 
   return (
-    <div className={rippleClasses} onClick={onClick}>
+    <div className={rippleClasses} onClick={onClick} onMouseDown={showRipple}>
       {children}
-      <div className="ripple-container" onMouseDown={showRipple}>
-        {renderRippleSpan()}
-      </div>
+      <div className="ripple-container">{renderRippleSpan()}</div>
     </div>
   );
 }

@@ -122,6 +122,36 @@
     }
   }
 
+  .trust-strip {
+    @include container;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: $spacing-6;
+    padding: $spacing-4 0;
+    border-bottom: 1px solid $border;
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: $spacing-2;
+      @include text-body-sm;
+      color: $text-secondary;
+      font-weight: $font-weight-medium;
+
+      .trust-icon {
+        font-size: 1rem;
+      }
+    }
+
+    @include mobile-only {
+      gap: $spacing-3;
+      justify-content: flex-start;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+    }
+  }
+
   .products-content {
     @include container;
     padding: $spacing-6 0;
@@ -309,18 +339,18 @@
 
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: $spacing-5;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: $spacing-3;
       margin-bottom: $spacing-6;
 
       @include tablet-only {
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-        gap: $spacing-4;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: $spacing-2;
       }
 
       @include mobile-only {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: $spacing-3;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: $spacing-2;
       }
     }
 
