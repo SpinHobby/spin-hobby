@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { FeaturedMerch } from "../../components/Cards";
 import { Ripple } from "../../components/Buttons";
 import { IMerchPreview } from "../../../ts";
+import { addItem } from "../../../reducers";
+import { getCatalog } from "../../../api/square";
 
 interface ProductsPageProps {}
 
 export default function Product() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [products, setProducts] = useState<IMerchPreview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,27 +33,9 @@ export default function Product() {
       setIsLoading(true);
       setError(null);
 
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: "20",
-      });
-
-      if (category) params.append("category", category);
-      if (featured) params.append("featured", "true");
-      if (preorder) params.append("preorder", "true");
-      if (newArrivals) params.append("new", "true");
-
-      const response = await fetch(
-        `http://localhost:8001/api/v1/products?${params.toString()}`
-      );
-      const data = await response.json();
-
-      if (data.success) {
-        setProducts(data.data || []);
-        setTotalPages(Math.ceil((data.meta?.total || 0) / 20));
-      } else {
-        setError("Failed to load products");
-      }
+      const { items } = await getCatalog(undefined, undefined, 60);
+      setProducts(items);
+      setTotalPages(1);
     } catch (err) {
       console.error("Error fetching products:", err);
       setError("Failed to load products. Please try again.");
@@ -101,8 +87,15 @@ export default function Product() {
   };
 
   const handleAddToCart = (product: IMerchPreview) => {
-    console.log("Adding to cart:", product);
-    // TODO: Implement add to cart functionality
+    if (!product.id) return;
+    dispatch(
+      addItem({
+        id: product.id,
+        name: product.title,
+        price: product.price,
+        imageUrl: product.img,
+      })
+    );
   };
 
   const handleQuickView = (product: IMerchPreview) => {

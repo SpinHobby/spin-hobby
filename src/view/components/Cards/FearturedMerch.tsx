@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ECurrencySymbols, ECurrencyCodes, IMerchPreview } from "../../../ts";
 import { useCurrencySelector } from "../../../selectors";
 import { roundToDecimal } from "../../../utils/math";
@@ -15,6 +16,7 @@ interface Props extends IMerchPreview {
 
 export function FeaturedMerch(props: Props) {
   const currency = useCurrencySelector();
+  const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -23,19 +25,14 @@ export function FeaturedMerch(props: Props) {
     name,
     img,
     images,
-    description,
     price,
     originalPrice,
     discountPercentage,
     isFeatured,
     isNewArrival,
     isPreorder,
-    categories,
     additionalClassNames,
-    isCompact,
-    showQuickView = true,
     onAddToCart,
-    onQuickView,
     onToggleFavorite,
   } = props;
 
@@ -47,50 +44,36 @@ export function FeaturedMerch(props: Props) {
     ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
     : discountPercentage;
 
-  const handleAddToCart = () => {
+  const goToDetail = () => {
+    if (props.id) navigate(`/product/${props.id}`);
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onAddToCart?.(props);
   };
 
-  const handleQuickView = () => {
-    onQuickView?.(props);
-  };
-
-  const handleToggleFavorite = () => {
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsFavorited(!isFavorited);
     onToggleFavorite?.(props);
   };
 
   const getBadges = () => {
     const badges = [];
-    if (isFeatured) badges.push({ text: "Featured", type: "featured" });
-    if (isNewArrival) badges.push({ text: "New", type: "new" });
     if (isPreorder) badges.push({ text: "Pre-order", type: "preorder" });
+    if (isNewArrival) badges.push({ text: "New", type: "new" });
     if (hasDiscount || discount)
       badges.push({ text: `${discount}% Off`, type: "sale" });
     return badges;
   };
 
-  const getMetaInfo = () => {
-    const meta = [];
-    if (categories && categories.length > 0) {
-      meta.push({ icon: "📂", text: categories[0].name || categories[0] });
-    }
-    if (isPreorder) {
-      meta.push({ icon: "⏰", text: "Pre-order" });
-    }
-    return meta;
-  };
-
   return (
     <div
-      className={classNames([
-        "cards-featured-merch",
-        additionalClassNames,
-        {
-          compact: isCompact,
-          loading: !imageLoaded && displayImage,
-        },
-      ])}
+      className={classNames(["cards-featured-merch", additionalClassNames])}
+      onClick={goToDetail}
+      role="link"
+      tabIndex={0}
     >
       <div className="cards-featured-merch-image-container">
         {displayImage && (
@@ -121,70 +104,33 @@ export function FeaturedMerch(props: Props) {
         >
           {isFavorited ? "❤️" : "🤍"}
         </button>
+
+        <button className="cards-featured-merch-cart-btn" onClick={handleAddToCart}>
+          🛒
+        </button>
       </div>
 
       <div className="cards-featured-merch-details">
         <h3 className="cards-featured-merch-title">{displayTitle}</h3>
 
-        {description && (
-          <p className="cards-featured-merch-description">{description}</p>
-        )}
-
-        {getMetaInfo().length > 0 && (
-          <div className="cards-featured-merch-meta">
-            {getMetaInfo().map((meta, index) => (
-              <div key={index} className="meta-item">
-                <span className="meta-icon">{meta.icon}</span>
-                <span>{meta.text}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="cards-featured-merch-price-section">
-          <div className="cards-featured-merch-price">
-            <div>
-              {currency.base === currency.conversion ? (
-                <div className="price-current">
-                  {ECurrencySymbols[currency.base]}
-                  {displayPrice.toFixed(2)}
-                </div>
-              ) : (
-                <>
-                  <div className="price-current">
-                    {ECurrencySymbols[currency.conversion]}
-                    {roundToDecimal(displayPrice * currency.rate, 2)}
-                  </div>
-                  <div className="cards-featured-merch-price-converted-currency">
-                    ({ECurrencySymbols[currency.base]}
-                    {displayPrice.toFixed(2)} {ECurrencyCodes[currency.base]})
-                  </div>
-                </>
-              )}
-            </div>
-
-            {hasDiscount && (
-              <div className="price-original">
-                {ECurrencySymbols[currency.base]}
-                {originalPrice.toFixed(2)}
-              </div>
-            )}
-
-            {discount && <div className="price-discount">{discount}% OFF</div>}
-          </div>
-
-          <div className="cards-featured-merch-actions">
-            <button className="btn-add-to-cart" onClick={handleAddToCart}>
-              <span className="btn-icon">🛒</span>
-              Add to Cart
-            </button>
-
-            {showQuickView && (
-              <button className="btn-quick-view" onClick={handleQuickView}>
-                <span className="btn-icon">👁️</span>
-              </button>
-            )}
-          </div>
+        <div className="cards-featured-merch-price">
+          {currency.base === currency.conversion ? (
+            <span className="price-current">
+              {ECurrencySymbols[currency.base]}
+              {displayPrice.toFixed(2)}
+            </span>
+          ) : (
+            <span className="price-current">
+              {ECurrencySymbols[currency.conversion]}
+              {roundToDecimal(displayPrice * currency.rate, 2)}
+            </span>
+          )}
+          {hasDiscount && (
+            <span className="price-original">
+              {ECurrencySymbols[currency.base]}
+              {originalPrice.toFixed(2)}
+            </span>
+          )}
         </div>
       </div>
     </div>

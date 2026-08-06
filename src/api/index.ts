@@ -1,15 +1,6 @@
 import axios from "axios";
-import { homeData, productData } from "../dummy";
-import {
-  ECurrencies,
-  ILogin,
-  ICartItem,
-  IMerchPreview,
-  IAnimeSeries,
-  ICharacter,
-} from "../ts";
-import { IHomeData } from "../view/pages/Home";
-import { IProductData } from "../view/pages/Product";
+import { ECurrencies, ILogin, IMerchPreview, IAnimeSeries, ICharacter } from "../ts";
+import { getCatalog } from "./square";
 
 const serverUrl =
   process.env.NODE_ENV === "production"
@@ -29,101 +20,16 @@ export async function getCurrencyConversion(
   return data.data.rates[conversion];
 }
 
-export function getHomeData(): Promise<IHomeData> {
-  return axios.get(`${serverUrl}api/v1/home`).then((response) => response.data);
-}
-
-export function getProductData(): Promise<IProductData> {
-  return new Promise((resolve) => resolve(productData));
-}
-
 export function getSearchResult(
   page: number,
   searchString: string,
   category?: string
 ): Promise<IMerchPreview[]> {
-  // Check if user wants to use real Square data
-  const dataSource = localStorage.getItem("dataSource");
-  const useSquareData = dataSource === "square";
-
-  // Use different endpoint based on data source preference
-  const baseEndpoint = useSquareData
-    ? `${serverUrl}api/v1/square-catalog/search`
-    : `${serverUrl}api/v1/search`;
-
-  const params = new URLSearchParams({
-    q: searchString,
-    page: page.toString(),
-    limit: "20",
-  });
-
-  if (category && category !== "All Categories") {
-    params.append("category", category);
-  }
-
-  // Add source parameter for regular search API
-  if (!useSquareData) {
-    params.append("source", "all");
-  }
-
-  return axios
-    .get(`${baseEndpoint}?${params.toString()}`)
-    .then((response) => {
-      if (response.data.success) {
-        return response.data.data.map((item: any) => ({
-          id: item.id,
-          title: item.title || item.name,
-          name: item.name,
-          description: item.description,
-          img: item.images?.[0] || item.img || "",
-          images: item.images || [],
-          price: item.price,
-          originalPrice: item.originalPrice,
-          discountPercentage: item.discountPercentage,
-          variations: item.variations || [],
-          categories: item.categories || [],
-          isFeatured: item.isFeatured || false,
-          isNewArrival: item.isNewArrival || false,
-          isPreorder: item.isPreorder || false,
-          source:
-            item.source || (useSquareData ? "square-catalog" : "database"),
-        }));
-      }
-      return [];
-    })
-    .catch((error) => {
-      console.error("Search API error:", error);
-      // Fallback to dummy data if Square API fails
-      if (useSquareData) {
-        console.log("Falling back to dummy data due to Square API error");
-        return getSearchResult(page, searchString, category);
-      }
-      return [];
-    });
+  return getCatalog(searchString).then(({ items }) => items);
 }
 
 export function requestLogin(login: ILogin) {
   return axios.post(`${serverUrl}login`, login);
-}
-
-export function fetchCart(): Promise<ICartItem[]> {
-  return axios.get("http://localhost:8001/cart");
-}
-
-export function updateCart(payload: {
-  product_id: number;
-  delta: number;
-  quantity: number;
-  operation: string;
-}) {
-  return () => {
-    return axios({
-      method: "post",
-      url: `http://localhost:8001/cart/${payload.product_id}`,
-      data: payload,
-      withCredentials: true,
-    });
-  };
 }
 
 export async function authenticateBetaUser({ username, password }: ILogin) {

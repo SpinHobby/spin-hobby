@@ -22,6 +22,7 @@ import Cart from "./view/pages/Cart";
 import CheckOut from "./view/pages/CheckOut";
 import Search from "./view/pages/Search";
 import Product from "view/pages/Product";
+import ProductDetail from "view/pages/ProductDetail";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import Login from "view/pages/Login";
 import { useBetaSelector } from "./selectors";
@@ -124,6 +125,7 @@ function App() {
                   />
                   <Route path="/search" element={<Search />} />
                   <Route path="/product" element={<Product />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/account" element={<Account />} />
                   <Route path="/admin/*" element={<AdminDashboard />} />
                   <Route

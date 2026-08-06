@@ -1,14 +1,9 @@
-import {ICartItem} from '../ts';
+import { ICartItem } from "../ts";
 
-export default function calculateSubTotal(cart: {cartItems: ICartItem[], quantity: {[key: string]: number}}): number {
-
-  let subtotal = 0;
-
-  cart.cartItems.forEach(item => {
-
-    subtotal += item.price * cart.quantity[item.id.toString()];
-
-  });
-  
-  return subtotal;
-};
+export default function calculateSubTotal(cart: {
+  items: ICartItem[];
+}): number {
+  return cart.items.reduce((subtotal, item) => {
+    return subtotal + item.price * item.quantity;
+  }, 0);
+}

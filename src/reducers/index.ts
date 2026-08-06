@@ -22,12 +22,10 @@ import userReducer, {
 } from "./userReducer";
 import cartReducer, {
   ICartState,
-  getCart,
-  modifyCart,
-  addCart,
-  removeCart,
+  addItem,
+  setQuantity,
+  removeItem,
   clearCart,
-  setCart,
   setError,
 } from "./cartReducer";
 import {
@@ -65,12 +63,10 @@ export {
   clearQueueLogin,
   loginBeta,
   logoutBeta,
-  getCart,
-  modifyCart,
-  addCart,
-  removeCart,
+  addItem,
+  setQuantity,
+  removeItem,
   clearCart,
-  setCart,
   setError,
   getSearch,
   setSearchResult,

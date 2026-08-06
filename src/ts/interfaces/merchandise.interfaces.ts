@@ -1,7 +1,16 @@
 export interface IMerchPreview {
+  id?: string; // Square catalog object id
   title: string;
+  name?: string;
   img: string;
+  images?: string[];
   price: number;
+  originalPrice?: number;
+  discountPercentage?: number;
+  categories?: { name: string }[];
+  isFeatured?: boolean;
+  isNewArrival?: boolean;
+  isPreorder?: boolean;
   description: string;
   // Anime-specific fields
   series?: string; // e.g., "Love Live!", "Hololive", "Genshin Impact"

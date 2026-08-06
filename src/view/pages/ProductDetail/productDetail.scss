@@ -1,0 +1,143 @@
+@use "../../../sass/variables.scss" as *;
+@use "../../../sass/mixins.scss" as *;
+
+.product-detail-page {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: $spacing-6 $spacing-4;
+}
+
+.product-detail-loading,
+.product-detail-not-found {
+  text-align: center;
+  padding: $spacing-8 0;
+}
+
+.product-detail-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  color: $text-secondary;
+  margin-bottom: $spacing-6;
+
+  .breadcrumb-btn {
+    background: none;
+    border: none;
+    color: $primary-600;
+    cursor: pointer;
+    font-size: inherit;
+    padding: 0;
+  }
+
+  .breadcrumb-current {
+    color: $text-secondary;
+  }
+}
+
+.product-detail-content {
+  display: flex;
+  gap: $spacing-8;
+  flex-wrap: wrap;
+
+  @include mobile-only {
+    flex-direction: column;
+  }
+}
+
+.product-detail-images {
+  flex: 1 1 460px;
+}
+
+.product-detail-info {
+  flex: 1 1 360px;
+
+  h1 {
+    @include text-h2;
+    margin: 0 0 $spacing-3;
+  }
+
+  .product-detail-price {
+    font-size: 1.75rem;
+    font-weight: $font-weight-bold;
+    color: $primary-600;
+    margin-bottom: $spacing-4;
+  }
+
+  .product-detail-description {
+    color: $text-secondary;
+    line-height: 1.6;
+    margin-bottom: $spacing-6;
+    white-space: pre-line;
+  }
+
+  .product-detail-quantity {
+    display: flex;
+    align-items: center;
+    gap: $spacing-4;
+    margin-bottom: $spacing-6;
+
+    .quantity-controls {
+      display: flex;
+      align-items: center;
+      border: 1px solid $border;
+      border-radius: $border-radius-base;
+      overflow: hidden;
+
+      button {
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: $neutral-100;
+        cursor: pointer;
+        font-size: 1.1rem;
+      }
+
+      input {
+        width: 48px;
+        height: 36px;
+        border: none;
+        text-align: center;
+        -moz-appearance: textfield;
+      }
+    }
+  }
+
+  .btn-add-to-cart-large {
+    width: 100%;
+    padding: $spacing-4;
+    background: $primary-600;
+    color: white;
+    border: none;
+    border-radius: $border-radius-base;
+    font-size: 1.05rem;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: background $transition-fast ease;
+
+    &:hover {
+      background: $primary-700;
+    }
+  }
+
+  .view-cart-link {
+    display: block;
+    text-align: center;
+    margin-top: $spacing-3;
+    color: $primary-600;
+  }
+
+  .product-detail-trust {
+    list-style: none;
+    margin: $spacing-5 0 0;
+    padding: $spacing-4 0 0;
+    border-top: 1px solid $border;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2;
+
+    li {
+      @include text-body-sm;
+      color: $text-secondary;
+    }
+  }
+}

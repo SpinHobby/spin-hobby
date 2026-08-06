@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
-import Header, { ISlide } from "./Header";
-import FeaturedMerchandise from "./FeaturedMerchandise";
-import { Categories, TabDisplay, GroupDisplay } from "./Merchandise";
-import { getHomeData } from "../../../api";
+import { useDispatch } from "react-redux";
+import { FeaturedMerch } from "../../components/Cards";
+import { Ripple } from "../../components/Buttons";
+import { addItem } from "../../../reducers";
+import { getCatalog } from "../../../api/square";
 import { IMerchPreview, IGroupedMerchPreview, ICategory } from "../../../ts";
+import { ISlide } from "./Header";
 
+// Kept for the (currently unused) RTK-Query scaffolding in store/api/homeApi.ts.
 export interface IHomeData {
   header: ISlide[];
   featured: IMerchPreview[];
@@ -12,7 +15,6 @@ export interface IHomeData {
   categories: ICategory[];
 }
 
-// Loading component
 function LoadingSpinner() {
   return (
     <div className="home-loading">
@@ -24,18 +26,17 @@ function LoadingSpinner() {
   );
 }
 
-// Error component
 function ErrorMessage({ error }: { error: any }) {
   return (
     <div className="home-error">
       <div className="error-message">
         <h3>Oops! Something went wrong</h3>
         <p>
-          We couldn't load the home page data. Please try refreshing the page.
+          We couldn't load the catalog. Please try refreshing the page.
         </p>
         <details>
           <summary>Error details</summary>
-          <pre>{JSON.stringify(error, null, 2)}</pre>
+          <pre>{JSON.stringify(error?.message || error, null, 2)}</pre>
         </details>
       </div>
     </div>
@@ -43,46 +44,85 @@ function ErrorMessage({ error }: { error: any }) {
 }
 
 export default function Home() {
-  const [homeData, setHomeData] = useState<IHomeData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useDispatch();
+  const [products, setProducts] = useState<IMerchPreview[] | null>(null);
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    getHomeData()
-      .then((data) => {
-        setHomeData(data);
-        setIsLoading(false);
-      })
+    getCatalog(undefined, undefined, 60)
+      .then(({ items }) => setProducts(items))
       .catch((err) => {
-        console.log("Error loading home route: ", err);
+        console.log("Error loading catalog: ", err);
         setError(err);
-        setIsLoading(false);
       });
   }, []);
 
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
+  const handleAddToCart = (product: IMerchPreview) => {
+    if (!product.id) return;
+    dispatch(
+      addItem({
+        id: product.id,
+        name: product.title,
+        price: product.price,
+        imageUrl: product.img,
+      })
+    );
+  };
 
   if (error) {
     return <ErrorMessage error={error} />;
   }
 
-  if (!homeData) {
+  if (!products) {
     return <LoadingSpinner />;
   }
 
   return (
-    <>
-      <Header slides={homeData.header} />
-      <div className="home-main">
-        <FeaturedMerchandise merchs={homeData.featured} />
-        <div className="home-main-padded">
-          <TabDisplay />
-          <Categories categories={homeData.categories} />
-          <GroupDisplay merchs={homeData.merchs} />
+    <div className="products-page">
+      <div className="products-header">
+        <div className="products-header-content">
+          <div className="products-title">
+            <h1>Welcome to Spin Hobby</h1>
+          </div>
+          <p className="products-description">
+            Browse our collection of anime figures, collectibles, and
+            merchandise
+          </p>
         </div>
       </div>
-    </>
+
+      <div className="trust-strip">
+        <div className="trust-item">
+          <span className="trust-icon">🔒</span>
+          <span>Secure checkout via Square</span>
+        </div>
+        <div className="trust-item">
+          <span className="trust-icon">✅</span>
+          <span>100% authentic merchandise</span>
+        </div>
+        <div className="trust-item">
+          <span className="trust-icon">📦</span>
+          <span>Ships within 2-3 business days</span>
+        </div>
+      </div>
+
+      <div className="products-content">
+        {products.length > 0 ? (
+          <div className="products-grid">
+            {products.map((product, index) => (
+              <Ripple key={product.id || index} classes="product-card-ripple">
+                <FeaturedMerch {...product} onAddToCart={handleAddToCart} />
+              </Ripple>
+            ))}
+          </div>
+        ) : (
+          <div className="products-empty">
+            <div className="empty-illustration">📦</div>
+            <h3>No Products Yet</h3>
+            <p>Check back soon for new arrivals.</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

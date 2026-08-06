@@ -1,7 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { useCartSelector } from "../../../selectors";
+import { clearCart } from "../../../reducers";
 import calculateSubTotal from "utils/calculateSubTotal";
-import axios from "axios";
+import { getSquareConfig, createPayment } from "../../../api/square";
+
+declare global {
+  interface Window {
+    Square?: any;
+  }
+}
 
 interface CountryCode {
   code: string;
@@ -314,12 +323,45 @@ const initialCommonInputs = {
 
 export default function CheckOut() {
   const cart = useCartSelector();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const [sameAsBillingAddress, setSameAsBillingAddress] =
     useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [checkoutError, setCheckoutError] = useState<string>("");
-  const [redirectUrl, setRedirectUrl] = useState<string>("");
+  const [card, setCard] = useState<any>(null);
+  const cardContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cardInstance: any;
+    let cancelled = false;
+
+    async function initializeCard() {
+      try {
+        const { applicationId, locationId } = await getSquareConfig();
+        if (cancelled || !window.Square) return;
+
+        const payments = window.Square.payments(applicationId, locationId);
+        cardInstance = await payments.card();
+        if (cancelled) return;
+        await cardInstance.attach(cardContainerRef.current);
+        setCard(cardInstance);
+      } catch (err) {
+        console.error("Failed to initialize Square card form:", err);
+        setCheckoutError(
+          "Unable to load the payment form. Please refresh and try again."
+        );
+      }
+    }
+
+    initializeCard();
+
+    return () => {
+      cancelled = true;
+      cardInstance?.destroy();
+    };
+  }, []);
 
   const [billingInputs, setBillingInputs] = useState<BillingInputs>({
     ...initialCommonInputs,
@@ -395,8 +437,13 @@ export default function CheckOut() {
       return;
     }
 
-    if (cart.cartItems.length === 0) {
+    if (cart.items.length === 0) {
       setCheckoutError("Your cart is empty");
+      return;
+    }
+
+    if (!card) {
+      setCheckoutError("Payment form is still loading. Please wait a moment.");
       return;
     }
 
@@ -404,40 +451,31 @@ export default function CheckOut() {
     setCheckoutError("");
 
     try {
-      const customerInfo = {
-        email: billingInputs.email,
-        phone: billingInputs.phone,
-        address: {
-          address_line_1: billingInputs.address.primary,
-          address_line_2: billingInputs.address.secondary,
-          locality: billingInputs.city,
-          administrative_district_level_1: billingInputs.province,
-          postal_code: billingInputs.postalCode,
-          country: billingInputs.country,
-        },
-        ask_for_shipping: !sameAsBillingAddress,
-      };
-
-      const response = await axios.post("/cart/checkout", {
-        customer_info: customerInfo,
-        redirect_url: `${window.location.origin}/checkout/success`,
-        cancel_url: `${window.location.origin}/cart`,
-      });
-
-      if (response.data.success) {
-        // Redirect to Square hosted checkout
-        window.location.href = response.data.data.checkout_url;
-      } else {
-        setCheckoutError(
-          response.data.error || "Failed to create checkout session"
+      const tokenResult = await card.tokenize();
+      if (tokenResult.status !== "OK") {
+        throw new Error(
+          tokenResult.errors?.[0]?.message || "Card details are invalid"
         );
       }
+
+      const amountCents = Math.round(calculateSubTotal(cart) * 100);
+      const payment = await createPayment({
+        sourceId: tokenResult.token,
+        amount: amountCents,
+        currency: "CAD",
+      });
+
+      dispatch(clearCart());
+
+      const params = new URLSearchParams({
+        orderId: payment.id,
+        paymentId: payment.id,
+        amount: (amountCents / 100).toFixed(2),
+      });
+      navigate(`/checkout/success?${params.toString()}`);
     } catch (error: any) {
       console.error("Checkout error:", error);
-      setCheckoutError(
-        error.response?.data?.error ||
-          "Failed to create checkout session. Please try again."
-      );
+      setCheckoutError(error.message || "Payment failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -515,14 +553,14 @@ export default function CheckOut() {
                 <th colSpan={2}>Your order</th>
               </tr>
 
-              {cart.cartItems.map((cartItem, i) => {
+              {cart.items.map((cartItem) => {
                 return (
-                  <tr key={i}>
+                  <tr key={cartItem.id}>
                     <td>
                       {" "}
-                      {cartItem.name} x {cart.quantity[cartItem.id]}(Qty)
+                      {cartItem.name} x {cartItem.quantity}(Qty)
                     </td>
-                    <td>${cartItem.price * cart.quantity[cartItem.id]}</td>
+                    <td>${(cartItem.price * cartItem.quantity).toFixed(2)}</td>
                   </tr>
                 );
               })}
@@ -542,9 +580,11 @@ export default function CheckOut() {
           <div className="checkout-section">
             <h3>Complete Your Order</h3>
             <p className="checkout-description">
-              Click below to proceed to Square's secure checkout page where you
-              can complete your payment.
+              Enter your card details below to complete your payment securely
+              via Square.
             </p>
+
+            <div className="square-card-container" ref={cardContainerRef} />
 
             {checkoutError && (
               <div className="checkout-error">
@@ -561,7 +601,7 @@ export default function CheckOut() {
             <div className="order-summary">
               <h4>Order Summary</h4>
               <div className="summary-row">
-                <span>Items ({cart.cartItems.length}):</span>
+                <span>Items ({cart.items.length}):</span>
                 <span>${calculateSubTotal(cart).toFixed(2)}</span>
               </div>
               <div className="summary-row">
@@ -578,7 +618,7 @@ export default function CheckOut() {
               <button
                 className="btn-checkout-square"
                 onClick={handleSquareCheckout}
-                disabled={isProcessing || cart.cartItems.length === 0}
+                disabled={isProcessing || cart.items.length === 0 || !card}
               >
                 {isProcessing ? (
                   <div className="processing">

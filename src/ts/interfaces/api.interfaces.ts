@@ -25,13 +25,9 @@ export interface IAuthUser {
 }
 
 export interface ICartItem {
-  id: number;
+  id: string; // Square catalog object id
   name: string;
-  inventory_id: number;
   price: number;
-  discount_id: number;
-  createdAt: string;
-  updatedAt: string;
-  category_id: number;
+  imageUrl: string;
   quantity: number;
 }

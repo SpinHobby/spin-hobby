@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useSearchSelector } from "../../../selectors";
-import { getSearch } from "../../../reducers";
+import { getSearch, addItem } from "../../../reducers";
 import { FeaturedMerch } from "../../components/Cards";
 import { Ripple } from "../../components/Buttons";
 import { IMerchPreview } from "../../../ts";
@@ -45,8 +45,15 @@ export default function Search() {
   };
 
   const handleAddToCart = (product: IMerchPreview) => {
-    console.log("Adding to cart:", product);
-    // TODO: Implement add to cart functionality
+    if (!product.id) return;
+    dispatch(
+      addItem({
+        id: product.id,
+        name: product.title,
+        price: product.price,
+        imageUrl: product.img,
+      })
+    );
   };
 
   const handleQuickView = (product: IMerchPreview) => {
@@ -147,7 +154,7 @@ export default function Search() {
           </>
         ) : (
           <div className="search-empty">
-            <div className="empty-illustration">🎌</div>
+            <div className="empty-illustration">🔍</div>
             <h3>No results found for "{query}"</h3>
             <p>
               We couldn't find any anime collectibles matching your search. Try

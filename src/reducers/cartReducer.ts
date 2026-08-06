@@ -1,26 +1,24 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { ICartItem } from "../ts";
 
 export interface ICartState {
-  cartItems: ICartItem[];
-  quantity: { [key: string]: number };
-  cartTotalQuantity: number;
-  cartTotalAmount: number;
+  items: ICartItem[];
   error: string;
 }
 
-export enum Operation {
-  ADD = "ADD",
-  REMOVE = "REMOVE",
-  SET = "SET",
-  CLEAR = "CLEAR",
+export const CART_STORAGE_KEY = "spinhobby_cart";
+
+function loadCartFromStorage(): ICartItem[] {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }
 
 const initialState: ICartState = {
-  cartItems: [],
-  quantity: { "0": 0 },
-  cartTotalQuantity: 0,
-  cartTotalAmount: 0,
+  items: loadCartFromStorage(),
   error: "",
 };
 
@@ -28,69 +26,42 @@ const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    //use to set initial state
-    getCart: () => {},
-    //use to trigger api and add/remove/set cart reducers
-    modifyCart: (
+    addItem: (
       state,
-      action: {
-        payload: {
-          product_id: number;
-          delta: number;
-          quantity: number;
-          operation: Operation;
-        };
-      }
-    ) => {},
-    //add a certain number(delta) of quantity
-    addCart: (
-      state,
-      action: { payload: { product_id: number; delta: number } }
+      action: PayloadAction<Omit<ICartItem, "quantity"> & { quantity?: number }>
     ) => {
-      state.quantity[action.payload.product_id.toString()] +=
-        action.payload.delta;
-    },
-    //remove a certain number(delta) of quantity
-    removeCart: (
-      state,
-      action: { payload: { product_id: number; delta: number } }
-    ) => {
-      if (state.quantity[action.payload.product_id] > action.payload.delta) {
-        state.quantity[action.payload.product_id] -= action.payload.delta;
+      const existing = state.items.find((i) => i.id === action.payload.id);
+      const delta = action.payload.quantity || 1;
+      if (existing) {
+        existing.quantity += delta;
       } else {
-        delete state.quantity[action.payload.product_id];
+        state.items.push({ ...action.payload, quantity: delta });
       }
     },
-    setCart: (
+    setQuantity: (
       state,
-      action: {
-        payload: { cartItems: ICartItem[]; quantity: ICartState["quantity"] };
-      }
+      action: PayloadAction<{ id: string; quantity: number }>
     ) => {
-      // if (action.payload.quantity <= 0)
-      //   delete state.quantity[action.payload.product_id];
-      // state.quantity[action.payload.product_id] = action.payload.quantity;
-      state.cartItems = action.payload.cartItems;
-      state.quantity = action.payload.quantity;
+      if (action.payload.quantity <= 0) {
+        state.items = state.items.filter((i) => i.id !== action.payload.id);
+        return;
+      }
+      const item = state.items.find((i) => i.id === action.payload.id);
+      if (item) item.quantity = action.payload.quantity;
+    },
+    removeItem: (state, action: PayloadAction<string>) => {
+      state.items = state.items.filter((i) => i.id !== action.payload);
     },
     clearCart: (state) => {
-      state.quantity = {};
-      state.cartItems = [];
+      state.items = [];
     },
-    setError: (state, action) => {
+    setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
     },
   },
 });
 
-export const {
-  getCart,
-  modifyCart,
-  addCart,
-  removeCart,
-  clearCart,
-  setCart,
-  setError,
-} = cartSlice.actions;
+export const { addItem, setQuantity, removeItem, clearCart, setError } =
+  cartSlice.actions;
 
 export default cartSlice.reducer;
