@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import classNames from "classnames";
 
 const AUTOCHANGE_TIME = 8000;
@@ -76,6 +77,7 @@ function MobileHero({ slides }: Props) {
 }
 
 function HeroSection({ slides }: Props) {
+  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -109,7 +111,12 @@ function HeroSection({ slides }: Props) {
               </p>
             )}
             <div className="hero-actions">
-              <button className="hero-btn-primary">Shop Now</button>
+              <button
+                className="hero-btn-primary"
+                onClick={() => navigate("/product")}
+              >
+                Shop Now
+              </button>
               <button className="hero-btn-secondary">Learn More</button>
             </div>
           </div>
