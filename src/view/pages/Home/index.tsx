@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { FeaturedMerch } from "../../components/Cards";
 import { Ripple } from "../../components/Buttons";
 import { addItem } from "../../../reducers";
@@ -45,6 +46,7 @@ function ErrorMessage({ error }: { error: any }) {
 
 export default function Home() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<IMerchPreview[] | null>(null);
   const [error, setError] = useState<any>(null);
 
@@ -77,6 +79,8 @@ export default function Home() {
     return <LoadingSpinner />;
   }
 
+  const featuredProducts = products.slice(0, 10);
+
   return (
     <div className="products-page">
       <div className="products-header">
@@ -88,6 +92,26 @@ export default function Home() {
             Browse our collection of anime figures, collectibles, and
             merchandise
           </p>
+
+          {featuredProducts.length > 0 && (
+            <div className="featured-showcase">
+              {featuredProducts.map((product) => (
+                <button
+                  key={product.id}
+                  className="featured-showcase-item"
+                  onClick={() => product.id && navigate(`/product/${product.id}`)}
+                >
+                  <img src={product.img} alt={product.title} />
+                  <span className="featured-showcase-title">
+                    {product.title}
+                  </span>
+                  <span className="featured-showcase-price">
+                    ${product.price.toFixed(2)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
