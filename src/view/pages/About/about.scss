@@ -1,0 +1,108 @@
+@use "../../../sass/variables.scss" as *;
+@use "../../../sass/mixins.scss" as *;
+
+.about-page {
+  min-height: 100vh;
+  background: linear-gradient(
+    135deg,
+    $primary-50 0%,
+    $surface 50%,
+    $neutral-50 100%
+  );
+}
+
+.about-header {
+  background: linear-gradient(135deg, $primary-600 0%, $primary-700 100%);
+  color: white;
+  padding: $spacing-8 0 $spacing-6;
+
+  .about-header-content {
+    @include container;
+
+    h1 {
+      @include text-h1;
+      margin: 0 0 $spacing-2;
+    }
+
+    p {
+      @include text-lg;
+      opacity: 0.9;
+      margin: 0;
+    }
+  }
+}
+
+.about-content {
+  @include container;
+  max-width: 900px;
+  padding: $spacing-8 0;
+}
+
+.about-section {
+  margin-bottom: $spacing-8;
+
+  h2 {
+    @include text-h3;
+    margin: 0 0 $spacing-4;
+  }
+
+  p {
+    @include text-body;
+    color: $text-secondary;
+    line-height: 1.7;
+  }
+}
+
+.about-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: $spacing-5;
+}
+
+.about-value {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  padding: $spacing-5;
+  text-align: center;
+
+  .about-value-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: $spacing-3;
+  }
+
+  h3 {
+    @include text-h6;
+    margin: 0 0 $spacing-2;
+  }
+
+  p {
+    @include text-body-sm;
+    color: $text-secondary;
+    margin: 0;
+  }
+}
+
+.about-cta {
+  text-align: center;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  padding: $spacing-6;
+
+  .btn-primary {
+    display: inline-block;
+    margin-top: $spacing-3;
+    padding: $spacing-3 $spacing-6;
+    background: $primary-600;
+    color: white;
+    border-radius: $border-radius-base;
+    font-weight: $font-weight-medium;
+    text-decoration: none;
+
+    &:hover {
+      background: $primary-700;
+    }
+  }
+}

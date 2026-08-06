@@ -34,6 +34,7 @@ import SquareWeb from "view/pages/SquareWeb";
 import Contact from "view/pages/Contact";
 import Support from "view/pages/Support";
 import Events from "view/pages/Events";
+import About from "view/pages/About";
 import NotFound from "view/pages/NotFound";
 
 let loaded = false;
@@ -134,6 +135,7 @@ function App() {
                     element={<SquareCallback />}
                   />
                   <Route path="/events" element={<Events />} />
+                  <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/support" element={<Support />} />
                   <Route path="*" element={<NotFound />} />

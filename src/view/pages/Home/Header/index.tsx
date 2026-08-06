@@ -117,7 +117,12 @@ function HeroSection({ slides }: Props) {
               >
                 Shop Now
               </button>
-              <button className="hero-btn-secondary">Learn More</button>
+              <button
+                className="hero-btn-secondary"
+                onClick={() => navigate("/about")}
+              >
+                Learn More
+              </button>
             </div>
           </div>
         </div>
