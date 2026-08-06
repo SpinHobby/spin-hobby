@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoChevronDown } from "react-icons/io5";
+import { getCategories } from "../../../api/square";
 
 interface Category {
   id: string;
   name: string;
-  description?: string;
-  img?: string;
-  featured: boolean;
-  productCount: number;
-  parentCategoryId?: string;
-  subcategories?: Category[];
 }
 
 export default function Navigation() {
@@ -20,37 +15,18 @@ export default function Navigation() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch categories from API
-    fetchCategories();
+    getCategories()
+      .then((data) =>
+        setCategories(
+          data.filter((c) => c.name).sort((a, b) => a.name.localeCompare(b.name))
+        )
+      )
+      .catch((error) => console.error("Error fetching categories:", error))
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch(
-        "http://localhost:8001/api/v1/categories?featured=true&parent_only=true"
-      );
-      const data = await response.json();
-      if (data.success) {
-        // Sort categories, prioritize featured ones
-        const sortedCategories = data.data.sort((a: Category, b: Category) => {
-          if (a.featured && !b.featured) return -1;
-          if (!a.featured && b.featured) return 1;
-          return a.name.localeCompare(b.name);
-        });
-        setCategories(sortedCategories);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleCategoryClick = (category: Category) => {
-    const params = new URLSearchParams({
-      category: category.name,
-    });
-    navigate(`/product?${params.toString()}`);
+    navigate(`/search?q=${encodeURIComponent(category.name)}`);
     setIsDropdownOpen(false);
   };
 
@@ -75,27 +51,17 @@ export default function Navigation() {
               {isLoading ? (
                 <div className="dropdown-loading">Loading categories...</div>
               ) : categories.length > 0 ? (
-                <>
-                  <div className="dropdown-header">Shop by Category</div>
-                  <div className="categories-grid">
-                    {categories.slice(0, 16).map((category) => (
-                      <button
-                        key={category.id}
-                        className="category-item"
-                        onClick={() => handleCategoryClick(category)}
-                      >
-                        <div className="category-name">{category.name}</div>
-                      </button>
-                    ))}
-                  </div>
-                  {categories.length > 16 && (
-                    <div className="dropdown-footer">
-                      <button className="view-all-btn">
-                        View All Categories ({categories.length})
-                      </button>
-                    </div>
-                  )}
-                </>
+                <div className="categories-grid">
+                  {categories.slice(0, 16).map((category) => (
+                    <button
+                      key={category.id}
+                      className="category-item"
+                      onClick={() => handleCategoryClick(category)}
+                    >
+                      <div className="category-name">{category.name}</div>
+                    </button>
+                  ))}
+                </div>
               ) : (
                 <div className="dropdown-empty">No categories available</div>
               )}
@@ -111,19 +77,6 @@ export default function Navigation() {
         {/* Support Link */}
         <a href="/support" className="nav-item">
           <button className="nav-link">Support</button>
-        </a>
-
-        {/* Instagram Promotion */}
-        <a
-          href="https://www.instagram.com/spinhobby"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="nav-item instagram-promo"
-        >
-          <button className="nav-link instagram-link">
-            <span className="instagram-icon">📷</span>
-            <span className="instagram-text">Follow Us @spinhobby</span>
-          </button>
         </a>
       </div>
     </div>

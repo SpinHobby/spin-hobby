@@ -17,11 +17,7 @@ export default function NavBar() {
         <div className="navbar">
           <div className="navbar-title-container">
             <div className="navbar-title" onClick={handleLogoClick}>
-              <img
-                src="logo/SPIN-HOBBY-LOGO_アートボード 1 のコピー.png"
-                alt="Spin Hobby Logo"
-              />
-              <h1>Spin Hobby</h1>
+              <img src="/assets/spin-hobby-logo.svg" alt="Spin Hobby Logo" />
             </div>
           </div>
           <div className="navbar-search">

@@ -33,7 +33,7 @@ export default function Login() {
               <Link to="/search">🔍 spinhobby.com/search</Link>
               <Link to="/product">📦 spinhobby.com/product</Link>
               <Link to="/admin" className="admin-link">
-                🎌 Admin Dashboard
+                ⚙️ Admin Dashboard
               </Link>
             </div>
             <button

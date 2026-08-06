@@ -155,7 +155,7 @@ function CategoryManagement() {
   return (
     <div className="admin-dashboard">
       <header className="admin-header">
-        <h1>🎌 Anime Store Admin</h1>
+        <h1>Anime Store Admin</h1>
         <nav className="admin-nav">
           <Link to="/" className="nav-link">
             ← Back to Store
