@@ -1,12 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { FeaturedMerch } from "../../components/Cards";
 import { Ripple } from "../../components/Buttons";
+import Header, { ISlide } from "./Header";
 import { addItem } from "../../../reducers";
 import { getCatalog } from "../../../api/square";
 import { IMerchPreview, IGroupedMerchPreview, ICategory } from "../../../ts";
-import { ISlide } from "./Header";
+
+// Placeholder announcement/promo slides. Swap for real admin-managed content later.
+const PLACEHOLDER_SLIDES: Omit<ISlide, "img">[] = [
+  {
+    headline: "New Arrivals Every Week",
+    subheading: "Fresh figures, badges, and plushies added regularly",
+  },
+  {
+    headline: "Free Shipping on Orders $75+",
+    subheading: "Shop your favorite series and save on shipping",
+  },
+  {
+    headline: "Join Our Discord Community",
+    subheading: "Get restock alerts and exclusive drops first",
+  },
+];
 
 // Kept for the (currently unused) RTK-Query scaffolding in store/api/homeApi.ts.
 export interface IHomeData {
@@ -46,7 +61,6 @@ function ErrorMessage({ error }: { error: any }) {
 
 export default function Home() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const [products, setProducts] = useState<IMerchPreview[] | null>(null);
   const [error, setError] = useState<any>(null);
 
@@ -79,41 +93,14 @@ export default function Home() {
     return <LoadingSpinner />;
   }
 
-  const featuredProducts = products.slice(0, 10);
+  const slides: ISlide[] = PLACEHOLDER_SLIDES.map((slide, i) => ({
+    ...slide,
+    img: products[i]?.img || "",
+  })).filter((slide) => slide.img);
 
   return (
     <div className="products-page">
-      <div className="products-header">
-        <div className="products-header-content">
-          <div className="products-title">
-            <h1>Welcome to Spin Hobby</h1>
-          </div>
-          <p className="products-description">
-            Browse our collection of anime figures, collectibles, and
-            merchandise
-          </p>
-
-          {featuredProducts.length > 0 && (
-            <div className="featured-showcase">
-              {featuredProducts.map((product) => (
-                <button
-                  key={product.id}
-                  className="featured-showcase-item"
-                  onClick={() => product.id && navigate(`/product/${product.id}`)}
-                >
-                  <img src={product.img} alt={product.title} />
-                  <span className="featured-showcase-title">
-                    {product.title}
-                  </span>
-                  <span className="featured-showcase-price">
-                    ${product.price.toFixed(2)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      {slides.length > 0 && <Header slides={slides} />}
 
       <div className="trust-strip">
         <div className="trust-item">
