@@ -859,6 +859,7 @@ strong {
   border-top: 1px solid #e0e0e0;
 
   .checkout-btn {
+    box-sizing: border-box;
     background: #52ad9c;
     color: white;
     border: none;
@@ -866,6 +867,7 @@ strong {
     border-radius: 6px;
     font-size: 18px;
     font-weight: bold;
+    letter-spacing: normal;
     cursor: pointer;
     transition: background 0.3s;
 
