@@ -3,9 +3,6 @@ import { useDispatch } from "react-redux";
 import { useModalSelector } from "../../selectors";
 import { EModal } from "../../ts";
 import { hideModal } from "../../reducers";
-import Login from "./Login";
-import SignUp from "./SignUp";
-import ForgotPassword from "./ForgotPassword";
 import Settings from "./Settings";
 import ReactDOM from "react-dom";
 import Announcement from "./Announcement";
@@ -33,12 +30,6 @@ function TrueModal({ mode }: { mode: EModal }) {
 
   function getModalContent() {
     switch (mode) {
-      case EModal.LOGIN:
-        return <Login />;
-      case EModal.SIGNUP:
-        return <SignUp />;
-      case EModal.FORGOT_PASSWORD:
-        return <ForgotPassword />;
       case EModal.SETTINGS:
         return <Settings />;
       case EModal.ANNOUNCEMENT:

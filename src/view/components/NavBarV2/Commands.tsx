@@ -1,10 +1,7 @@
 import React from "react";
 import { IconType } from "react-icons";
-import { FaUserAlt, FaInstagram, FaDiscord } from "react-icons/fa";
+import { FaInstagram, FaDiscord } from "react-icons/fa";
 import { RiShoppingCart2Line } from "react-icons/ri";
-import { openModal } from "../../../reducers";
-import { EModal } from "../../../ts";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useCartSelector } from "../../../selectors";
 
@@ -16,7 +13,6 @@ interface INavBarCommand {
 }
 
 export default function Commands() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const cart = useCartSelector();
   const cartCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -35,7 +31,6 @@ export default function Commands() {
   };
 
   const commands: INavBarCommand[] = [
-    { label: "Login", icon: FaUserAlt, onClick: handleLoginCommand },
     {
       label: "Cart",
       icon: RiShoppingCart2Line,
@@ -45,10 +40,6 @@ export default function Commands() {
     { label: "Discord", icon: FaDiscord, onClick: navigateToDiscord },
     { label: "Instagram", icon: FaInstagram, onClick: navigateToInstagram },
   ];
-
-  function handleLoginCommand() {
-    dispatch(openModal(EModal.LOGIN));
-  }
 
   function getCommandButtons(commands: INavBarCommand[]) {
     return commands.map((command, index) => (
