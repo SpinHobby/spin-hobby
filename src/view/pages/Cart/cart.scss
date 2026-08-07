@@ -405,29 +405,6 @@ strong {
     }
   }
 }
-.cart-footer {
-  border-top: 1px solid #ccc;
-  margin-top: 15px;
-  padding-top: 15px;
-  .cont-shopping {
-    float: left;
-    font-size: 0.8em;
-    padding-top: 10px;
-    cursor: pointer;
-    i {
-      position: relative;
-      top: 0px;
-      margin-right: 6px;
-      font-size: 75%;
-    }
-  }
-  .btn {
-    float: right;
-    width: 200px;
-    text-align: center;
-  }
-}
-
 @media only screen and (max-width: 860px) {
   .item-main {
     position: relative;
