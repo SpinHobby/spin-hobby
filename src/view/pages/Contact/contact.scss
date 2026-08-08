@@ -39,11 +39,10 @@
 
 .contact-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: $spacing-8;
 
   @include mobile-only {
-    grid-template-columns: 1fr;
     gap: $spacing-6;
   }
 }

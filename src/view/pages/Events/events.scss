@@ -69,10 +69,21 @@
     margin-bottom: $spacing-3;
   }
 
-  p {
+  .event-note {
     @include text-body-sm;
-    color: $text-secondary;
-    line-height: 1.6;
-    margin: 0;
+    color: $error-500;
+    font-style: italic;
+    margin: 0 0 $spacing-2;
+  }
+
+  .event-link {
+    @include text-body-sm;
+    color: $primary-600;
+    font-weight: $font-weight-medium;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
