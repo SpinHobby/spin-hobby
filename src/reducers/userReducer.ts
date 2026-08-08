@@ -1,6 +1,5 @@
 import { createAction, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { ILogin, ISquareLogin, IAuthUser } from "../ts";
-import Cookies from "js-cookie";
 
 export interface IUserState {
   beta: boolean;
@@ -11,7 +10,7 @@ export interface IUserState {
 }
 
 const initialState: IUserState = {
-  beta: process.env.NODE_ENV !== "production" || !!Cookies.get("beta"),
+  beta: true,
   awaitingLoginRes: false,
   isAuthenticated: false,
   user: null,

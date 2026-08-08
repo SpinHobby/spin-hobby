@@ -19,7 +19,9 @@ export default function Contact() {
             <div className="contact-methods">
               <div className="contact-method">
                 <h3>📧 Email</h3>
-                <p>info@spinhobby.com</p>
+                <p>
+                  <a href="mailto:info@spinhobby.com">info@spinhobby.com</a>
+                </p>
                 <p>For general inquiries, orders, and support</p>
               </div>
 
