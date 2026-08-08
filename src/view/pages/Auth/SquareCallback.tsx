@@ -107,7 +107,7 @@ export default function SquareCallback() {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .square-callback-container {
           min-height: 100vh;
           display: flex;

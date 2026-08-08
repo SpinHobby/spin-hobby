@@ -295,7 +295,7 @@ export default function CategoryEdit() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .category-edit-form {
           padding: 2rem;
         }
