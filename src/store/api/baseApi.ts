@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const serverUrl =
   process.env.NODE_ENV === "production"
-    ? "https://spinhobby.herokuapp.com/"
+    ? "https://spin-hobby-server.onrender.com/"
     : "http://localhost:8001/";
 
 // Base API configuration

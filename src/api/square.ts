@@ -3,7 +3,7 @@ import { IMerchPreview } from "../ts";
 
 const serverUrl =
   process.env.NODE_ENV === "production"
-    ? "https://spinhobby.herokuapp.com/"
+    ? "https://spin-hobby-server.onrender.com/"
     : "http://localhost:8001/";
 
 // Inline SVG so it never depends on an external image service being reachable.

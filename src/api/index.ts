@@ -4,7 +4,7 @@ import { getCatalog } from "./square";
 
 const serverUrl =
   process.env.NODE_ENV === "production"
-    ? "https://spinhobby.herokuapp.com/"
+    ? "https://spin-hobby-server.onrender.com/"
     : "http://localhost:8001/";
 
 export function loadInitialData() {}

@@ -10,6 +10,7 @@ import { TiArrowSortedDown, TiArrowSortedUp } from "react-icons/ti";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getSearch } from "../../../reducers";
+import { getCategories } from "../../../api/square";
 
 interface Props {
   onNav?: boolean;
@@ -36,42 +37,26 @@ export default function Search({ onNav = true }: Props) {
   );
   const [categories, setCategories] =
     useState<SearchCategory[]>(DEFAULT_CATEGORIES);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Fetch categories from backend
+  // Fetch categories from the Square catalog
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:8001/api/v1/categories?featured=true&parent_only=true"
-        );
-        const data = await response.json();
-        if (data.success && data.data.length > 0) {
-          const apiCategories = [
-            DEFAULT_CATEGORIES[0], // Keep "All Categories" first
-            ...data.data.map((cat: any) => ({
-              id: cat.id,
-              name: cat.name,
-            })),
-          ];
-          setCategories(apiCategories);
+    getCategories()
+      .then((cats) => {
+        if (cats.length > 0) {
+          setCategories([DEFAULT_CATEGORIES[0], ...cats]);
         }
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error("Error fetching categories for search:", error);
         // Keep default categories on error
-      }
-    };
-
-    fetchCategories();
+      });
   }, []);
 
-  // Close dropdowns when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -80,78 +65,17 @@ export default function Search({ onNav = true }: Props) {
       ) {
         setOpenCategoryList(false);
       }
-
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
     }
 
-    if (openCategoryList || showSuggestions) {
+    if (openCategoryList) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [openCategoryList, showSuggestions]);
+  }, [openCategoryList]);
 
   function handleSearchInput(e: ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
-    setSearch(value);
-
-    // Fetch suggestions after user stops typing for 300ms
-    if (value.trim().length >= 2) {
-      const timeoutId = setTimeout(() => {
-        fetchSuggestions(value.trim());
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }
-
-  async function fetchSuggestions(query: string) {
-    try {
-      const response = await fetch(
-        `http://localhost:8001/api/v1/search/suggestions?q=${encodeURIComponent(
-          query
-        )}&limit=5`
-      );
-      const data = await response.json();
-
-      if (data.success) {
-        setSuggestions(data.suggestions);
-        setShowSuggestions(data.suggestions.length > 0);
-      }
-    } catch (error) {
-      console.error("Error fetching suggestions:", error);
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }
-
-  function handleSuggestionClick(suggestion: any) {
-    setSearch(suggestion.text);
-    setShowSuggestions(false);
-
-    // Trigger search immediately
-    dispatch(
-      getSearch({
-        page: 1,
-        searchString: suggestion.text,
-        category: category.name,
-      })
-    );
-
-    const searchParams = new URLSearchParams({
-      q: suggestion.text,
-      category: category.name,
-    });
-
-    navigate(`/search?${searchParams.toString()}`);
+    setSearch(e.target.value);
   }
 
   function handleOpenCategoryList() {
@@ -214,26 +138,7 @@ export default function Search({ onNav = true }: Props) {
             placeholder="Search..."
             value={search}
             onChange={handleSearchInput}
-            onFocus={() =>
-              search.length >= 2 &&
-              suggestions.length > 0 &&
-              setShowSuggestions(true)
-            }
           />
-          {showSuggestions && suggestions.length > 0 && (
-            <div ref={suggestionsRef} className="search-suggestions">
-              {suggestions.map((suggestion, index) => (
-                <div
-                  key={index}
-                  className={`suggestion-item ${suggestion.type}`}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  <span className="suggestion-text">{suggestion.text}</span>
-                  <span className="suggestion-type">{suggestion.type}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </form>
       <div className="navbar-search-magnifier">
