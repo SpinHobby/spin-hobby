@@ -36,6 +36,7 @@ import Support from "view/pages/Support";
 import Events from "view/pages/Events";
 import About from "view/pages/About";
 import NotFound from "view/pages/NotFound";
+import Cashier from "view/pages/Cashier";
 
 let loaded = false;
 
@@ -138,6 +139,7 @@ function App() {
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/support" element={<Support />} />
+                  <Route path="/cashier" element={<Cashier />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
