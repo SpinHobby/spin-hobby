@@ -22,12 +22,19 @@ export function identifyPhoto(
 }
 
 export function recordItem(params: {
+  photo?: File;
   title: string;
   description: string;
   price: number; // dollars
 }): Promise<{ itemId?: string }> {
+  const formData = new FormData();
+  if (params.photo) formData.append("photo", params.photo);
+  formData.append("title", params.title);
+  formData.append("description", params.description);
+  formData.append("price", String(params.price));
+
   return axios
-    .post(`${serverUrl}api/cashier/record`, params)
+    .post(`${serverUrl}api/cashier/record`, formData)
     .then((response) => {
       if (!response.data.success) {
         throw new Error(response.data.error || "Could not save item to Square");

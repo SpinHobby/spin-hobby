@@ -57,6 +57,7 @@ export default function Cashier() {
 
 function CashierTool() {
   const [step, setStep] = useState<Step>("capture");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -70,6 +71,7 @@ function CashierTool() {
     e.target.value = "";
     if (!file) return;
 
+    setPhotoFile(file);
     setPhotoUrl(URL.createObjectURL(file));
     setStep("loading");
     setError("");
@@ -91,6 +93,7 @@ function CashierTool() {
 
   function startOver() {
     setStep("capture");
+    setPhotoFile(null);
     setPhotoUrl("");
     setTitle("");
     setDescription("");
@@ -103,7 +106,12 @@ function CashierTool() {
     setStep("saving");
     setSaveError("");
     try {
-      await recordItem({ title, description, price: priceValue });
+      await recordItem({
+        photo: photoFile || undefined,
+        title,
+        description,
+        price: priceValue,
+      });
     } catch (err: any) {
       setSaveError(
         err.message || "Couldn't save to Square. You can still charge the amount manually."
