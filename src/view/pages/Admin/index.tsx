@@ -33,7 +33,7 @@ interface AdminStats {
 
 const API_BASE =
   process.env.NODE_ENV === "production"
-    ? "https://spinhobby.herokuapp.com/api"
+    ? "https://spin-hobby-server.onrender.com/api"
     : "http://localhost:8001/api";
 
 function CategoryManagement() {
