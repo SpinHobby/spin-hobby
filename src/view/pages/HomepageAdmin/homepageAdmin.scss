@@ -61,6 +61,50 @@
   margin: 0 0 $spacing-3;
 }
 
+.homepage-admin-tabs {
+  display: flex;
+  gap: $spacing-2;
+  margin-bottom: $spacing-5;
+
+  button {
+    padding: $spacing-2 $spacing-4;
+    border: 1px solid $border;
+    border-radius: $border-radius-base;
+    background: $surface;
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      background: $primary-600;
+      border-color: $primary-600;
+      color: $surface;
+    }
+  }
+}
+
+.homepage-admin-ops-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-6;
+  margin-bottom: $spacing-4;
+  background: $surface-secondary;
+  border-radius: $border-radius-lg;
+}
+
+.homepage-admin-ops-gauge-value {
+  @include text-h2;
+  color: $primary-600;
+  font-weight: 700;
+}
+
+.homepage-admin-ops-gauge-label {
+  @include text-body-sm;
+  color: $text-secondary;
+}
+
 .homepage-admin-section {
   background: $surface;
   border: 1px solid $border;

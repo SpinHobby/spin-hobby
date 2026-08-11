@@ -12,6 +12,7 @@ import {
   removeFeaturedProduct,
 } from "api/homepage";
 import { getCatalog } from "api/square";
+import { getDatabaseStats, IDatabaseStats } from "api/ops";
 import { IMerchPreview } from "../../../ts";
 import "./homepageAdmin.scss";
 
@@ -66,18 +67,102 @@ export default function HomepageAdmin() {
   return <HomepageAdminTool />;
 }
 
+type Tab = "homepage" | "ops";
+
 function HomepageAdminTool() {
+  const [tab, setTab] = useState<Tab>("homepage");
+
   return (
     <div className="homepage-admin-page">
       <div className="homepage-admin-container">
-        <h1>Homepage Admin</h1>
-        <p className="homepage-admin-hint">
-          Controls what appears on the live homepage. Changes take effect immediately.
-        </p>
-        <SlidesSection />
-        <FeaturedSection />
+        <h1>Admin</h1>
+        <div className="homepage-admin-tabs">
+          <button
+            className={tab === "homepage" ? "active" : ""}
+            onClick={() => setTab("homepage")}
+          >
+            Homepage
+          </button>
+          <button className={tab === "ops" ? "active" : ""} onClick={() => setTab("ops")}>
+            Ops
+          </button>
+        </div>
+
+        {tab === "homepage" && (
+          <>
+            <p className="homepage-admin-hint">
+              Controls what appears on the live homepage. Changes take effect immediately.
+            </p>
+            <SlidesSection />
+            <FeaturedSection />
+          </>
+        )}
+
+        {tab === "ops" && <OpsSection />}
       </div>
     </div>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = -1;
+  do {
+    value /= 1024;
+    unitIndex++;
+  } while (value >= 1024 && unitIndex < units.length - 1);
+  return `${value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function OpsSection() {
+  const [stats, setStats] = useState<IDatabaseStats | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getDatabaseStats()
+      .then(setStats)
+      .catch((err) => setError(err.message || "Failed to load database stats"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <section className="homepage-admin-section">
+      <h2>Database</h2>
+      <p className="homepage-admin-hint">
+        NeonDB Postgres usage. Free-tier storage limits are enforced by Neon directly -
+        check your Neon dashboard for your plan's exact cap.
+      </p>
+      {error && <p className="homepage-admin-error">{error}</p>}
+      {loading ? (
+        <p>Loading...</p>
+      ) : stats ? (
+        <>
+          <div className="homepage-admin-ops-gauge">
+            <span className="homepage-admin-ops-gauge-value">
+              {formatBytes(stats.totalBytes)}
+            </span>
+            <span className="homepage-admin-ops-gauge-label">total database size</span>
+          </div>
+          <div className="homepage-admin-table">
+            {stats.tables.map((table) => (
+              <div className="homepage-admin-row" key={table.name}>
+                <span className="homepage-admin-featured-name">{table.name}</span>
+                <span>{table.rowEstimate.toLocaleString()} rows</span>
+                <span>{formatBytes(table.bytes)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      <p className="homepage-admin-hint" style={{ marginTop: "1.5rem" }}>
+        Render (hosting) and Anthropic (cashier AI) usage/cost gauges aren't wired up yet -
+        those need API keys generated from each service's own dashboard first.
+      </p>
+    </section>
   );
 }
 

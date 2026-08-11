@@ -26,12 +26,18 @@ export function recordItem(params: {
   title: string;
   description: string;
   price: number; // dollars
+  hidden: boolean;
+  quantity?: number; // only used when hidden is false
 }): Promise<{ itemId?: string }> {
   const formData = new FormData();
   if (params.photo) formData.append("photo", params.photo);
   formData.append("title", params.title);
   formData.append("description", params.description);
   formData.append("price", String(params.price));
+  formData.append("hidden", String(params.hidden));
+  if (!params.hidden && params.quantity != null) {
+    formData.append("quantity", String(params.quantity));
+  }
 
   return axios
     .post(`${serverUrl}api/cashier/record`, formData)

@@ -6,6 +6,7 @@ const CASHIER_PASSWORD = "spinedm26";
 const AUTH_STORAGE_KEY = "spinhobby_cashier_unlocked";
 
 type Step = "capture" | "loading" | "review" | "saving" | "final" | "error";
+type Mode = "website" | "pos";
 
 export default function Cashier() {
   const [unlocked, setUnlocked] = useState(
@@ -56,12 +57,14 @@ export default function Cashier() {
 }
 
 function CashierTool() {
+  const [mode, setMode] = useState<Mode>("website");
   const [step, setStep] = useState<Step>("capture");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +101,7 @@ function CashierTool() {
     setTitle("");
     setDescription("");
     setPrice("");
+    setQuantity("");
     setError("");
     setSaveError("");
   }
@@ -111,6 +115,8 @@ function CashierTool() {
         title,
         description,
         price: priceValue,
+        hidden: mode === "pos",
+        quantity: mode === "website" ? quantityValue : undefined,
       });
     } catch (err: any) {
       setSaveError(
@@ -122,11 +128,31 @@ function CashierTool() {
 
   const priceValue = parseFloat(price);
   const priceIsValid = !isNaN(priceValue) && priceValue > 0;
+  const quantityValue = parseInt(quantity, 10);
+  const quantityIsValid = mode === "pos" || (!isNaN(quantityValue) && quantityValue >= 0);
+  const canSave = !!title && priceIsValid && quantityIsValid;
 
   return (
     <div className="cashier-page">
       <div className="cashier-container">
         <h1>Cashier</h1>
+
+        {step !== "saving" && step !== "final" && (
+          <div className="cashier-mode-toggle">
+            <button
+              className={mode === "website" ? "active" : ""}
+              onClick={() => setMode("website")}
+            >
+              Add to Website
+            </button>
+            <button
+              className={mode === "pos" ? "active" : ""}
+              onClick={() => setMode("pos")}
+            >
+              Convention (POS)
+            </button>
+          </div>
+        )}
 
         {step === "capture" && (
           <div className="cashier-step cashier-capture">
@@ -198,16 +224,31 @@ function CashierTool() {
               />
             </label>
 
+            {mode === "website" && (
+              <label className="cashier-field">
+                <span>Stock Count</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  min="0"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="How many do you have?"
+                />
+              </label>
+            )}
+
             <div className="cashier-actions">
               <button className="cashier-btn cashier-btn-ghost" onClick={startOver}>
                 Retake Photo
               </button>
               <button
                 className="cashier-btn cashier-btn-primary"
-                disabled={!title || !priceIsValid}
+                disabled={!canSave}
                 onClick={confirmAndSave}
               >
-                Ready to Charge
+                {mode === "website" ? "Add to Website" : "Ready to Charge"}
               </button>
             </div>
           </div>
@@ -226,6 +267,11 @@ function CashierTool() {
             <div className="cashier-final-price">${priceValue.toFixed(2)}</div>
             {saveError ? (
               <p className="cashier-error">{saveError}</p>
+            ) : mode === "website" ? (
+              <p className="cashier-final-instructions">
+                Added to the website with <strong>{quantityValue}</strong> in stock.
+                It's live on spinhobby.com now.
+              </p>
             ) : (
               <p className="cashier-final-instructions">
                 Saved to Square. In <strong>Square Point of Sale</strong>, search

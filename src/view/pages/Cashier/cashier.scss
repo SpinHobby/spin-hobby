@@ -26,6 +26,30 @@
   gap: $spacing-4;
 }
 
+.cashier-mode-toggle {
+  display: flex;
+  gap: $spacing-2;
+  margin-bottom: $spacing-6;
+
+  button {
+    flex: 1;
+    padding: $spacing-2 $spacing-3;
+    border: 1px solid $border;
+    border-radius: $border-radius-base;
+    background: $surface;
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      background: $primary-600;
+      border-color: $primary-600;
+      color: $surface;
+    }
+  }
+}
+
 .cashier-hint {
   @include text-body;
   color: $text-secondary;
