@@ -1,5 +1,7 @@
 export interface IMerchPreview {
   id?: string; // Square catalog object id
+  variationId?: string; // Square catalog item variation id, needed for inventory lookups
+  stockCount?: number | null; // null/undefined = untracked in Square (unlimited)
   title: string;
   name?: string;
   img: string;

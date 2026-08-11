@@ -463,6 +463,10 @@ export default function CheckOut() {
         sourceId: tokenResult.token,
         amount: amountCents,
         currency: "CAD",
+        items: cart.items.map((i) => ({
+          variationId: i.variationId,
+          quantity: i.quantity,
+        })),
       });
 
       dispatch(clearCart());

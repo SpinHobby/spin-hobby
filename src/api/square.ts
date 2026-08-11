@@ -68,7 +68,7 @@ export function getCatalogItem(
     });
 }
 
-function buildImageMap(relatedObjects: any[]): Map<string, string> {
+export function buildImageMap(relatedObjects: any[]): Map<string, string> {
   const map = new Map<string, string>();
   for (const obj of relatedObjects) {
     if (obj.type === "IMAGE" && obj.imageData?.url) {
@@ -82,6 +82,7 @@ export function createPayment(params: {
   sourceId: string;
   amount: number; // smallest currency unit, e.g. cents
   currency?: string;
+  items?: { variationId: string; quantity: number }[];
 }): Promise<{ id: string; status: string; receiptUrl?: string }> {
   return axios
     .post(`${serverUrl}api/square/payments`, params)
@@ -93,14 +94,26 @@ export function createPayment(params: {
     });
 }
 
+// Returns { [variationId]: quantity } for tracked variations; ids not present
+// in the result are untracked in Square (treat as unlimited stock).
+export function getInventoryCounts(
+  variationIds: string[]
+): Promise<Record<string, number>> {
+  if (variationIds.length === 0) return Promise.resolve({});
+  const params = new URLSearchParams({ ids: variationIds.join(",") });
+  return axios
+    .get(`${serverUrl}api/square/inventory?${params.toString()}`)
+    .then((response) => response.data.quantities || {});
+}
+
 // Maps a raw Square CatalogObject (type ITEM) into the shape used across the UI.
 export function mapCatalogItemToMerchPreview(
   item: any,
   imagesById?: Map<string, string>
 ): IMerchPreview {
   const itemData = item.itemData || {};
-  const variation = itemData.variations?.[0]?.itemVariationData;
-  const priceCents = variation?.priceMoney?.amount || 0;
+  const variation = itemData.variations?.[0];
+  const priceCents = variation?.itemVariationData?.priceMoney?.amount || 0;
 
   const imageIds: string[] = itemData.imageIds || itemData.image_ids || [];
   const images = imageIds
@@ -110,6 +123,7 @@ export function mapCatalogItemToMerchPreview(
 
   return {
     id: item.id,
+    variationId: variation?.id,
     title: itemData.name || "Untitled Product",
     name: itemData.name || "Untitled Product",
     img: images[0],

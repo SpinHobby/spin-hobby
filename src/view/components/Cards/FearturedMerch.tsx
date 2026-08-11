@@ -31,6 +31,7 @@ export function FeaturedMerch(props: Props) {
     isFeatured,
     isNewArrival,
     isPreorder,
+    stockCount,
     additionalClassNames,
     onAddToCart,
     onToggleFavorite,
@@ -43,6 +44,7 @@ export function FeaturedMerch(props: Props) {
   const discount = hasDiscount
     ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
     : discountPercentage;
+  const isSoldOut = stockCount === 0;
 
   const goToDetail = () => {
     if (props.id) navigate(`/product/${props.id}`);
@@ -50,6 +52,7 @@ export function FeaturedMerch(props: Props) {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isSoldOut) return;
     onAddToCart?.(props);
   };
 
@@ -61,6 +64,7 @@ export function FeaturedMerch(props: Props) {
 
   const getBadges = () => {
     const badges = [];
+    if (isSoldOut) badges.push({ text: "Sold out", type: "sold-out" });
     if (isPreorder) badges.push({ text: "Pre-order", type: "preorder" });
     if (isNewArrival) badges.push({ text: "New", type: "new" });
     if (hasDiscount || discount)
@@ -105,7 +109,14 @@ export function FeaturedMerch(props: Props) {
           {isFavorited ? "❤️" : "🤍"}
         </button>
 
-        <button className="cards-featured-merch-cart-btn" onClick={handleAddToCart}>
+        <button
+          className={classNames("cards-featured-merch-cart-btn", {
+            disabled: isSoldOut,
+          })}
+          onClick={handleAddToCart}
+          disabled={isSoldOut}
+          aria-label={isSoldOut ? "Sold out" : "Add to cart"}
+        >
           🛒
         </button>
       </div>

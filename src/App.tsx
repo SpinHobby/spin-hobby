@@ -27,7 +27,6 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import Login from "view/pages/Login";
 import { useBetaSelector } from "./selectors";
 import { Account } from "view/pages/Account";
-import AdminDashboard from "view/pages/Admin";
 import CheckoutSuccess from "view/pages/CheckoutSuccess";
 import SquareCallback from "view/pages/Auth/SquareCallback";
 import SquareWeb from "view/pages/SquareWeb";
@@ -37,6 +36,7 @@ import Events from "view/pages/Events";
 import About from "view/pages/About";
 import NotFound from "view/pages/NotFound";
 import Cashier from "view/pages/Cashier";
+import HomepageAdmin from "view/pages/HomepageAdmin";
 
 let loaded = false;
 
@@ -130,7 +130,6 @@ function App() {
                   <Route path="/product" element={<Product />} />
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/account" element={<Account />} />
-                  <Route path="/admin/*" element={<AdminDashboard />} />
                   <Route
                     path="/auth/square/callback"
                     element={<SquareCallback />}
@@ -140,6 +139,7 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/support" element={<Support />} />
                   <Route path="/cashier" element={<Cashier />} />
+                  <Route path="/homepage-admin" element={<HomepageAdmin />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

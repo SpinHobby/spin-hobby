@@ -26,6 +26,7 @@ export interface IAuthUser {
 
 export interface ICartItem {
   id: string; // Square catalog object id
+  variationId: string; // Square catalog item variation id, needed for inventory adjustments
   name: string;
   price: number;
   imageUrl: string;

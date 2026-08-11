@@ -102,6 +102,16 @@
     }
   }
 
+  .product-detail-sold-out {
+    display: inline-block;
+    margin: 0 0 $spacing-6;
+    padding: $spacing-2 $spacing-3;
+    background: $neutral-800;
+    color: white;
+    border-radius: $border-radius-base;
+    font-weight: $font-weight-semibold;
+  }
+
   .btn-add-to-cart-large {
     width: 100%;
     padding: $spacing-4;
@@ -116,6 +126,11 @@
 
     &:hover {
       background: $primary-700;
+    }
+
+    &:disabled {
+      background: $neutral-400;
+      cursor: not-allowed;
     }
   }
 

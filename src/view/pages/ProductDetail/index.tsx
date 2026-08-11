@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Previewer } from "../Product/ImageSlider/ImageSlider";
-import { getCatalogItem } from "../../../api/square";
+import { getCatalogItem, getInventoryCounts } from "../../../api/square";
 import { addItem } from "../../../reducers";
 import { IMerchPreview } from "../../../ts";
 import "./productDetail.scss";
@@ -29,19 +29,33 @@ export default function ProductDetail() {
       .then((result) => {
         if (!result) {
           setNotFound(true);
-        } else {
-          setProduct(result);
+          return;
+        }
+        setProduct(result);
+        if (result.variationId) {
+          getInventoryCounts([result.variationId])
+            .then((counts) => {
+              if (result.variationId! in counts) {
+                setProduct((current) =>
+                  current ? { ...current, stockCount: counts[result.variationId!] } : current
+                );
+              }
+            })
+            .catch((err) => console.error("Error loading inventory count:", err));
         }
       })
       .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  const isSoldOut = product?.stockCount === 0;
+
   const handleAddToCart = () => {
-    if (!product?.id) return;
+    if (!product?.id || !product.variationId || isSoldOut) return;
     dispatch(
       addItem({
         id: product.id,
+        variationId: product.variationId,
         name: product.title,
         price: product.price,
         imageUrl: product.img,
@@ -96,29 +110,37 @@ export default function ProductDetail() {
             <p className="product-detail-description">{product.description}</p>
           )}
 
-          <div className="product-detail-quantity">
-            <span>Quantity</span>
-            <div className="quantity-controls">
-              <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                disabled={quantity <= 1}
-              >
-                −
-              </button>
-              <input
-                type="number"
-                value={quantity}
-                min={1}
-                onChange={(e) =>
-                  setQuantity(Math.max(1, parseInt(e.target.value) || 1))
-                }
-              />
-              <button onClick={() => setQuantity((q) => q + 1)}>+</button>
+          {isSoldOut ? (
+            <p className="product-detail-sold-out">Sold out</p>
+          ) : (
+            <div className="product-detail-quantity">
+              <span>Quantity</span>
+              <div className="quantity-controls">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  value={quantity}
+                  min={1}
+                  onChange={(e) =>
+                    setQuantity(Math.max(1, parseInt(e.target.value) || 1))
+                  }
+                />
+                <button onClick={() => setQuantity((q) => q + 1)}>+</button>
+              </div>
             </div>
-          </div>
+          )}
 
-          <button className="btn-add-to-cart-large" onClick={handleAddToCart}>
-            {added ? "✓ Added to Cart" : "🛒 Add to Cart"}
+          <button
+            className="btn-add-to-cart-large"
+            onClick={handleAddToCart}
+            disabled={isSoldOut}
+          >
+            {isSoldOut ? "Sold out" : added ? "✓ Added to Cart" : "🛒 Add to Cart"}
           </button>
 
           {added && (

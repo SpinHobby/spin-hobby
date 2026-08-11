@@ -45,10 +45,11 @@ export default function Search() {
   };
 
   const handleAddToCart = (product: IMerchPreview) => {
-    if (!product.id) return;
+    if (!product.id || !product.variationId) return;
     dispatch(
       addItem({
         id: product.id,
+        variationId: product.variationId,
         name: product.title,
         price: product.price,
         imageUrl: product.img,
