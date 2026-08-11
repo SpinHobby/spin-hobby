@@ -5,9 +5,27 @@ const serverUrl =
     ? "https://spin-hobby-server.onrender.com/"
     : "http://localhost:8001/";
 
+// Mirrors PRODUCT_CATEGORIES in the backend's src/services/productCategories.ts.
+export const PRODUCT_CATEGORIES = [
+  "Bishoujo Figures",
+  "Action Figures",
+  "Nendoroids & Chibi Figures",
+  "Plushies",
+  "Keychains & Straps",
+  "Acrylic Stands",
+  "Badges & Pins",
+  "Trading Cards & TCG",
+  "Apparel",
+  "Home Goods",
+  "Posters & Tapestries",
+  "Stationery & Stickers",
+  "Cosplay",
+  "Other",
+] as const;
+
 export function identifyPhoto(
   photo: File
-): Promise<{ title: string; description: string }> {
+): Promise<{ title: string; description: string; category: string }> {
   const formData = new FormData();
   formData.append("photo", photo);
 
@@ -17,7 +35,11 @@ export function identifyPhoto(
       if (!response.data.success) {
         throw new Error(response.data.error || "Could not identify item");
       }
-      return { title: response.data.title, description: response.data.description };
+      return {
+        title: response.data.title,
+        description: response.data.description,
+        category: response.data.category,
+      };
     });
 }
 
@@ -28,6 +50,7 @@ export function recordItem(params: {
   price: number; // dollars
   hidden: boolean;
   quantity?: number; // only used when hidden is false
+  category?: string;
 }): Promise<{ itemId?: string }> {
   const formData = new FormData();
   if (params.photo) formData.append("photo", params.photo);
@@ -38,6 +61,7 @@ export function recordItem(params: {
   if (!params.hidden && params.quantity != null) {
     formData.append("quantity", String(params.quantity));
   }
+  if (params.category) formData.append("category", params.category);
 
   return axios
     .post(`${serverUrl}api/cashier/record`, formData)

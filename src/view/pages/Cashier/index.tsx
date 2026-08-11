@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { identifyPhoto, recordItem } from "api/cashier";
+import { identifyPhoto, recordItem, PRODUCT_CATEGORIES } from "api/cashier";
 import "./cashier.scss";
 
 const CASHIER_PASSWORD = "spinedm26";
@@ -63,6 +63,7 @@ function CashierTool() {
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<string>(PRODUCT_CATEGORIES[0]);
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
   const [error, setError] = useState("");
@@ -83,6 +84,11 @@ function CashierTool() {
       const result = await identifyPhoto(file);
       setTitle(result.title);
       setDescription(result.description);
+      setCategory(
+        (PRODUCT_CATEGORIES as readonly string[]).includes(result.category)
+          ? result.category
+          : PRODUCT_CATEGORIES[0]
+      );
       setPrice("");
       setStep("review");
     } catch (err: any) {
@@ -100,6 +106,7 @@ function CashierTool() {
     setPhotoUrl("");
     setTitle("");
     setDescription("");
+    setCategory(PRODUCT_CATEGORIES[0]);
     setPrice("");
     setQuantity("");
     setError("");
@@ -114,6 +121,7 @@ function CashierTool() {
         photo: photoFile || undefined,
         title,
         description,
+        category,
         price: priceValue,
         hidden: mode === "pos",
         quantity: mode === "website" ? quantityValue : undefined,
@@ -208,6 +216,17 @@ function CashierTool() {
                 placeholder="Short description"
                 rows={3}
               />
+            </label>
+
+            <label className="cashier-field">
+              <span>Category</span>
+              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="cashier-field">

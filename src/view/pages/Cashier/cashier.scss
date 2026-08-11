@@ -111,7 +111,8 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     @include text-body;
     width: 100%;
     box-sizing: border-box;
