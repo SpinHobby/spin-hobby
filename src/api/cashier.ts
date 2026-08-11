@@ -74,3 +74,77 @@ export function recordItem(params: {
       return { itemId: response.data.itemId };
     });
 }
+
+export interface ISearchResultItem {
+  id: string;
+  name: string;
+  priceCents: number;
+  hidden: boolean;
+}
+
+export function searchItemsForEdit(query: string): Promise<ISearchResultItem[]> {
+  return axios
+    .get(`${serverUrl}api/cashier/search`, { params: { q: query } })
+    .then((response) => {
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Search failed");
+      }
+      return response.data.items;
+    });
+}
+
+export interface IEditableItem {
+  id: string;
+  name: string;
+  description: string;
+  priceCents: number;
+  variationId?: string;
+  categoryId?: string;
+  categoryName?: string;
+  hidden: boolean;
+  stockCount: number | null;
+}
+
+export function getItemForEdit(id: string): Promise<IEditableItem> {
+  return axios.get(`${serverUrl}api/cashier/item/${id}`).then((response) => {
+    if (!response.data.success) {
+      throw new Error(response.data.error || "Could not load item");
+    }
+    return response.data.item;
+  });
+}
+
+export function updateItem(
+  id: string,
+  params: {
+    photo?: File;
+    title: string;
+    description: string;
+    price: number; // dollars
+    hidden: boolean;
+    quantity?: number;
+    category?: string;
+    categoryId?: string; // fallback when category isn't one of our canonical names
+  }
+): Promise<{ itemId?: string }> {
+  const formData = new FormData();
+  if (params.photo) formData.append("photo", params.photo);
+  formData.append("title", params.title);
+  formData.append("description", params.description);
+  formData.append("price", String(params.price));
+  formData.append("hidden", String(params.hidden));
+  if (!params.hidden && params.quantity != null) {
+    formData.append("quantity", String(params.quantity));
+  }
+  if (!params.category && params.categoryId) {
+    formData.append("categoryId", params.categoryId);
+  }
+  if (params.category) formData.append("category", params.category);
+
+  return axios.put(`${serverUrl}api/cashier/item/${id}`, formData).then((response) => {
+    if (!response.data.success) {
+      throw new Error(response.data.error || "Could not update item");
+    }
+    return { itemId: response.data.itemId };
+  });
+}

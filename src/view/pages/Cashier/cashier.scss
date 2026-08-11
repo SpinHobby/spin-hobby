@@ -55,6 +55,99 @@
   margin-bottom: $spacing-6;
 }
 
+.cashier-page-tabs {
+  display: flex;
+  gap: $spacing-2;
+  margin-bottom: $spacing-6;
+
+  button {
+    flex: 1;
+    padding: $spacing-3;
+    border: 1px solid $border;
+    border-radius: $border-radius-base;
+    background: $surface;
+    color: $text-secondary;
+    font-size: $font-size-base;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      background: $theme-color-dark;
+      border-color: $theme-color-dark;
+      color: $surface;
+    }
+  }
+}
+
+.cashier-search-form {
+  display: flex;
+  gap: $spacing-2;
+
+  input {
+    @include text-body;
+    flex: 1;
+    padding: $spacing-3;
+    border: 1px solid $border;
+    border-radius: $border-radius-base;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-400;
+    }
+  }
+
+  .cashier-btn {
+    width: auto;
+    padding: $spacing-3 $spacing-4;
+  }
+}
+
+.cashier-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.cashier-search-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-3;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  background: $surface;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover {
+    border-color: $primary-400;
+    background: $surface-secondary;
+  }
+
+  span:first-child {
+    @include text-body-sm;
+    color: $text-primary;
+  }
+}
+
+.cashier-search-result-meta {
+  @include text-caption;
+  color: $text-secondary;
+  white-space: nowrap;
+  margin-left: $spacing-3;
+}
+
+.cashier-checkbox-field {
+  flex-direction: row !important;
+  align-items: center;
+  gap: $spacing-2 !important;
+
+  input {
+    width: auto !important;
+  }
+}
+
 .cashier-hint {
   @include text-body;
   color: $text-secondary;
