@@ -26,10 +26,11 @@
   gap: $spacing-4;
 }
 
-.cashier-mode-toggle {
+.cashier-mode-toggle,
+.cashier-condition-toggle {
   display: flex;
   gap: $spacing-2;
-  margin-bottom: $spacing-6;
+  margin-bottom: $spacing-4;
 
   button {
     flex: 1;
@@ -48,6 +49,10 @@
       color: $surface;
     }
   }
+}
+
+.cashier-mode-toggle {
+  margin-bottom: $spacing-6;
 }
 
 .cashier-hint {

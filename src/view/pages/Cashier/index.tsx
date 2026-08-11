@@ -7,6 +7,7 @@ const AUTH_STORAGE_KEY = "spinhobby_cashier_unlocked";
 
 type Step = "capture" | "loading" | "review" | "saving" | "final" | "error";
 type Mode = "website" | "pos";
+type Condition = "sealed" | "used";
 
 export default function Cashier() {
   const [unlocked, setUnlocked] = useState(
@@ -58,6 +59,7 @@ export default function Cashier() {
 
 function CashierTool() {
   const [mode, setMode] = useState<Mode>("website");
+  const [condition, setCondition] = useState<Condition>("sealed");
   const [step, setStep] = useState<Step>("capture");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string>("");
@@ -122,6 +124,7 @@ function CashierTool() {
         title,
         description,
         category,
+        condition,
         price: priceValue,
         hidden: mode === "pos",
         quantity: mode === "website" ? quantityValue : undefined,
@@ -164,8 +167,25 @@ function CashierTool() {
 
         {step === "capture" && (
           <div className="cashier-step cashier-capture">
+            <div className="cashier-condition-toggle">
+              <button
+                className={condition === "sealed" ? "active" : ""}
+                onClick={() => setCondition("sealed")}
+              >
+                Sealed
+              </button>
+              <button
+                className={condition === "used" ? "active" : ""}
+                onClick={() => setCondition("used")}
+              >
+                Opened / Used
+              </button>
+            </div>
             <p className="cashier-hint">
-              Take a photo of the item. We'll draft a title and description for you to review.
+              {condition === "sealed"
+                ? "Take a close-up photo of the box's front artwork (not the whole box) — that's the manufacturer's own product photo, so it'll look sharp without showing anything that isn't accurate to what's sealed inside."
+                : "Take a clear, well-lit photo of the actual item."}{" "}
+              We'll draft a title and description for you to review.
             </p>
             <button
               className="cashier-btn cashier-btn-primary"

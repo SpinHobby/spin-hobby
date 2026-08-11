@@ -149,6 +149,33 @@
   color: $text-primary;
 }
 
+.homepage-admin-ai-row label {
+  @include text-caption;
+  display: flex;
+  align-items: center;
+  gap: $spacing-1;
+  color: $text-secondary;
+
+  input {
+    width: 70px;
+  }
+}
+
+.homepage-admin-ai-status {
+  @include text-body-sm;
+  font-weight: $font-weight-medium;
+  color: $success-700;
+
+  &.homepage-admin-ai-status-warn {
+    color: $warning-500;
+  }
+
+  &.homepage-admin-ai-status-blocked {
+    color: $error-500;
+    font-weight: $font-weight-semibold;
+  }
+}
+
 .homepage-admin-input {
   @include text-body-sm;
   flex: 1;

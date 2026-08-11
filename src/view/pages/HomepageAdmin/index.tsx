@@ -12,7 +12,7 @@ import {
   removeFeaturedProduct,
 } from "api/homepage";
 import { getCatalog } from "api/square";
-import { getDatabaseStats, IDatabaseStats } from "api/ops";
+import { getDatabaseStats, IDatabaseStats, getAiUsage, updateAiBudget, IAiToolBudget } from "api/ops";
 import { IMerchPreview } from "../../../ts";
 import "./homepageAdmin.scss";
 
@@ -129,39 +129,145 @@ function OpsSection() {
   }, []);
 
   return (
+    <>
+      <AiUsageSection />
+
+      <section className="homepage-admin-section">
+        <h2>Database</h2>
+        <p className="homepage-admin-hint">
+          NeonDB Postgres usage. Free-tier storage limits are enforced by Neon directly -
+          check your Neon dashboard for your plan's exact cap.
+        </p>
+        {error && <p className="homepage-admin-error">{error}</p>}
+        {loading ? (
+          <p>Loading...</p>
+        ) : stats ? (
+          <>
+            <div className="homepage-admin-ops-gauge">
+              <span className="homepage-admin-ops-gauge-value">
+                {formatBytes(stats.totalBytes)}
+              </span>
+              <span className="homepage-admin-ops-gauge-label">total database size</span>
+            </div>
+            <div className="homepage-admin-table">
+              {stats.tables.map((table) => (
+                <div className="homepage-admin-row" key={table.name}>
+                  <span className="homepage-admin-featured-name">{table.name}</span>
+                  <span>{table.rowEstimate.toLocaleString()} rows</span>
+                  <span>{formatBytes(table.bytes)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : null}
+
+        <p className="homepage-admin-hint" style={{ marginTop: "1.5rem" }}>
+          Render (hosting) usage/cost isn't wired up yet - needs an API key from Render's
+          dashboard first.
+        </p>
+      </section>
+    </>
+  );
+}
+
+const AI_TOOL_LABELS: Record<string, string> = {
+  anthropic_cashier: "Anthropic (cashier photo identify)",
+};
+
+function AiUsageSection() {
+  const [tools, setTools] = useState<IAiToolBudget[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [editingTool, setEditingTool] = useState<string | null>(null);
+  const [editWarn, setEditWarn] = useState("");
+  const [editStop, setEditStop] = useState("");
+
+  function load() {
+    setLoading(true);
+    getAiUsage()
+      .then(setTools)
+      .catch((err) => setError(err.message || "Failed to load AI usage"))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(load, []);
+
+  function startEdit(tool: IAiToolBudget) {
+    setEditingTool(tool.tool);
+    setEditWarn(String(tool.warnThresholdUsd));
+    setEditStop(String(tool.stopThresholdUsd));
+  }
+
+  function saveEdit(tool: string) {
+    updateAiBudget(tool, Number(editWarn) || 0, Number(editStop) || 0)
+      .then(() => {
+        setEditingTool(null);
+        load();
+      })
+      .catch((err) => setError(err.message || "Failed to update budget"));
+  }
+
+  return (
     <section className="homepage-admin-section">
-      <h2>Database</h2>
+      <h2>AI Tool Usage & Budgets</h2>
       <p className="homepage-admin-hint">
-        NeonDB Postgres usage. Free-tier storage limits are enforced by Neon directly -
-        check your Neon dashboard for your plan's exact cap.
+        Estimated spend this calendar month. When a tool hits its stop threshold, it's
+        disabled until next month (or until you raise the budget here).
       </p>
       {error && <p className="homepage-admin-error">{error}</p>}
       {loading ? (
         <p>Loading...</p>
-      ) : stats ? (
-        <>
-          <div className="homepage-admin-ops-gauge">
-            <span className="homepage-admin-ops-gauge-value">
-              {formatBytes(stats.totalBytes)}
-            </span>
-            <span className="homepage-admin-ops-gauge-label">total database size</span>
-          </div>
-          <div className="homepage-admin-table">
-            {stats.tables.map((table) => (
-              <div className="homepage-admin-row" key={table.name}>
-                <span className="homepage-admin-featured-name">{table.name}</span>
-                <span>{table.rowEstimate.toLocaleString()} rows</span>
-                <span>{formatBytes(table.bytes)}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      <p className="homepage-admin-hint" style={{ marginTop: "1.5rem" }}>
-        Render (hosting) and Anthropic (cashier AI) usage/cost gauges aren't wired up yet -
-        those need API keys generated from each service's own dashboard first.
-      </p>
+      ) : (
+        <div className="homepage-admin-table">
+          {tools.map((tool) => (
+            <div className="homepage-admin-row homepage-admin-ai-row" key={tool.tool}>
+              <span className="homepage-admin-featured-name">
+                {AI_TOOL_LABELS[tool.tool] || tool.tool}
+              </span>
+              <span className={`homepage-admin-ai-status homepage-admin-ai-status-${tool.status}`}>
+                ${tool.spendUsd.toFixed(2)} / ${tool.stopThresholdUsd.toFixed(2)}
+                {tool.status === "warn" && " — nearing budget"}
+                {tool.status === "blocked" && " — disabled, budget reached"}
+              </span>
+              {editingTool === tool.tool ? (
+                <>
+                  <label>
+                    Warn at $
+                    <input
+                      className="homepage-admin-input homepage-admin-input-narrow"
+                      type="number"
+                      value={editWarn}
+                      onChange={(e) => setEditWarn(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Stop at $
+                    <input
+                      className="homepage-admin-input homepage-admin-input-narrow"
+                      type="number"
+                      value={editStop}
+                      onChange={(e) => setEditStop(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="homepage-admin-btn homepage-admin-btn-primary"
+                    onClick={() => saveEdit(tool.tool)}
+                  >
+                    Save
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="homepage-admin-btn homepage-admin-btn-ghost"
+                  onClick={() => startEdit(tool)}
+                >
+                  Edit budget
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

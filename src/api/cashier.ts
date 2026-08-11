@@ -51,6 +51,7 @@ export function recordItem(params: {
   hidden: boolean;
   quantity?: number; // only used when hidden is false
   category?: string;
+  condition?: "sealed" | "used";
 }): Promise<{ itemId?: string }> {
   const formData = new FormData();
   if (params.photo) formData.append("photo", params.photo);
@@ -62,6 +63,7 @@ export function recordItem(params: {
     formData.append("quantity", String(params.quantity));
   }
   if (params.category) formData.append("category", params.category);
+  if (params.condition) formData.append("condition", params.condition);
 
   return axios
     .post(`${serverUrl}api/cashier/record`, formData)
