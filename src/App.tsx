@@ -37,6 +37,7 @@ import About from "view/pages/About";
 import NotFound from "view/pages/NotFound";
 import Cashier from "view/pages/Cashier";
 import HomepageAdmin from "view/pages/HomepageAdmin";
+import MaintenanceNotice from "view/components/MaintenanceNotice";
 
 let loaded = false;
 
@@ -152,6 +153,7 @@ function App() {
             </Routes>
           )}
           <Modal />
+          <MaintenanceNotice />
           {/* <div className="main">
           <Home />
         </div> */}
