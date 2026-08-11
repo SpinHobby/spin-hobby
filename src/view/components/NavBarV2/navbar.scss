@@ -17,13 +17,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 80px;
-  gap: $spacing-8;
+  height: 60px;
+  gap: $spacing-6;
   overflow: visible !important; // Allow dropdowns to overflow navbar
 
   @include mobile-only {
-    height: 64px;
-    gap: $spacing-4;
+    height: 52px;
+    gap: $spacing-3;
   }
 
   .navbar-title-container {
@@ -39,12 +39,12 @@
       transition: opacity $transition-fast ease-in-out;
 
       img {
-        height: 56px;
+        height: 38px;
         width: auto;
         object-fit: contain;
 
         @include mobile-only {
-          height: 44px;
+          height: 32px;
         }
       }
 
@@ -76,15 +76,15 @@
     .navbar-command {
       @include button-ghost;
       flex-direction: column;
-      gap: $spacing-1;
-      padding: $spacing-2 $spacing-3;
-      min-width: 64px;
+      gap: 2px;
+      padding: $spacing-1 $spacing-2;
+      min-width: 48px;
       height: auto;
       border-radius: $border-radius-base;
 
       @include mobile-only {
-        min-width: 48px;
-        padding: $spacing-2;
+        min-width: 40px;
+        padding: $spacing-1;
       }
 
       .navbar-command-icon-wrap {
@@ -93,10 +93,10 @@
       }
 
       .navbar-command-icon {
-        font-size: 20px;
+        font-size: 17px;
 
         @include mobile-only {
-          font-size: 18px;
+          font-size: 16px;
         }
       }
 
@@ -281,12 +281,12 @@
     align-items: center;
     justify-content: center;
     gap: $spacing-1;
-    padding: $spacing-3 $spacing-4;
+    padding: $spacing-2 $spacing-3;
     background: $neutral-100;
     border-right: 1px solid $border;
     cursor: pointer;
     transition: background-color $transition-fast ease-in-out;
-    min-width: 120px;
+    min-width: 100px;
 
     @include text-body-sm;
     font-weight: $font-weight-medium;
@@ -316,8 +316,8 @@
         width: 100%;
         border: none;
         background: transparent;
-        padding: $spacing-3 $spacing-4;
-        @include text-body;
+        padding: $spacing-2 $spacing-3;
+        @include text-body-sm;
 
         &:focus {
           outline: none;
@@ -387,7 +387,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: $spacing-3;
+    padding: $spacing-2 $spacing-3;
     background: $primary-600;
     color: white;
     cursor: pointer;
@@ -398,7 +398,7 @@
     }
 
     svg {
-      font-size: 18px;
+      font-size: 16px;
     }
   }
 }
@@ -572,12 +572,12 @@
     @include container;
     display: flex;
     align-items: center;
-    gap: $spacing-8;
-    padding: $spacing-3 0;
+    gap: $spacing-4;
+    padding: $spacing-1 0;
 
     @include mobile-only {
-      gap: $spacing-6;
-      padding: $spacing-2 0;
+      gap: $spacing-4;
+      padding: $spacing-1 0;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
@@ -604,9 +604,9 @@
 
   .nav-link {
     @include button-ghost;
-    @include text-body;
+    @include text-body-sm;
     font-weight: $font-weight-medium;
-    padding: $spacing-2 $spacing-4;
+    padding: $spacing-1 $spacing-3;
     border-radius: $border-radius-base;
     transition: all $transition-fast ease-in-out;
     background: none;
@@ -619,8 +619,8 @@
     white-space: nowrap;
 
     @include mobile-only {
-      padding: $spacing-2 $spacing-3;
-      font-size: $font-size-sm;
+      padding: $spacing-1 $spacing-2;
+      font-size: $font-size-xs;
     }
 
     &:hover {
@@ -671,11 +671,11 @@
   border: 1px solid $border;
   border-radius: $border-radius-lg;
   box-shadow: $shadow-lg;
-  min-width: 600px;
-  max-width: 800px;
-  min-height: 400px;
-  max-height: 600px;
-  padding: $spacing-6;
+  min-width: 560px;
+  max-width: 760px;
+  min-height: 280px;
+  max-height: 500px;
+  padding: $spacing-4;
   margin-top: $spacing-1;
 
   @include mobile-only {
@@ -691,11 +691,11 @@
   }
 
   .dropdown-header {
-    @include text-h5;
+    @include text-body;
     font-weight: $font-weight-bold;
     color: $text-primary;
-    margin-bottom: $spacing-4;
-    padding-bottom: $spacing-3;
+    margin-bottom: $spacing-3;
+    padding-bottom: $spacing-2;
     border-bottom: 2px solid $primary-100;
     text-align: center;
   }
@@ -724,14 +724,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: $spacing-5;
-    border-radius: $border-radius-lg;
+    padding: $spacing-3;
+    border-radius: $border-radius-base;
     border: 2px solid transparent;
     background: $surface-secondary;
     cursor: pointer;
     transition: all $transition-base ease-in-out;
     text-align: center;
-    min-height: 80px;
+    min-height: 52px;
 
     @include mobile-only {
       padding: $spacing-4;
@@ -746,14 +746,14 @@
     }
 
     .category-name {
-      @include text-lg;
+      @include text-body-sm;
       font-weight: $font-weight-semibold;
       color: $text-primary;
       margin: 0;
       line-height: 1.3;
 
       @include mobile-only {
-        @include text-body;
+        @include text-caption;
       }
     }
   }

@@ -4,7 +4,7 @@
 // Modern Hero Section Styles
 .hero-section {
   position: relative;
-  min-height: 300px;
+  min-height: 240px;
   background: linear-gradient(135deg, $primary-50 0%, $surface 100%);
   overflow: hidden;
 
@@ -15,13 +15,13 @@
   .hero-container {
     @include container;
     position: relative;
-    height: 300px;
+    height: 240px;
     display: flex;
     align-items: center;
     gap: $spacing-8;
 
     @include tablet-only {
-      height: 250px;
+      height: 220px;
       gap: $spacing-4;
     }
   }
@@ -48,12 +48,12 @@
 
       .hero-headline {
         @include text-h2;
-        margin-bottom: $spacing-3;
-        font-size: $font-size-3xl;
+        margin-bottom: $spacing-2;
+        font-size: $font-size-2xl;
         line-height: 1.2;
 
         @include tablet-only {
-          font-size: $font-size-2xl;
+          font-size: $font-size-xl;
         }
       }
 
@@ -110,13 +110,13 @@
   .hero-image {
     flex: 1;
     position: relative;
-    height: 250px;
+    height: 200px;
     border-radius: $border-radius-lg;
     overflow: hidden;
     box-shadow: $shadow-md;
 
     @include tablet-only {
-      height: 200px;
+      height: 170px;
     }
 
     img {
