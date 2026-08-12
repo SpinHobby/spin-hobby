@@ -4,7 +4,7 @@ export enum Content {
   Summary,
   OrderHistory,
   Address,
-  ChangePassword,
+  LinkedAccounts,
   LogOut,
 }
 

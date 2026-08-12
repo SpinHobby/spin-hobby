@@ -55,6 +55,13 @@ export function postDiscordLogin(code: string, redirectUri: string): Promise<IAu
     });
 }
 
+export function getLinkedProviders(): Promise<string[]> {
+  return axios
+    .get(`${serverUrl}api/auth/me`, { withCredentials: true })
+    .then((response) => (response.data.success ? response.data.linkedProviders || [] : []))
+    .catch(() => []);
+}
+
 export function getMe(): Promise<IAuthUser | null> {
   return axios
     .get(`${serverUrl}api/auth/me`, { withCredentials: true })

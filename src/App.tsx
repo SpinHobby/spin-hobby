@@ -27,6 +27,7 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import Login from "view/pages/Login";
 import { useBetaSelector } from "./selectors";
 import { Account } from "view/pages/Account";
+import Orders from "view/pages/Orders";
 import CheckoutSuccess from "view/pages/CheckoutSuccess";
 import SquareCallback from "view/pages/Auth/SquareCallback";
 import DiscordCallback from "view/pages/Auth/DiscordCallback";
@@ -135,6 +136,8 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/orders/:id" element={<Orders />} />
                   <Route
                     path="/auth/square/callback"
                     element={<SquareCallback />}

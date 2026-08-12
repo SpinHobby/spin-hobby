@@ -1,102 +1,281 @@
+@use "../../../sass/variables" as *;
+@use "../../../sass/mixins" as *;
+
 #account {
   display: flex;
   justify-content: center;
-  color: black;
-  font-style: normal;
-  line-height: normal;
+  color: $text-primary;
+  padding: $spacing-6 $spacing-4;
 
   #account-container {
-    width: 1280px;
+    width: 100%;
+    max-width: 1100px;
 
     #account-header {
-      height: 51px;
+      @include text-h4;
       text-align: center;
-      vertical-align: middle;
-      line-height: 51px;
-      font-family: Arial;
-      font-size: 20px;
-      font-style: normal;
-      font-weight: 400;
-      margin-top: 4px;
-      margin-bottom: 20px;
+      margin-bottom: $spacing-6;
     }
 
     #account-content {
       display: flex;
       flex-direction: row;
-      justify-content: space-between;
+      gap: $spacing-8;
+
+      @include mobile-only {
+        flex-direction: column;
+        gap: $spacing-4;
+      }
 
       .account-side-title {
-        display: flex;
-        width: 278px;
-        height: 24px;
-        flex-direction: column;
-        justify-content: center;
-        flex-shrink: 0;
-        font-size: 16px;
-        font-weight: 400;
+        @include text-body;
+        font-weight: $font-weight-medium;
+        margin-bottom: $spacing-4;
       }
 
       #account-menu {
-        width: 31%;
-        -webkit-user-select: none;
+        width: 260px;
+        flex-shrink: 0;
         user-select: none;
 
+        @include mobile-only {
+          width: 100%;
+        }
+
         #account-menu-index {
-          width: 371px;
-          height: 205px;
-          flex-shrink: 0;
-          border: solid 1px black;
-          padding: 18px 16px 15.68px 19px;
+          border: 1px solid $border;
+          border-radius: $border-radius-lg;
+          padding: $spacing-3;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
+          gap: $spacing-1;
+
+          @include mobile-only {
+            flex-direction: row;
+            overflow-x: auto;
+          }
 
           .account-menu-item {
-            font-size: 15px;
+            @include text-body-sm;
             display: flex;
             flex-direction: row;
+            align-items: center;
             justify-content: space-between;
+            gap: $spacing-2;
+            padding: $spacing-2 $spacing-3;
+            border-radius: $border-radius-base;
+            white-space: nowrap;
           }
 
           .account-menu-item-selected {
-            font-weight: 800;
+            font-weight: $font-weight-semibold;
+            background: $primary-50;
+            color: $primary-700;
             cursor: default;
           }
 
           .account-menu-item-unselected {
-            font-weight: 400;
+            font-weight: $font-weight-normal;
             cursor: pointer;
+            color: $text-secondary;
+
+            &:hover {
+              background: $surface-secondary;
+            }
           }
         }
       }
 
       #account-content-right {
-        width: 68%;
+        flex: 1;
+        min-width: 0;
       }
+
       #account-details {
         width: 100%;
 
-        #account-summary {
-          //
-        }
-
-        #account-history {
-          //
-        }
-
-        #account-address {
-          //
-        }
-
-        #account-password {
-          //
-        }
-
-        #account-logout {
-          //
+        h3 {
+          @include text-h5;
+          margin: $spacing-6 0 $spacing-3;
         }
       }
     }
   }
+}
+
+.account-summary-line {
+  @include text-body-sm;
+  margin: 0 0 $spacing-2;
+}
+
+.account-error {
+  @include text-body-sm;
+  color: $error-500;
+  background: rgba($error-500, 0.08);
+  border-radius: $border-radius-base;
+  padding: $spacing-3;
+  margin-bottom: $spacing-4;
+}
+
+.account-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.account-order-row {
+  display: flex;
+  justify-content: space-between;
+  padding: $spacing-3;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  text-decoration: none;
+  color: $text-primary;
+
+  &:hover {
+    background: $surface-secondary;
+  }
+}
+
+.account-order-card {
+  display: block;
+  padding: $spacing-4;
+  border: 1px solid $border;
+  border-radius: $border-radius-lg;
+  text-decoration: none;
+  color: $text-primary;
+
+  &:hover {
+    border-color: $primary-400;
+  }
+}
+
+.account-order-card-header {
+  display: flex;
+  gap: $spacing-3;
+  flex-wrap: wrap;
+  @include text-body-sm;
+  color: $text-secondary;
+  margin-bottom: $spacing-2;
+}
+
+.account-order-status {
+  text-transform: capitalize;
+  color: $success-700;
+  font-weight: $font-weight-medium;
+}
+
+.account-order-card-items {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+  @include text-body-sm;
+  margin-bottom: $spacing-2;
+}
+
+.account-order-card-total {
+  font-weight: $font-weight-semibold;
+}
+
+.account-address-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+  margin-bottom: $spacing-4;
+}
+
+.account-address-card {
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  padding: $spacing-3;
+  @include text-body-sm;
+
+  > div {
+    margin-bottom: $spacing-1;
+  }
+}
+
+.account-address-default {
+  @include text-caption;
+  color: $primary-600;
+  font-weight: $font-weight-medium;
+}
+
+.account-address-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+  max-width: 400px;
+
+  input {
+    padding: $spacing-2 $spacing-3;
+    border: 1px solid $border;
+    border-radius: $border-radius-base;
+    @include text-body-sm;
+  }
+}
+
+.account-checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  @include text-body-sm;
+
+  input {
+    width: auto;
+  }
+}
+
+.account-address-form-actions {
+  display: flex;
+  gap: $spacing-2;
+  margin-top: $spacing-2;
+}
+
+.account-btn-primary,
+.account-btn-ghost {
+  padding: $spacing-2 $spacing-4;
+  border-radius: $border-radius-base;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+}
+
+.account-btn-primary {
+  background: $primary-600;
+  color: white;
+  border: none;
+
+  &:hover {
+    background: $primary-700;
+  }
+}
+
+.account-btn-ghost {
+  background: transparent;
+  border: 1px solid $border;
+  color: $text-secondary;
+
+  &:hover {
+    background: $surface-secondary;
+  }
+}
+
+.account-provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.account-provider-row {
+  display: flex;
+  justify-content: space-between;
+  padding: $spacing-3;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+}
+
+.account-provider-connected {
+  color: $success-700;
+  font-weight: $font-weight-medium;
 }

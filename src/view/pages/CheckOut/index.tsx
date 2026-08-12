@@ -459,22 +459,27 @@ export default function CheckOut() {
       }
 
       const amountCents = Math.round(calculateSubTotal(cart) * 100);
+      const shippingAddress = sameAsBillingAddress ? billingInputs : shippingInputs;
       const payment = await createPayment({
         sourceId: tokenResult.token,
         amount: amountCents,
         currency: "CAD",
         items: cart.items.map((i) => ({
+          itemId: i.id,
           variationId: i.variationId,
           quantity: i.quantity,
         })),
+        billing: billingInputs,
+        shipping: shippingAddress,
       });
 
       dispatch(clearCart());
 
       const params = new URLSearchParams({
-        orderId: payment.id,
+        orderId: payment.orderId ? String(payment.orderId) : "",
         paymentId: payment.id,
         amount: (amountCents / 100).toFixed(2),
+        email: billingInputs.email,
       });
       navigate(`/checkout/success?${params.toString()}`);
     } catch (error: any) {

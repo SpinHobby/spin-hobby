@@ -1,0 +1,112 @@
+@use "../../../sass/variables" as *;
+@use "../../../sass/mixins" as *;
+
+.orders-page {
+  min-height: 60vh;
+  padding: $spacing-6 $spacing-4;
+  display: flex;
+  justify-content: center;
+}
+
+.orders-container {
+  width: 100%;
+  max-width: 600px;
+
+  h1 {
+    @include text-h3;
+    margin-bottom: $spacing-4;
+  }
+}
+
+.orders-meta {
+  @include text-body-sm;
+  color: $text-secondary;
+  margin-bottom: $spacing-4;
+}
+
+.orders-items {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+  border-top: 1px solid $border;
+  border-bottom: 1px solid $border;
+  padding: $spacing-4 0;
+  margin-bottom: $spacing-4;
+}
+
+.orders-item-row {
+  display: flex;
+  justify-content: space-between;
+  @include text-body-sm;
+}
+
+.orders-total {
+  @include text-h5;
+  text-align: right;
+  margin-bottom: $spacing-6;
+}
+
+.orders-address h3 {
+  @include text-body;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-2;
+}
+
+.orders-address p {
+  @include text-body-sm;
+  color: $text-secondary;
+  line-height: 1.6;
+}
+
+.orders-list-row {
+  display: flex;
+  justify-content: space-between;
+  padding: $spacing-3;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  text-decoration: none;
+  color: $text-primary;
+  margin-bottom: $spacing-2;
+
+  &:hover {
+    background: $surface-secondary;
+  }
+}
+
+.orders-error {
+  @include text-body-sm;
+  color: $error-500;
+  background: rgba($error-500, 0.08);
+  padding: $spacing-3;
+  border-radius: $border-radius-base;
+  margin-bottom: $spacing-4;
+}
+
+.orders-lookup-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+  max-width: 360px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2;
+
+    span {
+      @include text-body-sm;
+      font-weight: $font-weight-medium;
+    }
+
+    input {
+      padding: $spacing-3;
+      border: 1px solid $border;
+      border-radius: $border-radius-base;
+    }
+  }
+}
+
+.orders-lookup-btn {
+  @include button-primary;
+  padding: $spacing-3 $spacing-4;
+}

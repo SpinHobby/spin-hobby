@@ -3,13 +3,15 @@ import { Menu } from "./Menu";
 import { Summary } from "./Summary";
 import { History } from "./History";
 import { Address } from "./Address";
-import { Password } from "./Password";
+import { LinkedAccounts } from "./LinkedAccounts";
 import { LogOut } from "./LogOut";
 import { Content } from "./types";
 import { menuItems } from "./constants";
+import { useUserSelector } from "../../../selectors";
 
 export function Account() {
   const [content, setContent] = useState<Content>(Content.Summary);
+  const { user } = useUserSelector();
 
   function getDetails() {
     switch (content) {
@@ -19,14 +21,16 @@ export function Account() {
         return <History />;
       case Content.Address:
         return <Address />;
-      case Content.ChangePassword:
-        return <Password />;
+      case Content.LinkedAccounts:
+        return <LinkedAccounts />;
       case Content.LogOut:
         return <LogOut />;
       default:
         return null;
     }
   }
+
+  const welcomeName = user?.fname || user?.email || "there";
 
   return (
     <div id="account">
@@ -37,9 +41,7 @@ export function Account() {
         <div id="account-content">
           <Menu content={content} onChange={(content) => setContent(content)} />
           <div id="account-content-right">
-            <div className="account-side-title">
-              Welcome, Firstname FamilyNAME
-            </div>
+            <div className="account-side-title">Welcome, {welcomeName}</div>
             <div id="account-details">{getDetails()}</div>
           </div>
         </div>

@@ -78,19 +78,31 @@ export function buildImageMap(relatedObjects: any[]): Map<string, string> {
   return map;
 }
 
+export interface ICheckoutAddress {
+  name: { first: string; last: string };
+  address: { primary: string; secondary?: string };
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  phone?: string;
+}
+
 export function createPayment(params: {
   sourceId: string;
   amount: number; // smallest currency unit, e.g. cents
   currency?: string;
-  items?: { variationId: string; quantity: number }[];
-}): Promise<{ id: string; status: string; receiptUrl?: string }> {
+  items?: { itemId: string; variationId: string; quantity: number }[];
+  billing?: ICheckoutAddress & { email: string };
+  shipping?: ICheckoutAddress;
+}): Promise<{ id: string; status: string; receiptUrl?: string; orderId?: number }> {
   return axios
-    .post(`${serverUrl}api/square/payments`, params)
+    .post(`${serverUrl}api/square/payments`, params, { withCredentials: true })
     .then((response) => {
       if (!response.data.success) {
         throw new Error(response.data.error || "Payment failed");
       }
-      return response.data.payment;
+      return { ...response.data.payment, orderId: response.data.orderId };
     });
 }
 

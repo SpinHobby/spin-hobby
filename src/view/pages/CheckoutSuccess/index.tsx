@@ -2,10 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { clearCart } from "../../../reducers";
+import { useUserSelector } from "../../../selectors";
 
 export default function CheckoutSuccess() {
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
+  const { isAuthenticated, user } = useUserSelector();
+  const isCustomer = isAuthenticated && user?.authType !== "square";
   const [orderInfo, setOrderInfo] = useState<any>(null);
 
   useEffect(() => {
@@ -16,15 +19,25 @@ export default function CheckoutSuccess() {
     const orderId = searchParams.get("orderId");
     const paymentId = searchParams.get("paymentId");
     const amount = searchParams.get("amount");
+    const email = searchParams.get("email");
 
     if (orderId || paymentId) {
       setOrderInfo({
         orderId,
         paymentId,
         amount,
+        email,
       });
     }
   }, [searchParams, dispatch]);
+
+  const ordersLink = orderInfo
+    ? isCustomer && orderInfo.orderId
+      ? `/orders/${orderInfo.orderId}`
+      : `/orders?paymentId=${encodeURIComponent(orderInfo.paymentId || "")}&email=${encodeURIComponent(
+          orderInfo.email || ""
+        )}`
+    : "/orders";
 
   return (
     <div className="checkout-success">
@@ -71,8 +84,8 @@ export default function CheckoutSuccess() {
           <Link to="/" className="btn btn-primary">
             Continue Shopping
           </Link>
-          <Link to="/orders" className="btn btn-secondary">
-            View Orders
+          <Link to={ordersLink} className="btn btn-secondary">
+            View Order
           </Link>
         </div>
 
