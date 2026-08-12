@@ -9,6 +9,7 @@ interface Props extends IMerchPreview {
   additionalClassNames?: string;
   isCompact?: boolean;
   showQuickView?: boolean;
+  isFavorited?: boolean;
   onAddToCart?: (product: IMerchPreview) => void;
   onQuickView?: (product: IMerchPreview) => void;
   onToggleFavorite?: (product: IMerchPreview) => void;
@@ -17,7 +18,6 @@ interface Props extends IMerchPreview {
 export function FeaturedMerch(props: Props) {
   const currency = useCurrencySelector();
   const navigate = useNavigate();
-  const [isFavorited, setIsFavorited] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const {
@@ -32,6 +32,7 @@ export function FeaturedMerch(props: Props) {
     isNewArrival,
     isPreorder,
     stockCount,
+    isFavorited = false,
     additionalClassNames,
     onAddToCart,
     onToggleFavorite,
@@ -58,7 +59,6 @@ export function FeaturedMerch(props: Props) {
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFavorited(!isFavorited);
     onToggleFavorite?.(props);
   };
 

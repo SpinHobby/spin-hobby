@@ -6,6 +6,7 @@ import { getSearch, addItem } from "../../../reducers";
 import { FeaturedMerch } from "../../components/Cards";
 import { Ripple } from "../../components/Buttons";
 import { IMerchPreview } from "../../../ts";
+import { useWishlist } from "../../../hooks/useWishlist";
 
 export default function Search() {
   const dispatch = useDispatch();
@@ -62,10 +63,7 @@ export default function Search() {
     // TODO: Implement quick view modal
   };
 
-  const handleToggleFavorite = (product: IMerchPreview) => {
-    console.log("Toggle favorite:", product);
-    // TODO: Implement favorites functionality
-  };
+  const { isFavorited, toggleFavorite: handleToggleFavorite } = useWishlist();
 
   const popularSuggestions = [
     "Demon Slayer",
@@ -148,6 +146,7 @@ export default function Search() {
                     onAddToCart={handleAddToCart}
                     onQuickView={handleQuickView}
                     onToggleFavorite={handleToggleFavorite}
+                    isFavorited={isFavorited(result.id)}
                   />
                 </Ripple>
               ))}

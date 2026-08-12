@@ -6,6 +6,7 @@ import { Ripple } from "../../components/Buttons";
 import { IMerchPreview } from "../../../ts";
 import { addItem } from "../../../reducers";
 import { getCatalog } from "../../../api/square";
+import { useWishlist } from "../../../hooks/useWishlist";
 
 interface ProductsPageProps {}
 
@@ -104,10 +105,7 @@ export default function Product() {
     // TODO: Implement quick view modal
   };
 
-  const handleToggleFavorite = (product: IMerchPreview) => {
-    console.log("Toggle favorite:", product);
-    // TODO: Implement favorites functionality
-  };
+  const { isFavorited, toggleFavorite: handleToggleFavorite } = useWishlist();
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -245,6 +243,7 @@ export default function Product() {
                     onAddToCart={handleAddToCart}
                     onQuickView={handleQuickView}
                     onToggleFavorite={handleToggleFavorite}
+                    isFavorited={isFavorited(product.id)}
                   />
                 </Ripple>
               ))}

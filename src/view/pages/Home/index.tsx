@@ -8,6 +8,7 @@ import { getCatalog, getInventoryCounts } from "../../../api/square";
 import { getHomepageContent, IHeroSlideContent } from "../../../api/homepage";
 import { IMerchPreview, IGroupedMerchPreview, ICategory } from "../../../ts";
 import { EBAY_STORE_URL } from "../../../ts/constants";
+import { useWishlist } from "../../../hooks/useWishlist";
 
 // Placeholder announcement/promo slides. Swap for real admin-managed content later.
 const PLACEHOLDER_SLIDES: Omit<ISlide, "img">[] = [
@@ -110,6 +111,8 @@ export default function Home() {
       });
   }, []);
 
+  const { isFavorited, toggleFavorite } = useWishlist();
+
   const handleAddToCart = (product: IMerchPreview) => {
     if (!product.id || !product.variationId) return;
     dispatch(
@@ -170,7 +173,12 @@ export default function Home() {
           <div className="products-grid">
             {products.map((product, index) => (
               <Ripple key={product.id || index} classes="product-card-ripple">
-                <FeaturedMerch {...product} onAddToCart={handleAddToCart} />
+                <FeaturedMerch
+                  {...product}
+                  onAddToCart={handleAddToCart}
+                  isFavorited={isFavorited(product.id)}
+                  onToggleFavorite={toggleFavorite}
+                />
               </Ripple>
             ))}
           </div>
