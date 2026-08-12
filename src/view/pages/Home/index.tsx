@@ -7,6 +7,7 @@ import { addItem } from "../../../reducers";
 import { getCatalog, getInventoryCounts } from "../../../api/square";
 import { getHomepageContent, IHeroSlideContent } from "../../../api/homepage";
 import { IMerchPreview, IGroupedMerchPreview, ICategory } from "../../../ts";
+import { EBAY_STORE_URL } from "../../../ts/constants";
 
 // Placeholder announcement/promo slides. Swap for real admin-managed content later.
 const PLACEHOLDER_SLIDES: Omit<ISlide, "img">[] = [
@@ -51,6 +52,14 @@ function ErrorMessage({ error }: { error: any }) {
         <p>
           We couldn't load the catalog. Please try refreshing the page.
         </p>
+        <a
+          href={EBAY_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="home-error-ebay-link"
+        >
+          In the meantime, shop our eBay store →
+        </a>
         <details>
           <summary>Error details</summary>
           <pre>{JSON.stringify(error?.message || error, null, 2)}</pre>

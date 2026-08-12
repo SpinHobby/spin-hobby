@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { subscribeBackendStatus } from "../../../utils/maintenanceStatus";
+import { EBAY_STORE_URL } from "../../../ts/constants";
 import "./maintenanceNotice.scss";
 
 const serverUrl =
@@ -46,6 +47,14 @@ export default function MaintenanceNotice() {
         >
           Retry Now
         </button>
+        <a
+          href={EBAY_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="maintenance-ebay-link"
+        >
+          Or shop our eBay store in the meantime →
+        </a>
       </div>
     </div>
   );

@@ -50,3 +50,16 @@
     background: $primary-700;
   }
 }
+
+.maintenance-ebay-link {
+  display: block;
+  margin-top: $spacing-4;
+  color: $primary-600;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
