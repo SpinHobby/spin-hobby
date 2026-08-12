@@ -20,7 +20,10 @@ export interface IAuthUser {
   username?: string;
   merchantId?: string;
   businessName?: string;
-  authType: "standard" | "square" | "google";
+  fname?: string;
+  lname?: string;
+  avatarUrl?: string;
+  authType: "standard" | "square" | "google" | "discord";
   loginAt: string;
 }
 

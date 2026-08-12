@@ -1,127 +1,66 @@
-import React, { FormEvent, useState } from "react";
+import React from "react";
 import { useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
-import { logoutBeta, requestLoginBeta } from "../../../reducers";
-import { useAwaitLoginSelector, useBetaSelector } from "../../../selectors";
-import { ILogin } from "../../../ts";
-
-const USERNAME = "username";
-const PASSWORD = "password";
+import { Navigate, useSearchParams } from "react-router-dom";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { requestOAuthLogin } from "../../../reducers";
+import { useUserSelector } from "../../../selectors";
+import { GOOGLE_CLIENT_ID, DISCORD_CLIENT_ID, DISCORD_REDIRECT_URI } from "../../../ts/constants";
+import "./login.scss";
 
 export default function Login() {
   const dispatch = useDispatch();
-  const beta = useBetaSelector();
-  const loggingIn = useAwaitLoginSelector();
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [inputs, setInputs] = useState<ILogin>({
-    username: "",
-    password: "",
-  });
-  const [hasAttempted, setHasAttempted] = useState<boolean>(false);
+  const { isAuthenticated, user, awaitingLoginRes } = useUserSelector();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/account";
 
-  if (beta) {
-    return (
-      <div className="login-page">
-        <div className="login-container">
-          <div className="beta-success">
-            <h4>You are now logged in as beta user!</h4>
-            <h5>The following pages are available for beta users</h5>
-            <div className="beta-links">
-              <Link to="/">🏠 spinhobby.com</Link>
-              <Link to="/cart">🛒 spinhobby.com/cart</Link>
-              <Link to="/checkout">💳 spinhobby.com/checkout</Link>
-              <Link to="/search">🔍 spinhobby.com/search</Link>
-              <Link to="/product">📦 spinhobby.com/product</Link>
-              <Link to="/admin" className="admin-link">
-                ⚙️ Admin Dashboard
-              </Link>
-            </div>
-            <button
-              className="logout-btn"
-              onClick={() => dispatch(logoutBeta())}
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  if (isAuthenticated && user?.authType !== "square") {
+    return <Navigate to={redirect} replace />;
+  }
+
+  function handleDiscordLogin() {
+    if (!DISCORD_CLIENT_ID) return;
+    sessionStorage.setItem("post_login_redirect", redirect);
+    const params = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      redirect_uri: DISCORD_REDIRECT_URI,
+      response_type: "code",
+      scope: "identify email",
+    });
+    window.location.href = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
   }
 
   return (
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>Beta Access</h1>
-          <p>Enter your credentials to access the beta version</p>
+          <h1>Sign In</h1>
+          <p>Track orders, save favorites, and check out faster.</p>
         </div>
 
-        <div className="login-form">
-          {loggingIn && <div className="loading-message">Logging in...</div>}
+        <div className="login-oauth-buttons">
+          <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                if (!credentialResponse.credential) return;
+                dispatch(
+                  requestOAuthLogin({
+                    provider: "google",
+                    idToken: credentialResponse.credential,
+                  })
+                );
+              }}
+              onError={() => console.error("Google sign-in failed")}
+              width="320"
+            />
+          </GoogleOAuthProvider>
 
-          {hasAttempted && !loggingIn && (
-            <div className="error-message">
-              Incorrect username and/or password
-            </div>
+          {DISCORD_CLIENT_ID && (
+            <button className="login-discord-btn" onClick={handleDiscordLogin}>
+              Sign in with Discord
+            </button>
           )}
 
-          <form
-            onSubmit={(e: FormEvent<HTMLFormElement>) => {
-              e.preventDefault();
-              dispatch(requestLoginBeta(inputs));
-              setHasAttempted(true);
-            }}
-          >
-            <div className="form-group">
-              <label htmlFor={USERNAME}>Username</label>
-              <input
-                id={USERNAME}
-                name={USERNAME}
-                type="text"
-                value={inputs.username}
-                onChange={(e) =>
-                  setInputs(({ password }) => ({
-                    username: e.target.value,
-                    password,
-                  }))
-                }
-                placeholder="Enter your username"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor={PASSWORD}>Password</label>
-              <input
-                id={PASSWORD}
-                name={PASSWORD}
-                type={showPassword ? "text" : "password"}
-                value={inputs.password}
-                onChange={(e) =>
-                  setInputs(({ username }) => ({
-                    username,
-                    password: e.target.value,
-                  }))
-                }
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-
-            <div className="checkbox-group">
-              <input
-                id="show-password"
-                type="checkbox"
-                checked={showPassword}
-                onChange={(e) => setShowPassword(e.target.checked)}
-              />
-              <label htmlFor="show-password">Show password</label>
-            </div>
-
-            <button type="submit" className="submit-btn" disabled={loggingIn}>
-              {loggingIn ? "Logging in..." : "Login"}
-            </button>
-          </form>
+          {awaitingLoginRes && <p className="login-status">Signing in...</p>}
         </div>
       </div>
     </div>

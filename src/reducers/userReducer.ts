@@ -90,6 +90,15 @@ const userSlice = createSlice({
 
 export const requestLoginBeta = createAction<ILogin>("user/requestLoginBeta");
 
+export const requestOAuthLogin = createAction<{
+  provider: "google" | "discord";
+  idToken?: string; // google
+  code?: string; // discord
+  redirectUri?: string; // discord
+}>("user/requestOAuthLogin");
+
+export const requestLogout = createAction("user/requestLogout");
+
 export const {
   login,
   loginSquare,

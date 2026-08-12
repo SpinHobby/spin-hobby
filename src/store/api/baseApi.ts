@@ -10,6 +10,10 @@ export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
     baseUrl: serverUrl,
+    // Customer auth rides an httpOnly session cookie (credentials: "include"
+    // so it's sent cross-origin); the merchant/admin flow still uses its own
+    // Bearer token below - the two are separate trust domains that coexist.
+    credentials: "include",
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("spinHobby_token");
       if (token) {
@@ -18,7 +22,7 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Home", "Product", "Category", "Series", "Character"],
+  tagTypes: ["Home", "Product", "Category", "Series", "Character", "Orders", "Wishlist"],
   endpoints: () => ({}),
 });
 

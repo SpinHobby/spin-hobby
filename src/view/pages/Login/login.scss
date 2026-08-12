@@ -99,6 +99,35 @@
     }
   }
 
+  .login-oauth-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-3;
+  }
+
+  .login-discord-btn {
+    @include button-base;
+    width: 320px;
+    max-width: 100%;
+    padding: $spacing-3 $spacing-4;
+    background: #5865f2;
+    color: white;
+    border: none;
+    border-radius: $border-radius-base;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+
+    &:hover {
+      background: #4752c4;
+    }
+  }
+
+  .login-status {
+    @include text-body-sm;
+    color: $text-secondary;
+  }
+
   .login-form {
     .error-message {
       @include text-body-sm;

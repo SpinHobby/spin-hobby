@@ -29,6 +29,8 @@ import { useBetaSelector } from "./selectors";
 import { Account } from "view/pages/Account";
 import CheckoutSuccess from "view/pages/CheckoutSuccess";
 import SquareCallback from "view/pages/Auth/SquareCallback";
+import DiscordCallback from "view/pages/Auth/DiscordCallback";
+import ProtectedRoute from "view/components/ProtectedRoute";
 import SquareWeb from "view/pages/SquareWeb";
 import Contact from "view/pages/Contact";
 import Support from "view/pages/Support";
@@ -125,10 +127,21 @@ function App() {
                   <Route path="/search" element={<Search />} />
                   <Route path="/product" element={<Product />} />
                   <Route path="/product/:id" element={<ProductDetail />} />
-                  <Route path="/account" element={<Account />} />
+                  <Route
+                    path="/account"
+                    element={
+                      <ProtectedRoute>
+                        <Account />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="/auth/square/callback"
                     element={<SquareCallback />}
+                  />
+                  <Route
+                    path="/auth/discord/callback"
+                    element={<DiscordCallback />}
                   />
                   <Route path="/events" element={<Events />} />
                   <Route path="/about" element={<About />} />

@@ -1,10 +1,15 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import SquareAuthService from "../api/squareAuth";
+import { getMe } from "../api/customerAuth";
 import { initializeAuth } from "../reducers/userReducer";
 
 /**
- * Hook to initialize authentication state on app load
+ * Hook to initialize authentication state on app load. Runs two independent
+ * checks - merchant/admin (Square OAuth, localStorage token) and customer
+ * (OAuth login, httpOnly session cookie). These are different trust domains
+ * and never satisfy each other; whichever one actually has a valid session
+ * wins (in practice only one will, since they're used on different pages).
  */
 export const useAuthInit = () => {
   const dispatch = useDispatch();
@@ -19,30 +24,30 @@ export const useAuthInit = () => {
       const user = SquareAuthService.getUser();
 
       if (token && user) {
-        // Check if token is still valid
         const isValid = await SquareAuthService.verifyToken();
-
         if (isValid) {
-          // Try to refresh token if needed
           await SquareAuthService.refreshTokenIfNeeded();
-
-          // Initialize auth state
           dispatch(initializeAuth({ user, token }));
-        } else {
-          // Token is invalid, clear auth state
-          SquareAuthService.logout();
-          dispatch(initializeAuth(null));
+          return;
         }
-      } else {
-        // No auth data found
-        dispatch(initializeAuth(null));
+        SquareAuthService.logout();
       }
     } catch (error) {
-      console.error("Error initializing auth state:", error);
-      // Clear potentially invalid auth data
+      console.error("Error initializing merchant auth state:", error);
       SquareAuthService.logout();
-      dispatch(initializeAuth(null));
     }
+
+    try {
+      const customer = await getMe();
+      if (customer) {
+        dispatch(initializeAuth({ user: customer, token: "" }));
+        return;
+      }
+    } catch (error) {
+      console.error("Error initializing customer auth state:", error);
+    }
+
+    dispatch(initializeAuth(null));
   };
 };
 
