@@ -39,12 +39,12 @@
       transition: opacity $transition-fast ease-in-out;
 
       img {
-        height: 38px;
+        height: 50px;
         width: auto;
         object-fit: contain;
 
         @include mobile-only {
-          height: 32px;
+          height: 42px;
         }
       }
 
