@@ -3,13 +3,17 @@ import { IconType } from "react-icons";
 import { FaInstagram, FaDiscord } from "react-icons/fa";
 import { RiShoppingCart2Line } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
+import classNames from "classnames";
 import { useCartSelector } from "../../../selectors";
+import UserMenu from "./UserMenu";
+import ThemeToggle from "./ThemeToggle";
 
 interface INavBarCommand {
   label: string;
   icon: IconType;
   onClick: () => void;
   badge?: number;
+  className?: string;
 }
 
 export default function Commands() {
@@ -37,15 +41,25 @@ export default function Commands() {
       onClick: navigateToCart,
       badge: cartCount,
     },
-    { label: "Discord", icon: FaDiscord, onClick: navigateToDiscord },
-    { label: "Instagram", icon: FaInstagram, onClick: navigateToInstagram },
+    {
+      label: "Discord",
+      icon: FaDiscord,
+      onClick: navigateToDiscord,
+      className: "navbar-command-discord",
+    },
+    {
+      label: "Instagram",
+      icon: FaInstagram,
+      onClick: navigateToInstagram,
+      className: "navbar-command-instagram",
+    },
   ];
 
   function getCommandButtons(commands: INavBarCommand[]) {
     return commands.map((command, index) => (
       <div
         key={`navbar-command-${index}-${command.label}`}
-        className="navbar-command"
+        className={classNames("navbar-command", command.className)}
         onClick={command.onClick}
       >
         <span className="navbar-command-icon-wrap">
@@ -59,5 +73,11 @@ export default function Commands() {
     ));
   }
 
-  return <div className="navbar-commands">{getCommandButtons(commands)}</div>;
+  return (
+    <div className="navbar-commands">
+      <UserMenu />
+      {getCommandButtons(commands)}
+      <ThemeToggle />
+    </div>
+  );
 }

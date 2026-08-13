@@ -5,6 +5,7 @@ import { Previewer } from "../Product/ImageSlider/ImageSlider";
 import { getCatalogItem, getInventoryCounts } from "../../../api/square";
 import { addItem } from "../../../reducers";
 import { IMerchPreview } from "../../../ts";
+import { useWishlist } from "../../../hooks/useWishlist";
 import "./productDetail.scss";
 
 export default function ProductDetail() {
@@ -17,6 +18,7 @@ export default function ProductDetail() {
   const [notFound, setNotFound] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const { isFavorited, toggleFavorite } = useWishlist();
 
   useEffect(() => {
     if (!id) return;
@@ -135,13 +137,25 @@ export default function ProductDetail() {
             </div>
           )}
 
-          <button
-            className="btn-add-to-cart-large"
-            onClick={handleAddToCart}
-            disabled={isSoldOut}
-          >
-            {isSoldOut ? "Sold out" : added ? "✓ Added to Cart" : "🛒 Add to Cart"}
-          </button>
+          <div className="product-detail-actions">
+            <button
+              className="btn-add-to-cart-large"
+              onClick={handleAddToCart}
+              disabled={isSoldOut}
+            >
+              {isSoldOut ? "Sold out" : added ? "✓ Added to Cart" : "🛒 Add to Cart"}
+            </button>
+
+            <button
+              className={`btn-wishlist${isFavorited(product.id) ? " favorited" : ""}`}
+              onClick={() => toggleFavorite(product)}
+              aria-label={
+                isFavorited(product.id) ? "Remove from wishlist" : "Add to wishlist"
+              }
+            >
+              {isFavorited(product.id) ? "❤️" : "🤍"}
+            </button>
+          </div>
 
           {added && (
             <Link to="/cart" className="view-cart-link">

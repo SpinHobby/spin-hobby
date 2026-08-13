@@ -17,15 +17,19 @@ export default function Search() {
 
   const query = searchParams.get("q") || "";
   const category = searchParams.get("category") || "All Categories";
+  const categoryIdsParam = searchParams.get("categoryIds") || "";
+  const categoryName = searchParams.get("categoryName") || "";
+  const categoryIds = categoryIdsParam ? categoryIdsParam.split(",").filter(Boolean) : [];
 
   useEffect(() => {
-    if (query.trim().length > 0) {
+    if (query.trim().length > 0 || categoryIds.length > 0) {
       setIsLoading(true);
       dispatch(
         getSearch({
           page: 1,
           searchString: query,
           category: category,
+          categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
         })
       );
 
@@ -33,10 +37,11 @@ export default function Search() {
       const timer = setTimeout(() => setIsLoading(false), 1000);
       return () => clearTimeout(timer);
     } else {
-      // If no query, redirect to home
+      // Nothing to search or browse by - redirect to home
       navigate("/");
     }
-  }, [dispatch, query, category, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, query, category, categoryIdsParam, navigate]);
 
   const handleSuggestionClick = (suggestion: string) => {
     const params = new URLSearchParams({
@@ -94,7 +99,7 @@ export default function Search() {
           </div>
 
           <div className="search-info">
-            <div className="search-query">{query}</div>
+            <div className="search-query">{query || categoryName}</div>
             {category !== "All Categories" && (
               <div className="search-category">{category}</div>
             )}
@@ -155,7 +160,10 @@ export default function Search() {
         ) : (
           <div className="search-empty">
             <div className="empty-illustration">🔍</div>
-            <h3>No results found for "{query}"</h3>
+            <h3>
+              No results found{" "}
+              {query ? `for "${query}"` : categoryName ? `in "${categoryName}"` : ""}
+            </h3>
             <p>
               We couldn't find any anime collectibles matching your search. Try
               different keywords or browse our popular categories below.

@@ -112,8 +112,35 @@
     font-weight: $font-weight-semibold;
   }
 
+  .product-detail-actions {
+    display: flex;
+    gap: $spacing-3;
+    align-items: stretch;
+  }
+
+  .btn-wishlist {
+    flex: 0 0 auto;
+    width: 56px;
+    padding: $spacing-4;
+    background: $surface;
+    border: 1px solid $border;
+    border-radius: $border-radius-base;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: border-color $transition-fast ease, background $transition-fast ease;
+
+    &:hover {
+      background: $surface-secondary;
+    }
+
+    &.favorited {
+      border-color: $gold-500;
+      background: rgba(243, 183, 47, 0.12);
+    }
+  }
+
   .btn-add-to-cart-large {
-    width: 100%;
+    flex: 1;
     padding: $spacing-4;
     background: $primary-600;
     color: white;

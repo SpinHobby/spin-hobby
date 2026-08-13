@@ -1,14 +1,20 @@
-// Modern Color Palette - Professional and accessible
-$primary-50: #f0f9ff;
-$primary-100: #e0f2fe;
-$primary-200: #bae6fd;
-$primary-300: #7dd3fc;
-$primary-400: #38bdf8;
-$primary-500: #0ea5e9;
-$primary-600: #0284c7;
-$primary-700: #0369a1;
-$primary-800: #075985;
-$primary-900: #0c4a6e;
+// Brand palette - navy + gold, matched to the logo. Values resolve through
+// CSS custom properties defined in _theme.scss so every consumer of these
+// variables becomes dark-mode aware automatically (light values below are
+// just the compile-time fallback).
+$primary-50: var(--primary-50, #eef0f5);
+$primary-100: var(--primary-100, #d6dae7);
+$primary-200: var(--primary-200, #aeb6d0);
+$primary-300: var(--primary-300, #7c88af);
+$primary-400: var(--primary-400, #47548a);
+$primary-500: var(--primary-500, #2c3968);
+$primary-600: var(--primary-600, #1d2a53);
+$primary-700: var(--primary-700, #172142);
+$primary-800: var(--primary-800, #111832);
+$primary-900: var(--primary-900, #0b0f21);
+
+$gold-500: var(--gold-500, #f3b72f);
+$gold-600: var(--gold-600, #c28a12);
 
 $neutral-50: #fafafa;
 $neutral-100: #f5f5f5;
@@ -27,15 +33,15 @@ $success-700: #15803d;
 $warning-500: #f59e0b;
 $error-500: #ef4444;
 
-// Semantic Colors
-$background: $neutral-50;
-$surface: #ffffff;
-$surface-secondary: $neutral-100;
-$text-primary: $neutral-900;
-$text-secondary: $neutral-600;
-$text-muted: $neutral-500;
-$border: $neutral-200;
-$border-hover: $neutral-300;
+// Semantic Colors (theme-aware - see _theme.scss)
+$background: var(--background, #fafafa);
+$surface: var(--surface, #ffffff);
+$surface-secondary: var(--surface-secondary, #f5f5f5);
+$text-primary: var(--text-primary, #171717);
+$text-secondary: var(--text-secondary, #525252);
+$text-muted: var(--text-muted, #737373);
+$border: var(--border, #e5e5e5);
+$border-hover: var(--border-hover, #d4d4d4);
 
 // Legacy theme colors for gradual migration
 $theme-color-dark: $neutral-800;

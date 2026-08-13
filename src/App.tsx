@@ -25,7 +25,8 @@ import Product from "view/pages/Product";
 import ProductDetail from "view/pages/ProductDetail";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import Login from "view/pages/Login";
-import { useBetaSelector } from "./selectors";
+import { useBetaSelector, useThemeSelector } from "./selectors";
+import { applyTheme } from "./utils/theme";
 import { Account } from "view/pages/Account";
 import Orders from "view/pages/Orders";
 import CheckoutSuccess from "view/pages/CheckoutSuccess";
@@ -46,10 +47,15 @@ let loaded = false;
 
 function App() {
   const beta = useBetaSelector();
+  const theme = useThemeSelector();
   const dispatch = useDispatch();
 
   // Initialize authentication state
   useAuthInit();
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     if (loaded) return;
@@ -151,7 +157,7 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/support" element={<Support />} />
                   <Route path="/cashier" element={<Cashier />} />
-                  <Route path="/homepage-admin" element={<HomepageAdmin />} />
+                  <Route path="/admin" element={<HomepageAdmin />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

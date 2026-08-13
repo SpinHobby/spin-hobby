@@ -1,32 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoChevronDown } from "react-icons/io5";
-import { getCategories } from "../../../api/square";
-
-interface Category {
-  id: string;
-  name: string;
-}
+import { getDisplayCategories, IDisplayCategory } from "../../../api/square";
 
 export default function Navigation() {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<IDisplayCategory[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getCategories()
-      .then((data) =>
-        setCategories(
-          data.filter((c) => c.name).sort((a, b) => a.name.localeCompare(b.name))
-        )
-      )
+    getDisplayCategories()
+      .then((data) => setCategories(data))
       .catch((error) => console.error("Error fetching categories:", error))
       .finally(() => setIsLoading(false));
   }, []);
 
-  const handleCategoryClick = (category: Category) => {
-    navigate(`/search?q=${encodeURIComponent(category.name)}`);
+  const handleCategoryClick = (category: IDisplayCategory) => {
+    const params = new URLSearchParams({
+      categoryIds: category.categoryIds.join(","),
+      categoryName: category.name,
+    });
+    navigate(`/search?${params.toString()}`);
     setIsDropdownOpen(false);
   };
 
@@ -52,9 +47,9 @@ export default function Navigation() {
                 <div className="dropdown-loading">Loading categories...</div>
               ) : categories.length > 0 ? (
                 <div className="categories-grid">
-                  {categories.slice(0, 16).map((category) => (
+                  {categories.map((category) => (
                     <button
-                      key={category.id}
+                      key={category.name}
                       className="category-item"
                       onClick={() => handleCategoryClick(category)}
                     >

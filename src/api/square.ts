@@ -33,6 +33,20 @@ export function getCategories(): Promise<{ id: string; name: string }[]> {
   );
 }
 
+export interface IDisplayCategory {
+  name: string;
+  categoryIds: string[];
+}
+
+// Curated ~14-category taxonomy for the storefront nav, grouping Square's
+// 60+ raw categories (duplicates/typos accumulated over years of manual
+// entry - see the backend's categoryMapping.ts) onto a clean display list.
+export function getDisplayCategories(): Promise<IDisplayCategory[]> {
+  return axios
+    .get(`${serverUrl}api/square/display-categories`)
+    .then((response) => response.data.categories || []);
+}
+
 export function getCatalog(
   q?: string,
   cursor?: string,
@@ -45,6 +59,31 @@ export function getCatalog(
 
   return axios
     .get(`${serverUrl}api/square/catalog?${params.toString()}`)
+    .then((response) => {
+      const imagesById = buildImageMap(response.data.relatedObjects || []);
+      return {
+        items: (response.data.items || []).map((item: any) =>
+          mapCatalogItemToMerchPreview(item, imagesById)
+        ),
+        cursor: response.data.cursor,
+      };
+    });
+}
+
+export function getCatalogByCategory(
+  categoryIds: string[],
+  q?: string,
+  cursor?: string,
+  limit = 24
+): Promise<{ items: IMerchPreview[]; cursor?: string }> {
+  const params = new URLSearchParams();
+  params.append("categoryIds", categoryIds.join(","));
+  if (q) params.append("q", q);
+  if (cursor) params.append("cursor", cursor);
+  params.append("limit", String(limit));
+
+  return axios
+    .get(`${serverUrl}api/square/catalog/by-category?${params.toString()}`)
     .then((response) => {
       const imagesById = buildImageMap(response.data.relatedObjects || []);
       return {
@@ -90,7 +129,8 @@ export interface ICheckoutAddress {
 
 export function createPayment(params: {
   sourceId: string;
-  amount: number; // smallest currency unit, e.g. cents
+  amount: number; // smallest currency unit, e.g. cents - the full order total
+  shippingCents?: number; // portion of `amount` that's shipping, for order storage
   currency?: string;
   items?: { itemId: string; variationId: string; quantity: number }[];
   billing?: ICheckoutAddress & { email: string };

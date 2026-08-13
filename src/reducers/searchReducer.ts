@@ -36,6 +36,7 @@ const searchSlice = createSlice({
         page: number;
         searchString: string;
         category?: string;
+        categoryIds?: string[];
       }>
     ) => {},
     setSearchResult: (state, action) => {

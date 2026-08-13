@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import classNames from "classnames";
+import { PLACEHOLDER_IMAGE } from "../../../../api/square";
 
 const AUTOCHANGE_TIME = 8000;
+
+// A slide falling back to the "No Image" placeholder graphic looks broken
+// once a dark gradient overlay is stacked on top of it - show a clean brand
+// gradient instead of a photo in that case.
+function hasRealImage(img: string) {
+  return !!img && img !== PLACEHOLDER_IMAGE;
+}
 
 export interface ISlide {
   headline: string;
@@ -48,8 +56,14 @@ function MobileHero({ slides }: Props) {
           })}
         >
           <div className="hero-mobile-image">
-            <img src={slide.img} alt={slide.headline} />
-            <div className="hero-mobile-overlay" />
+            {hasRealImage(slide.img) ? (
+              <>
+                <img src={slide.img} alt={slide.headline} />
+                <div className="hero-mobile-overlay" />
+              </>
+            ) : (
+              <div className="hero-mobile-fallback" />
+            )}
           </div>
           <div className="hero-mobile-content">
             <h2>{slide.headline}</h2>
@@ -128,12 +142,18 @@ function HeroSection({ slides }: Props) {
         </div>
 
         <div className="hero-image">
-          <img
-            src={slides[currentSlide].img}
-            alt={slides[currentSlide].headline}
-            className="fade-in"
-          />
-          <div className="hero-image-overlay" />
+          {hasRealImage(slides[currentSlide].img) ? (
+            <>
+              <img
+                src={slides[currentSlide].img}
+                alt={slides[currentSlide].headline}
+                className="fade-in"
+              />
+              <div className="hero-image-overlay" />
+            </>
+          ) : (
+            <div className="hero-image-fallback" />
+          )}
 
           {slides.length > 1 && (
             <>

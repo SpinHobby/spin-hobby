@@ -7,7 +7,20 @@
       href="/assets/transparent%20mascot%20chibi%20rotated.png"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="theme-color" content="#1D2A53" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121319" media="(prefers-color-scheme: dark)" />
+    <script>
+      (function () {
+        var stored = localStorage.getItem("spinhobby-theme");
+        var theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
     <meta
       name="description"
       content="We thrive to make official anime merch, doujin, creative arts more accessible at affordable price in Canada and US"

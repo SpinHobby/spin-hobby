@@ -26,6 +26,28 @@
     gap: $spacing-3;
   }
 
+  .navbar-hamburger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    border-radius: $border-radius-base;
+    color: $text-primary;
+    cursor: pointer;
+
+    &:hover {
+      background: $surface-secondary;
+    }
+
+    @include mobile-only {
+      display: flex;
+    }
+  }
+
   .navbar-title-container {
     display: flex;
     align-items: center;
@@ -37,14 +59,18 @@
       gap: $spacing-3;
       cursor: pointer;
       transition: opacity $transition-fast ease-in-out;
+      background: #ffffff;
+      border-radius: $border-radius-base;
+      padding: $spacing-1 $spacing-2;
 
       img {
-        height: 50px;
+        height: 42px;
         width: auto;
         object-fit: contain;
+        display: block;
 
         @include mobile-only {
-          height: 42px;
+          height: 36px;
         }
       }
 
@@ -72,6 +98,101 @@
     display: flex;
     align-items: center;
     gap: $spacing-2;
+
+    .navbar-user-menu {
+      position: relative;
+
+      .navbar-user-trigger {
+        display: flex;
+        align-items: center;
+        gap: $spacing-2;
+        padding: $spacing-1 $spacing-3;
+        border-radius: $border-radius-full;
+        cursor: pointer;
+        transition: background-color $transition-fast ease-in-out;
+
+        &:hover {
+          background: $surface-secondary;
+        }
+
+        @include mobile-only {
+          padding: $spacing-1;
+        }
+      }
+
+      .navbar-user-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+      }
+
+      .navbar-user-avatar-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: $primary-600;
+        color: white;
+        font-weight: $font-weight-semibold;
+        font-size: $font-size-sm;
+      }
+
+      .navbar-user-name {
+        @include text-body-sm;
+        font-weight: $font-weight-medium;
+        color: $text-primary;
+        cursor: inherit;
+        max-width: 120px;
+        @include truncate;
+
+        @include mobile-only {
+          display: none;
+        }
+      }
+
+      .navbar-user-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        z-index: $z-index-dropdown;
+        margin-top: $spacing-1;
+        min-width: 190px;
+        background: $surface;
+        border: 1px solid $border;
+        border-radius: $border-radius-lg;
+        box-shadow: $shadow-lg;
+        padding: $spacing-2;
+        animation: dropdown-fade-in 0.15s ease-out;
+        transform-origin: top right;
+      }
+
+      .navbar-user-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: $spacing-2;
+        width: 100%;
+        padding: $spacing-2 $spacing-3;
+        background: none;
+        border: none;
+        border-radius: $border-radius-base;
+        cursor: pointer;
+        text-align: left;
+        @include text-body-sm;
+        font-weight: $font-weight-medium;
+        color: $text-primary;
+        transition: background-color $transition-fast ease-in-out;
+
+        &:hover {
+          background: $surface-secondary;
+        }
+
+        &.navbar-user-dropdown-item-danger:hover {
+          background: rgba($error-500, 0.1);
+          color: $error-500;
+        }
+      }
+    }
 
     .navbar-command {
       @include button-ghost;
@@ -123,9 +244,22 @@
         font-weight: $font-weight-medium;
         margin: 0;
         cursor: inherit;
+        white-space: nowrap;
 
+        // Icon-only on mobile - the label text ("Sign In", "Cart") was
+        // wrapping onto two lines in the cramped mobile bar.
         @include mobile-only {
-          font-size: 10px;
+          display: none;
+        }
+      }
+
+      // Discord/Instagram/theme toggle move into the hamburger drawer
+      // (MobileMenu) on mobile, leaving just Cart + account in the bar.
+      @include mobile-only {
+        &.navbar-command-discord,
+        &.navbar-command-instagram,
+        &.navbar-command-theme {
+          display: none;
         }
       }
 
@@ -135,8 +269,7 @@
       }
 
       // Instagram specific styling
-      &:nth-child(3) {
-        // Third command (Instagram)
+      &.navbar-command-instagram {
         &:hover {
           background: linear-gradient(
             135deg,
@@ -147,6 +280,27 @@
           color: white !important;
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(131, 58, 180, 0.3);
+          border-radius: $border-radius-base;
+
+          .navbar-command-icon {
+            color: white !important;
+            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.3));
+          }
+
+          label {
+            color: white !important;
+            font-weight: $font-weight-bold;
+          }
+        }
+      }
+
+      // Discord specific styling (brand "blurple")
+      &.navbar-command-discord {
+        &:hover {
+          background: #5865f2 !important;
+          color: white !important;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(88, 101, 242, 0.35);
           border-radius: $border-radius-base;
 
           .navbar-command-icon {
@@ -282,7 +436,7 @@
     justify-content: center;
     gap: $spacing-1;
     padding: $spacing-2 $spacing-3;
-    background: $neutral-100;
+    background: $surface-secondary;
     border-right: 1px solid $border;
     cursor: pointer;
     transition: background-color $transition-fast ease-in-out;
@@ -293,7 +447,7 @@
     color: $text-secondary;
 
     &:hover {
-      background: $neutral-200;
+      background: $border-hover;
     }
 
     .navbar-search-selected-category {
@@ -568,6 +722,12 @@
   border-top: 1px solid $border;
   background: $surface;
 
+  // Categories/Events/Contact/Support now live in the mobile hamburger
+  // drawer (MobileMenu) instead of a second stacked row.
+  @include mobile-only {
+    display: none;
+  }
+
   .nav-container {
     @include container;
     display: flex;
@@ -839,5 +999,179 @@
   to {
     opacity: 1;
     transform: translateY(0) scaleY(1);
+  }
+}
+
+// Mobile hamburger drawer (MobileMenu) - houses categories, nav links,
+// search, and account/theme/social controls that used to be spread across
+// two extra stacked rows on mobile.
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: $z-index-modal;
+  display: flex;
+}
+
+.mobile-menu-panel {
+  width: min(320px, 85vw);
+  height: 100%;
+  background: $surface;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: mobile-menu-slide-in $transition-base ease-out;
+}
+
+@keyframes mobile-menu-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.mobile-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-4;
+  border-bottom: 1px solid $border;
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+
+  .mobile-menu-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: $text-secondary;
+    cursor: pointer;
+  }
+}
+
+.mobile-menu-search {
+  display: flex;
+  gap: $spacing-2;
+  padding: $spacing-4;
+  border-bottom: 1px solid $border;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-2 $spacing-3;
+    border: 1px solid $border;
+    border-radius: $border-radius-base;
+    background: $surface-secondary;
+    color: $text-primary;
+    font-size: $font-size-sm;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-500;
+    }
+  }
+
+  button {
+    padding: $spacing-2 $spacing-4;
+    background: $primary-600;
+    color: white;
+    border: none;
+    border-radius: $border-radius-base;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+
+    &:hover {
+      background: $primary-700;
+    }
+  }
+}
+
+.mobile-menu-account {
+  padding: $spacing-2 $spacing-4;
+  border-bottom: 1px solid $border;
+}
+
+.mobile-menu-link {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  width: 100%;
+  padding: $spacing-3 0;
+  background: none;
+  border: none;
+  text-align: left;
+  color: $text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+
+  &:hover {
+    color: $primary-600;
+  }
+}
+
+.mobile-menu-signin {
+  color: $primary-600;
+}
+
+.mobile-menu-section {
+  padding: $spacing-2 $spacing-4;
+  border-bottom: 1px solid $border;
+
+  .mobile-menu-section-title {
+    @include text-caption;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $text-muted;
+    margin: $spacing-2 0;
+  }
+}
+
+.mobile-menu-categories {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu-category {
+  display: block;
+  width: 100%;
+  padding: $spacing-2 0;
+  background: none;
+  border: none;
+  text-align: left;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  cursor: pointer;
+
+  &:hover {
+    color: $primary-600;
+  }
+}
+
+.mobile-menu-footer {
+  display: flex;
+  gap: $spacing-3;
+  padding: $spacing-4;
+  margin-top: auto;
+
+  .mobile-menu-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: $border-radius-full;
+    background: $surface-secondary;
+    border: none;
+    color: $text-secondary;
+    cursor: pointer;
+
+    &:hover {
+      background: $border;
+      color: $text-primary;
+    }
   }
 }

@@ -3,6 +3,8 @@ import modalReducer, { ModalState, hideModal, openModal } from "./modalReducer";
 import settingReducer, {
   ISettingState,
   setConversionCurrency,
+  setTheme,
+  toggleTheme,
   // setCurrencyRate,
   // resetCurrency,
 } from "./settingReducer";
@@ -58,6 +60,8 @@ export {
   hideModal,
   openModal,
   setConversionCurrency,
+  setTheme,
+  toggleTheme,
   login,
   loginSquare,
   loginSuccess,
