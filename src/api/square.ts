@@ -129,7 +129,8 @@ export interface ICheckoutAddress {
 
 export function createPayment(params: {
   sourceId: string;
-  amount: number; // smallest currency unit, e.g. cents
+  amount: number; // smallest currency unit, e.g. cents - the full order total
+  shippingCents?: number; // portion of `amount` that's shipping, for order storage
   currency?: string;
   items?: { itemId: string; variationId: string; quantity: number }[];
   billing?: ICheckoutAddress & { email: string };

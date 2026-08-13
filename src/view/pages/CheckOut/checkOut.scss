@@ -1,3 +1,4 @@
+@use "../../../sass/variables.scss" as *;
 @import url("https://fonts.googleapis.com/css?family=Roboto+Condensed:400,700");
 
 // body{
@@ -85,7 +86,8 @@
     padding: 35px 20px 15px;
     margin: 0 0 20px;
     width: 100%;
-    box-shadow: inset 0 0 0 1px #ccc;
+    color: $text-primary;
+    box-shadow: inset 0 0 0 1px $border;
   }
   select {
     /*width: 72%;
@@ -98,38 +100,40 @@
     padding: 35px 20px 15px;
     margin: 0 0 20px;
     width: 100%;
-    box-shadow: inset 0 0 0 1px #ccc;
+    color: $text-primary;
+    box-shadow: inset 0 0 0 1px $border;
   }
   .Yorder {
     margin-top: 15px;
     height: 600px;
     padding: 20px;
-    border: 1px solid #dadada;
+    border: 1px solid $border;
   }
   table {
     margin: 0;
     padding: 0;
   }
   th {
-    border-bottom: 1px solid #dadada;
+    border-bottom: 1px solid $border;
     padding: 10px 0;
+    color: $text-primary;
   }
   tr > td:nth-child(1) {
     text-align: left;
-    color: #2d2d2a;
+    color: $text-primary;
   }
   tr > td:nth-child(2) {
     text-align: right;
     color: #52ad9c;
   }
   td {
-    border-bottom: 1px solid #dadada;
+    border-bottom: 1px solid $border;
     padding: 25px 25px 25px 0;
   }
 
   p {
     display: block;
-    color: #888;
+    color: $text-secondary;
     margin: 0;
     padding-left: 25px;
   }
@@ -306,35 +310,117 @@
 
 /* Square Hosted Checkout Styles */
 .checkout-section {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: $surface;
+  border: 1px solid $border;
   border-radius: 8px;
   padding: 30px;
   margin-top: 20px;
 
   h3 {
-    color: #333;
+    color: $text-primary;
     margin-bottom: 10px;
     font-size: 1.5rem;
   }
 
   .checkout-description {
-    color: #666;
+    color: $text-secondary;
     margin-bottom: 20px;
     font-size: 1rem;
   }
 
   .square-card-container {
-    border: 1px solid #e0e0e0;
+    border: 1px solid $border;
     border-radius: 6px;
     padding: 12px;
     margin-bottom: 20px;
     min-height: 90px;
   }
 
+  .express-checkout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+
+    // Undo the legacy ".checkout-container button" rule near the top of
+    // this file (width: 100%, padding: 10px, margin-top: 10px, teal
+    // background via the `background` SHORTHAND, 30px border-radius) - a
+    // generic `button` selector that was silently winning over Apple/
+    // Google Pay's own real button styling by CSS specificity. Only
+    // resetting width/margin/border-radius here (not background, not
+    // padding) - a previous attempt used the `background` shorthand to
+    // reset color, which also wiped background-image/size/repeat/position
+    // and broke Google's logo rendering as a side effect.
+    button {
+      width: auto;
+      margin: 0;
+      border-radius: 0;
+    }
+
+    .apple-pay-button {
+      display: inline-block;
+      -webkit-appearance: -apple-pay-button;
+      -apple-pay-button-type: buy;
+      -apple-pay-button-style: black;
+      width: 100%;
+      height: 48px;
+      border-radius: 6px;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .google-pay-button-container {
+      display: flex;
+      justify-content: center;
+      padding: 8px 0;
+      cursor: pointer;
+
+      // Google's own .gpay-button rule already sets these correctly, but
+      // the legacy button reset above (and the original legacy rule it
+      // undoes) both use `background`/`padding` shorthands with just
+      // enough specificity to clobber them. Setting the same real values
+      // explicitly here (copied from Square's injected stylesheet) beats
+      // both by specificity without guessing at new ones. Also restoring
+      // border-radius, which the legacy-undo `button { border-radius: 0; }`
+      // above squares off along with the teal background it was meant to
+      // undo - Google's button ships with 4px rounded corners.
+      button {
+        padding: 12px 24px 10px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .express-checkout-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: $text-muted;
+    font-size: 13px;
+    margin-bottom: 16px;
+
+    &::before,
+    &::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid $border;
+    }
+
+    span {
+      padding: 0 12px;
+    }
+  }
+
   .checkout-error {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
+    background: rgba($error-500, 0.12);
+    border: 1px solid rgba($error-500, 0.3);
     border-radius: 6px;
     padding: 15px;
     margin-bottom: 20px;
@@ -343,7 +429,7 @@
     align-items: center;
 
     p {
-      color: #721c24;
+      color: $error-500;
       margin: 0;
     }
 
@@ -363,15 +449,15 @@
   }
 
   .order-summary {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background: $surface-secondary;
+    border: 1px solid $border;
     border-radius: 6px;
     padding: 20px;
     margin-bottom: 25px;
 
     h4 {
       margin: 0 0 15px 0;
-      color: #333;
+      color: $text-primary;
       font-size: 1.2rem;
     }
 
@@ -379,7 +465,7 @@
       display: flex;
       justify-content: space-between;
       padding: 8px 0;
-      border-bottom: 1px solid #e9ecef;
+      border-bottom: 1px solid $border;
 
       &:last-child {
         border-bottom: none;
@@ -465,7 +551,7 @@
       margin-bottom: 20px;
 
       p {
-        color: #666;
+        color: $text-secondary;
         margin-bottom: 10px;
         font-size: 14px;
       }
@@ -481,7 +567,7 @@
         }
 
         .payment-text {
-          color: #666;
+          color: $text-secondary;
           font-size: 14px;
         }
       }
@@ -489,7 +575,7 @@
 
     .security-notice {
       p {
-        color: #666;
+        color: $text-secondary;
         font-size: 13px;
         margin: 5px 0;
         display: flex;
@@ -497,6 +583,72 @@
         justify-content: center;
         gap: 6px;
       }
+    }
+  }
+}
+
+// Lives inside .Yorder (a sibling of .checkout-section, not a descendant -
+// scoping this under .checkout-section earlier meant the selector never
+// actually matched the real DOM at all, so display:flex silently lost to
+// the legacy ".checkout-container label { display: block }" rule below.
+// Explicitly prefixed with .checkout-container so it also outranks that
+// legacy rule on specificity (2 classes beats 1 class + 1 element).
+.checkout-container .shipping-method-picker {
+  background: $surface-secondary;
+  border: 1px solid $border;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 20px;
+
+  h4 {
+    margin: 0 0 12px 0;
+    color: $text-primary;
+    font-size: 1.1rem;
+  }
+
+  .shipping-method-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 8px;
+    margin: 0;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: $surface;
+    }
+
+    input[type="radio"] {
+      width: auto;
+      margin: 0;
+      box-shadow: none;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .shipping-method-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .shipping-method-label {
+      color: $text-primary;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .shipping-method-description {
+      color: $text-secondary;
+      font-size: 0.8rem;
+    }
+
+    .shipping-method-price {
+      color: $text-primary;
+      font-weight: 600;
+      font-size: 0.95rem;
+      white-space: nowrap;
     }
   }
 }

@@ -1,10 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { useCartSelector } from "../../../selectors";
+import { useCartSelector, useThemeSelector } from "../../../selectors";
 import { clearCart } from "../../../reducers";
 import calculateSubTotal from "utils/calculateSubTotal";
 import { getSquareConfig, createPayment } from "../../../api/square";
+import {
+  SHIPPING_OPTIONS,
+  ShippingMethod,
+  getShippingCost,
+} from "../../../ts/constants";
 
 declare global {
   interface Window {
@@ -323,30 +328,102 @@ const initialCommonInputs = {
 
 export default function CheckOut() {
   const cart = useCartSelector();
+  const theme = useThemeSelector();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const [sameAsBillingAddress, setSameAsBillingAddress] =
+  const [sameAsShippingAddress, setSameAsShippingAddress] =
     useState<boolean>(false);
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethod>("standard");
+  const subtotal = calculateSubTotal(cart);
+  const shippingCost = getShippingCost(shippingMethod, subtotal);
+  const orderTotal = subtotal + shippingCost;
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [checkoutError, setCheckoutError] = useState<string>("");
   const [card, setCard] = useState<any>(null);
   const cardContainerRef = useRef<HTMLDivElement>(null);
+  const cardInstanceRef = useRef<any>(null);
+
+  // Apple Pay / Google Pay - same Square account and sourceId/createPayment
+  // pipeline as the card flow above, just an alternate way to produce the
+  // token. Availability is device/browser-dependent (e.g. Apple Pay only
+  // in Safari with a card in Wallet), so the buttons only render once
+  // Square's SDK confirms the method is actually usable here.
+  const [applePayAvailable, setApplePayAvailable] = useState(false);
+  const [googlePayAvailable, setGooglePayAvailable] = useState(false);
+  const applePayInstanceRef = useRef<any>(null);
+  const googlePayInstanceRef = useRef<any>(null);
+  const googlePayContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let cardInstance: any;
     let cancelled = false;
 
     async function initializeCard() {
       try {
+        // destroy() is async - awaiting it before creating the replacement
+        // avoids racing a fresh attach() against an in-flight teardown of
+        // the old iframe, which was making attach() silently no-op (found
+        // while making the card re-theme itself on theme toggle).
+        if (cardInstanceRef.current) {
+          try {
+            await cardInstanceRef.current.destroy();
+          } catch {
+            // already destroyed/detached - nothing to do
+          }
+          cardInstanceRef.current = null;
+        }
+
         const { applicationId, locationId } = await getSquareConfig();
         if (cancelled || !window.Square) return;
 
         const payments = window.Square.payments(applicationId, locationId);
-        cardInstance = await payments.card();
-        if (cancelled) return;
-        await cardInstance.attach(cardContainerRef.current);
-        setCard(cardInstance);
+        // Square's hosted card iframe ignores our page CSS entirely - it
+        // needs its own style object, and (unlike our CSS custom
+        // properties) that's fixed at attach() time, so the card has to be
+        // destroyed and re-attached when the theme toggles rather than
+        // just re-rendering.
+        const isDark = theme === "dark";
+        const newCard = await payments.card({
+          style: {
+            input: {
+              color: isDark ? "#f2f2f3" : "#171717",
+              backgroundColor: isDark ? "#1a1c24" : "#ffffff",
+              fontSize: "16px",
+            },
+            "input::placeholder": {
+              color: isDark ? "#83868f" : "#737373",
+            },
+            ".input-container": {
+              borderColor: isDark ? "#2e313b" : "#e5e5e5",
+              borderRadius: "6px",
+            },
+            ".input-container.is-focus": {
+              borderColor: "#1d2a53",
+            },
+            ".input-container.is-error": {
+              borderColor: "#E24847",
+            },
+            ".message-text": {
+              color: isDark ? "#83868f" : "#737373",
+            },
+            ".message-icon": {
+              color: isDark ? "#83868f" : "#737373",
+            },
+            ".message-text.is-error": {
+              color: "#E24847",
+            },
+            ".message-icon.is-error": {
+              color: "#E24847",
+            },
+          },
+        });
+        if (cancelled) {
+          await newCard.destroy();
+          return;
+        }
+        await newCard.attach(cardContainerRef.current);
+        cardInstanceRef.current = newCard;
+        setCard(newCard);
       } catch (err) {
         console.error("Failed to initialize Square card form:", err);
         setCheckoutError(
@@ -359,7 +436,96 @@ export default function CheckOut() {
 
     return () => {
       cancelled = true;
-      cardInstance?.destroy();
+    };
+  }, [theme]);
+
+  // Separate from the card effect above so picking a different shipping
+  // tier (which changes the total these wallets need to display/charge)
+  // doesn't also destroy and recreate the card field, wiping out whatever
+  // the customer already typed there.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initializeWallets() {
+      const { applicationId, locationId } = await getSquareConfig();
+      if (cancelled || !window.Square) return;
+
+      const payments = window.Square.payments(applicationId, locationId);
+      const isDark = theme === "dark";
+      const paymentRequest = payments.paymentRequest({
+        countryCode: "CA",
+        currencyCode: "CAD",
+        total: {
+          amount: orderTotal.toFixed(2),
+          label: "Total",
+        },
+      });
+
+      // Same destroy-before-create sequencing as the card instance - avoids
+      // racing a fresh attach() against an in-flight teardown of the old
+      // instance.
+      if (applePayInstanceRef.current) {
+        try {
+          await applePayInstanceRef.current.destroy();
+        } catch {}
+        applePayInstanceRef.current = null;
+      }
+      if (googlePayInstanceRef.current) {
+        try {
+          await googlePayInstanceRef.current.destroy();
+        } catch {}
+        googlePayInstanceRef.current = null;
+      }
+
+      // Apple Pay is only available in Safari/WebKit with a card in
+      // Wallet - payments.applePay() itself throws when unsupported, so
+      // absence of the button on other browsers is expected, not an error.
+      try {
+        const applePayInstance = await payments.applePay(paymentRequest);
+        if (cancelled) {
+          await applePayInstance.destroy();
+        } else {
+          applePayInstanceRef.current = applePayInstance;
+          setApplePayAvailable(true);
+        }
+      } catch {
+        setApplePayAvailable(false);
+      }
+
+      try {
+        const googlePayInstance = await payments.googlePay(paymentRequest);
+        if (cancelled) {
+          await googlePayInstance.destroy();
+          return;
+        }
+        if (googlePayContainerRef.current) {
+          await googlePayInstance.attach(googlePayContainerRef.current, {
+            buttonColor: isDark ? "white" : "black",
+            buttonType: "long",
+            buttonSizeMode: "static",
+          });
+        }
+        googlePayInstanceRef.current = googlePayInstance;
+        setGooglePayAvailable(true);
+      } catch {
+        setGooglePayAvailable(false);
+      }
+    }
+
+    initializeWallets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [theme, orderTotal]);
+
+  // Final teardown on real unmount - the [theme] effect above already
+  // destroys the previous instances itself before creating each new one.
+  useEffect(() => {
+    return () => {
+      cardInstanceRef.current?.destroy?.();
+      applePayInstanceRef.current?.destroy?.();
+      googlePayInstanceRef.current?.destroy?.();
     };
   }, []);
 
@@ -404,33 +570,70 @@ export default function CheckOut() {
     const errors: string[] = [];
 
     if (!billingInputs.email) errors.push("Email is required");
-    if (!billingInputs.name.first) errors.push("First name is required");
-    if (!billingInputs.name.last) errors.push("Last name is required");
-    if (!billingInputs.address.primary) errors.push("Address is required");
-    if (!billingInputs.city) errors.push("City is required");
-    if (!billingInputs.province) errors.push("State/Province is required");
-    if (!billingInputs.postalCode) errors.push("Postal code is required");
-    if (!billingInputs.country) errors.push("Country is required");
+    if (!shippingInputs.name.first) errors.push("First name is required");
+    if (!shippingInputs.name.last) errors.push("Last name is required");
+    if (!shippingInputs.address.primary) errors.push("Address is required");
+    if (!shippingInputs.city) errors.push("City is required");
+    if (!shippingInputs.province) errors.push("State/Province is required");
+    if (!shippingInputs.postalCode) errors.push("Postal code is required");
+    if (!shippingInputs.country) errors.push("Country is required");
 
-    if (!sameAsBillingAddress) {
-      if (!shippingInputs.name.first)
-        errors.push("Shipping first name is required");
-      if (!shippingInputs.name.last)
-        errors.push("Shipping last name is required");
-      if (!shippingInputs.address.primary)
-        errors.push("Shipping address is required");
-      if (!shippingInputs.city) errors.push("Shipping city is required");
-      if (!shippingInputs.province)
-        errors.push("Shipping state/province is required");
-      if (!shippingInputs.postalCode)
-        errors.push("Shipping postal code is required");
-      if (!shippingInputs.country) errors.push("Shipping country is required");
+    if (!sameAsShippingAddress) {
+      if (!billingInputs.name.first)
+        errors.push("Billing first name is required");
+      if (!billingInputs.name.last)
+        errors.push("Billing last name is required");
+      if (!billingInputs.address.primary)
+        errors.push("Billing address is required");
+      if (!billingInputs.city) errors.push("Billing city is required");
+      if (!billingInputs.province)
+        errors.push("Billing state/province is required");
+      if (!billingInputs.postalCode)
+        errors.push("Billing postal code is required");
+      if (!billingInputs.country) errors.push("Billing country is required");
     }
 
     return errors;
   };
 
-  const handleSquareCheckout = async () => {
+  // Shared by the card and wallet (Apple Pay/Google Pay) flows below - all
+  // three only differ in how they produce a sourceId token. The address
+  // form stays the single source of truth for the order regardless of
+  // which one tokenized the payment.
+  const submitPayment = async (sourceId: string) => {
+    const amountCents = Math.round(orderTotal * 100);
+    const shippingCents = Math.round(shippingCost * 100);
+    // Shipping is the primary/always-filled form now; billing address only
+    // has its own values when the customer unchecked "same as shipping".
+    // Email always comes from billingInputs since that's the only place it's
+    // entered, regardless of which address section is collapsed.
+    const billingAddress = sameAsShippingAddress ? shippingInputs : billingInputs;
+    const payment = await createPayment({
+      sourceId,
+      amount: amountCents,
+      shippingCents,
+      currency: "CAD",
+      items: cart.items.map((i) => ({
+        itemId: i.id,
+        variationId: i.variationId,
+        quantity: i.quantity,
+      })),
+      billing: { ...billingAddress, email: billingInputs.email },
+      shipping: shippingInputs,
+    });
+
+    dispatch(clearCart());
+
+    const params = new URLSearchParams({
+      orderId: payment.orderId ? String(payment.orderId) : "",
+      paymentId: payment.id,
+      amount: (amountCents / 100).toFixed(2),
+      email: billingInputs.email,
+    });
+    navigate(`/checkout/success?${params.toString()}`);
+  };
+
+  const runCheckout = async (tokenize: () => Promise<any>, invalidMessage: string) => {
     const validationErrors = validateCheckoutForm();
     if (validationErrors.length > 0) {
       setCheckoutError(validationErrors.join(", "));
@@ -442,52 +645,51 @@ export default function CheckOut() {
       return;
     }
 
-    if (!card) {
-      setCheckoutError("Payment form is still loading. Please wait a moment.");
-      return;
-    }
-
     setIsProcessing(true);
     setCheckoutError("");
 
     try {
-      const tokenResult = await card.tokenize();
+      const tokenResult = await tokenize();
       if (tokenResult.status !== "OK") {
-        throw new Error(
-          tokenResult.errors?.[0]?.message || "Card details are invalid"
-        );
+        throw new Error(tokenResult.errors?.[0]?.message || invalidMessage);
       }
-
-      const amountCents = Math.round(calculateSubTotal(cart) * 100);
-      const shippingAddress = sameAsBillingAddress ? billingInputs : shippingInputs;
-      const payment = await createPayment({
-        sourceId: tokenResult.token,
-        amount: amountCents,
-        currency: "CAD",
-        items: cart.items.map((i) => ({
-          itemId: i.id,
-          variationId: i.variationId,
-          quantity: i.quantity,
-        })),
-        billing: billingInputs,
-        shipping: shippingAddress,
-      });
-
-      dispatch(clearCart());
-
-      const params = new URLSearchParams({
-        orderId: payment.orderId ? String(payment.orderId) : "",
-        paymentId: payment.id,
-        amount: (amountCents / 100).toFixed(2),
-        email: billingInputs.email,
-      });
-      navigate(`/checkout/success?${params.toString()}`);
+      await submitPayment(tokenResult.token);
     } catch (error: any) {
       console.error("Checkout error:", error);
       setCheckoutError(error.message || "Payment failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleSquareCheckout = () => {
+    if (!card) {
+      setCheckoutError("Payment form is still loading. Please wait a moment.");
+      return;
+    }
+    runCheckout(() => card.tokenize(), "Card details are invalid");
+  };
+
+  const handleApplePayCheckout = () => {
+    if (!applePayInstanceRef.current) {
+      setCheckoutError("Apple Pay is still loading. Please wait a moment.");
+      return;
+    }
+    runCheckout(
+      () => applePayInstanceRef.current.tokenize(),
+      "Apple Pay was cancelled or failed"
+    );
+  };
+
+  const handleGooglePayCheckout = () => {
+    if (!googlePayInstanceRef.current) {
+      setCheckoutError("Google Pay is still loading. Please wait a moment.");
+      return;
+    }
+    runCheckout(
+      () => googlePayInstanceRef.current.tokenize(),
+      "Google Pay was cancelled or failed"
+    );
   };
 
   return (
@@ -499,19 +701,44 @@ export default function CheckOut() {
         <form action="" method="">
           <div>
             <div className="checkout-header">
-              <h2>Billing Address</h2>
+              <h2>Shipping Address</h2>
               <span className="required-notice">* denotes required fields</span>
             </div>
             <Form
-              type={FormType.Billing}
-              data={billingInputs}
+              type={FormType.Shipping}
+              data={shippingInputs}
               onChange={(name, value) =>
-                setBillingInputs((old) => ({
-                  ...old,
-                  ...updateCommonInputs(name, value, old),
-                }))
+                setShippingInputs((old) => updateCommonInputs(name, value, old))
               }
             />
+          </div>
+
+          <div>
+            <div className="checkout-header">
+              <h2>Billing Address</h2>
+              <label>
+                <input
+                  type="checkbox"
+                  className=""
+                  checked={sameAsShippingAddress}
+                  onChange={(e) => setSameAsShippingAddress(e.target.checked)}
+                />
+                <span className="mark-address">Same as Shipping Address</span>
+              </label>
+              <span className="required-notice">* denotes required fields</span>
+            </div>
+            {!sameAsShippingAddress && (
+              <Form
+                type={FormType.Billing}
+                data={billingInputs}
+                onChange={(name, value) =>
+                  setBillingInputs((old) => ({
+                    ...old,
+                    ...updateCommonInputs(name, value, old),
+                  }))
+                }
+              />
+            )}
             <label>
               <span>
                 Email Address <span className="required">*</span>
@@ -526,33 +753,6 @@ export default function CheckOut() {
                 name="email"
               />
             </label>
-          </div>
-
-          <div>
-            <div className="checkout-header">
-              <h2>Shipping Address</h2>
-              <label>
-                <input
-                  type="checkbox"
-                  className=""
-                  checked={sameAsBillingAddress}
-                  onChange={(e) => setSameAsBillingAddress(e.target.checked)}
-                />
-                <span className="mark-address">Same as Billing Address</span>
-              </label>
-              <span className="required-notice">* denotes required fields</span>
-            </div>
-            {!sameAsBillingAddress && (
-              <Form
-                type={FormType.Shipping}
-                data={shippingInputs}
-                onChange={(name, value) =>
-                  setShippingInputs((old) =>
-                    updateCommonInputs(name, value, old)
-                  )
-                }
-              />
-            )}
           </div>
         </form>
         <div className="Yorder">
@@ -576,15 +776,53 @@ export default function CheckOut() {
 
               <tr>
                 <td>Subtotal</td>
-                <td>${calculateSubTotal(cart)}</td>
+                <td>${subtotal.toFixed(2)}</td>
               </tr>
               <tr>
                 <td>Shipping</td>
-                <td>Free shipping</td>
+                <td>{shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Total</strong>
+                </td>
+                <td>
+                  <strong>${orderTotal.toFixed(2)}</strong>
+                </td>
               </tr>
             </tbody>
           </table>
           <br />
+
+          <div className="shipping-method-picker">
+            <h4>Shipping Method</h4>
+            {SHIPPING_OPTIONS.map((option) => {
+              const cost = getShippingCost(option.id, subtotal);
+              return (
+                <label key={option.id} className="shipping-method-option">
+                  <input
+                    type="radio"
+                    name="shippingMethod"
+                    checked={shippingMethod === option.id}
+                    onChange={() => setShippingMethod(option.id)}
+                  />
+                  {/* Divs, not spans - this file has a legacy "label > span"
+                      rule (for the address forms' floating labels) that
+                      matches any span directly under a label, which was
+                      making these overlap. */}
+                  <div className="shipping-method-info">
+                    <div className="shipping-method-label">{option.label}</div>
+                    <div className="shipping-method-description">
+                      {option.description}
+                    </div>
+                  </div>
+                  <div className="shipping-method-price">
+                    {cost === 0 ? "Free" : `$${cost.toFixed(2)}`}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
 
           <div className="checkout-section">
             <h3>Complete Your Order</h3>
@@ -592,6 +830,38 @@ export default function CheckOut() {
               Enter your card details below to complete your payment securely
               via Square.
             </p>
+
+            {/* Google Pay's container must always be in the DOM - Square's
+                attach() needs a real node to render into, and that happens
+                before googlePayAvailable flips true, so gating this div's
+                presence (not just its visibility) on that flag left the
+                ref null when attach() ran and the button silently never
+                appeared. Visibility is style-only for both wallets. */}
+            <div
+              className="express-checkout"
+              style={{ display: applePayAvailable || googlePayAvailable ? "flex" : "none" }}
+            >
+              <button
+                type="button"
+                className="apple-pay-button"
+                onClick={handleApplePayCheckout}
+                disabled={isProcessing}
+                aria-label="Pay with Apple Pay"
+                style={{ display: applePayAvailable ? "inline-block" : "none" }}
+              />
+              <div
+                ref={googlePayContainerRef}
+                className="google-pay-button-container"
+                style={{ display: googlePayAvailable ? "flex" : "none" }}
+                onClick={handleGooglePayCheckout}
+              />
+            </div>
+            <div
+              className="express-checkout-divider"
+              style={{ display: applePayAvailable || googlePayAvailable ? "flex" : "none" }}
+            >
+              <span>Or pay with card</span>
+            </div>
 
             <div className="square-card-container" ref={cardContainerRef} />
 
@@ -611,15 +881,15 @@ export default function CheckOut() {
               <h4>Order Summary</h4>
               <div className="summary-row">
                 <span>Items ({cart.items.length}):</span>
-                <span>${calculateSubTotal(cart).toFixed(2)}</span>
+                <span>${subtotal.toFixed(2)}</span>
               </div>
               <div className="summary-row">
                 <span>Shipping:</span>
-                <span>Free</span>
+                <span>{shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}</span>
               </div>
               <div className="summary-row total">
                 <span>Total:</span>
-                <span>${calculateSubTotal(cart).toFixed(2)}</span>
+                <span>${orderTotal.toFixed(2)}</span>
               </div>
             </div>
 
@@ -638,9 +908,7 @@ export default function CheckOut() {
                   <div className="checkout-content">
                     <span className="square-logo">□</span>
                     Pay with Square
-                    <span className="amount">
-                      ${calculateSubTotal(cart).toFixed(2)}
-                    </span>
+                    <span className="amount">${orderTotal.toFixed(2)}</span>
                   </div>
                 )}
               </button>
