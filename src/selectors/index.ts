@@ -28,3 +28,7 @@ export function useBetaSelector() {
 export function useAwaitLoginSelector() {
   return useSelector((state: IRootState) => state.user.awaitingLoginRes);
 }
+
+export function useThemeSelector() {
+  return useSelector((state: IRootState) => state.setting.theme);
+}

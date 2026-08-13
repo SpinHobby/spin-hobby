@@ -1,3 +1,4 @@
+@use "../../../sass/variables.scss" as *;
 @import url(https://fonts.googleapis.com/css?family=Lato:300,400,900);
 //@import url(https://i.icomoon.io/public/c88de6d4a5/CartIcons/style.css);
 .cf:before,
@@ -494,12 +495,12 @@ strong {
   z-index: 9999;
 
   .loading-spinner {
-    background: white;
+    background: $surface;
     padding: 20px 40px;
     border-radius: 8px;
     font-size: 16px;
     font-weight: bold;
-    color: #333;
+    color: $text-primary;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 }
@@ -516,13 +517,13 @@ strong {
     }
 
     h2 {
-      color: #333;
+      color: $text-primary;
       margin-bottom: 10px;
       font-size: 1.8rem;
     }
 
     p {
-      color: #666;
+      color: $text-secondary;
       margin-bottom: 30px;
       font-size: 1.1rem;
     }
@@ -550,12 +551,12 @@ strong {
   justify-content: space-between;
   align-items: center;
   padding: 20px 0;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid $border;
   margin-bottom: 20px;
 
   strong {
     font-size: 1.8rem;
-    color: #333;
+    color: $text-primary;
   }
 
   .cart-actions {
@@ -564,7 +565,7 @@ strong {
     gap: 15px;
 
     .item-count {
-      color: #666;
+      color: $text-secondary;
       font-size: 14px;
     }
 
@@ -592,10 +593,10 @@ strong {
 
 .cart-table {
   .item {
-    border: 1px solid #e0e0e0;
+    border: 1px solid $border;
     border-radius: 8px;
     margin-bottom: 15px;
-    background: white;
+    background: $surface;
 
     .item-main {
       padding: 20px;
@@ -614,7 +615,7 @@ strong {
           height: 80px;
           object-fit: cover;
           border-radius: 6px;
-          border: 1px solid #e0e0e0;
+          border: 1px solid $border;
         }
 
         .ib-info-meta {
@@ -624,13 +625,13 @@ strong {
             display: block;
             font-weight: bold;
             font-size: 16px;
-            color: #333;
+            color: $text-primary;
             margin-bottom: 5px;
           }
 
           .itemno {
             display: block;
-            color: #666;
+            color: $text-secondary;
             font-size: 12px;
             margin-bottom: 15px;
           }
@@ -643,8 +644,9 @@ strong {
             .btn-quantity {
               width: 30px;
               height: 30px;
-              border: 1px solid #ddd;
-              background: white;
+              border: 1px solid $border;
+              background: $surface;
+              color: $text-primary;
               border-radius: 4px;
               display: flex;
               align-items: center;
@@ -668,7 +670,9 @@ strong {
               width: 60px;
               height: 30px;
               text-align: center;
-              border: 1px solid #ddd;
+              border: 1px solid $border;
+              background: $surface;
+              color: $text-primary;
               border-radius: 4px;
               font-size: 14px;
 
@@ -696,7 +700,7 @@ strong {
         .quantity {
           display: block;
           font-size: 14px;
-          color: #666;
+          color: $text-secondary;
         }
       }
 
@@ -711,7 +715,7 @@ strong {
         .tp-price {
           font-size: 18px;
           font-weight: bold;
-          color: #333;
+          color: $text-primary;
         }
 
         .tp-remove {
@@ -738,8 +742,8 @@ strong {
 
     .item-foot {
       padding: 15px 20px;
-      border-top: 1px solid #f0f0f0;
-      background: #fafafa;
+      border-top: 1px solid $border;
+      background: $surface-secondary;
 
       .if-left {
         display: flex;
@@ -755,7 +759,7 @@ strong {
         }
 
         .if-shipping {
-          color: #666;
+          color: $text-secondary;
           font-size: 12px;
         }
       }
@@ -775,22 +779,22 @@ strong {
       list-style: none;
       padding: 0;
       margin: 0;
-      border: 1px solid #e0e0e0;
+      border: 1px solid $border;
       border-radius: 8px;
-      background: white;
+      background: $surface;
 
       li {
         display: flex;
         justify-content: space-between;
         padding: 15px 20px;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid $border;
 
         &:last-child {
           border-bottom: none;
         }
 
         &.grand-total {
-          background: #f8f9fa;
+          background: $surface-secondary;
           font-weight: bold;
           font-size: 18px;
 
@@ -800,11 +804,11 @@ strong {
         }
 
         .sb-label {
-          color: #333;
+          color: $text-primary;
         }
 
         .sb-value {
-          color: #666;
+          color: $text-secondary;
           font-weight: 500;
         }
       }
@@ -817,7 +821,7 @@ strong {
     .security-info {
       p {
         margin: 8px 0;
-        color: #666;
+        color: $text-secondary;
         font-size: 14px;
         display: flex;
         align-items: center;
@@ -833,7 +837,7 @@ strong {
   align-items: center;
   margin-top: 30px;
   padding: 20px 0;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid $border;
 
   .checkout-btn {
     box-sizing: border-box;

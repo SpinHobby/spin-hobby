@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, Navigate } from "react-router-dom";
 import { useUserSelector } from "../../../selectors";
-import { getOrder, getOrders, lookupGuestOrder, IOrder } from "../../../api/orders";
+import { getOrder, lookupGuestOrder, IOrder } from "../../../api/orders";
 import "./orders.scss";
 
 export default function Orders() {
@@ -14,13 +14,21 @@ export default function Orders() {
   const emailParam = searchParams.get("email");
 
   const [order, setOrder] = useState<IOrder | null>(null);
-  const [orders, setOrders] = useState<IOrder[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lookupEmail, setLookupEmail] = useState(emailParam || "");
   const [lookupPaymentId, setLookupPaymentId] = useState(paymentIdParam || "");
 
+  // Logged-in customers browse order history in Account's History tab, not
+  // here - this page only serves order detail (id, for links from that tab)
+  // and unauthenticated guest lookup by payment id + email.
+  const isRedundantCustomerList = isCustomer && !id && !(paymentIdParam && emailParam);
+
   useEffect(() => {
+    if (isRedundantCustomerList) {
+      setLoading(false);
+      return;
+    }
     if (id && isCustomer) {
       setLoading(true);
       getOrder(Number(id))
@@ -33,16 +41,14 @@ export default function Orders() {
         .then(setOrder)
         .catch((err) => setError(err.message || "Order not found"))
         .finally(() => setLoading(false));
-    } else if (isCustomer) {
-      setLoading(true);
-      getOrders()
-        .then(setOrders)
-        .catch((err) => setError(err.message || "Failed to load orders"))
-        .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [id, isCustomer, paymentIdParam, emailParam]);
+  }, [id, isCustomer, paymentIdParam, emailParam, isRedundantCustomerList]);
+
+  if (isRedundantCustomerList) {
+    return <Navigate to="/account?tab=history" replace />;
+  }
 
   function handleGuestLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -91,28 +97,6 @@ export default function Orders() {
               {order.shippingAddress.country}
             </p>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Logged-in order list
-  if (orders) {
-    return (
-      <div className="orders-page">
-        <div className="orders-container">
-          <h1>Your Orders</h1>
-          {orders.length === 0 ? (
-            <p>No orders yet.</p>
-          ) : (
-            orders.map((o) => (
-              <a href={`/orders/${o.id}`} className="orders-list-row" key={o.id}>
-                <span>Order #{o.id}</span>
-                <span>{new Date(o.createdAt).toLocaleDateString()}</span>
-                <span>${(o.totalCents / 100).toFixed(2)}</span>
-              </a>
-            ))
-          )}
         </div>
       </div>
     );

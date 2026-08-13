@@ -1,6 +1,6 @@
 import axios from "axios";
 import { ECurrencies, ILogin, IMerchPreview, IAnimeSeries, ICharacter } from "../ts";
-import { getCatalog } from "./square";
+import { getCatalog, getCatalogByCategory } from "./square";
 
 const serverUrl =
   process.env.NODE_ENV === "production"
@@ -23,8 +23,14 @@ export async function getCurrencyConversion(
 export function getSearchResult(
   page: number,
   searchString: string,
-  category?: string
+  category?: string,
+  categoryIds?: string[]
 ): Promise<IMerchPreview[]> {
+  if (categoryIds && categoryIds.length > 0) {
+    return getCatalogByCategory(categoryIds, searchString || undefined).then(
+      ({ items }) => items
+    );
+  }
   return getCatalog(searchString).then(({ items }) => items);
 }
 

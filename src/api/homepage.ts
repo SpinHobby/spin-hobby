@@ -1,6 +1,7 @@
 import axios from "axios";
 import { IMerchPreview } from "../ts";
 import { buildImageMap, mapCatalogItemToMerchPreview } from "./square";
+import { adminAuthHeaders } from "./adminAuth";
 
 const serverUrl =
   process.env.NODE_ENV === "production"
@@ -42,7 +43,7 @@ export interface IAdminSlide {
 
 export function getAdminSlides(): Promise<IAdminSlide[]> {
   return axios
-    .get(`${serverUrl}api/homepage/admin/slides`)
+    .get(`${serverUrl}api/homepage/admin/slides`, { headers: adminAuthHeaders() })
     .then((response) => response.data.slides || []);
 }
 
@@ -53,7 +54,7 @@ export function createSlide(params: {
   sortOrder?: number;
 }): Promise<IAdminSlide> {
   return axios
-    .post(`${serverUrl}api/homepage/admin/slides`, params)
+    .post(`${serverUrl}api/homepage/admin/slides`, params, { headers: adminAuthHeaders() })
     .then((response) => response.data.slide);
 }
 
@@ -68,12 +69,14 @@ export function updateSlide(
   }>
 ): Promise<IAdminSlide> {
   return axios
-    .put(`${serverUrl}api/homepage/admin/slides/${id}`, params)
+    .put(`${serverUrl}api/homepage/admin/slides/${id}`, params, { headers: adminAuthHeaders() })
     .then((response) => response.data.slide);
 }
 
 export function deleteSlide(id: number): Promise<void> {
-  return axios.delete(`${serverUrl}api/homepage/admin/slides/${id}`).then(() => undefined);
+  return axios
+    .delete(`${serverUrl}api/homepage/admin/slides/${id}`, { headers: adminAuthHeaders() })
+    .then(() => undefined);
 }
 
 // --- Admin: featured products ---
@@ -88,7 +91,7 @@ export interface IAdminFeaturedProduct {
 
 export function getAdminFeaturedProducts(): Promise<IAdminFeaturedProduct[]> {
   return axios
-    .get(`${serverUrl}api/homepage/admin/featured`)
+    .get(`${serverUrl}api/homepage/admin/featured`, { headers: adminAuthHeaders() })
     .then((response) => response.data.featured || []);
 }
 
@@ -97,7 +100,11 @@ export function addFeaturedProduct(
   sortOrder?: number
 ): Promise<IAdminFeaturedProduct> {
   return axios
-    .post(`${serverUrl}api/homepage/admin/featured`, { squareItemId, sortOrder })
+    .post(
+      `${serverUrl}api/homepage/admin/featured`,
+      { squareItemId, sortOrder },
+      { headers: adminAuthHeaders() }
+    )
     .then((response) => response.data.featured);
 }
 
@@ -106,12 +113,14 @@ export function updateFeaturedProduct(
   params: Partial<{ sortOrder: number; isVisible: boolean }>
 ): Promise<IAdminFeaturedProduct> {
   return axios
-    .put(`${serverUrl}api/homepage/admin/featured/${id}`, params)
+    .put(`${serverUrl}api/homepage/admin/featured/${id}`, params, {
+      headers: adminAuthHeaders(),
+    })
     .then((response) => response.data.featured);
 }
 
 export function removeFeaturedProduct(id: number): Promise<void> {
   return axios
-    .delete(`${serverUrl}api/homepage/admin/featured/${id}`)
+    .delete(`${serverUrl}api/homepage/admin/featured/${id}`, { headers: adminAuthHeaders() })
     .then(() => undefined);
 }

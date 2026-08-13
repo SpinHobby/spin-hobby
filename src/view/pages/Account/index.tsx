@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Menu } from "./Menu";
 import { Summary } from "./Summary";
 import { History } from "./History";
@@ -9,8 +10,16 @@ import { Content } from "./types";
 import { menuItems } from "./constants";
 import { useUserSelector } from "../../../selectors";
 
+const TAB_PARAM_TO_CONTENT: Record<string, Content> = {
+  history: Content.OrderHistory,
+  address: Content.Address,
+  linked: Content.LinkedAccounts,
+};
+
 export function Account() {
-  const [content, setContent] = useState<Content>(Content.Summary);
+  const [searchParams] = useSearchParams();
+  const initialTab = TAB_PARAM_TO_CONTENT[searchParams.get("tab") || ""] ?? Content.Summary;
+  const [content, setContent] = useState<Content>(initialTab);
   const { user } = useUserSelector();
 
   function getDetails() {

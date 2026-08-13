@@ -6,12 +6,18 @@ import { getSearchResult } from "../api";
 
 function* fetchSearchResult({
   payload,
-}: PayloadAction<{ page: number; searchString: string; category?: string }>) {
+}: PayloadAction<{
+  page: number;
+  searchString: string;
+  category?: string;
+  categoryIds?: string[];
+}>) {
   try {
     const searchResult: IMerchPreview[] = yield getSearchResult(
       payload.page,
       payload.searchString,
-      payload.category
+      payload.category,
+      payload.categoryIds
     );
 
     yield put(

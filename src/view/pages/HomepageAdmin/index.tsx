@@ -13,26 +13,36 @@ import {
 } from "api/homepage";
 import { getCatalog } from "api/square";
 import { getDatabaseStats, IDatabaseStats, getAiUsage, updateAiBudget, IAiToolBudget } from "api/ops";
+import {
+  getStoredAdminPassword,
+  setStoredAdminPassword,
+  clearStoredAdminPassword,
+} from "api/adminAuth";
 import { IMerchPreview } from "../../../ts";
 import "./homepageAdmin.scss";
 
-const ADMIN_PASSWORD = "spinadmin26";
-const AUTH_STORAGE_KEY = "spinhobby_homepage_admin_unlocked";
-
 export default function HomepageAdmin() {
-  const [unlocked, setUnlocked] = useState(
-    () => localStorage.getItem(AUTH_STORAGE_KEY) === "true"
-  );
+  const [unlocked, setUnlocked] = useState(() => !!getStoredAdminPassword());
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [checkingPassword, setCheckingPassword] = useState(false);
 
-  function handleUnlock(e: React.FormEvent) {
+  async function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      localStorage.setItem(AUTH_STORAGE_KEY, "true");
+    setCheckingPassword(true);
+    setPasswordError("");
+    // Stash the entered password first so the verification call below picks
+    // it up via adminAuthHeaders() - the backend is the actual judge now,
+    // not a string compare shipped in this bundle.
+    setStoredAdminPassword(password);
+    try {
+      await getDatabaseStats();
       setUnlocked(true);
-    } else {
+    } catch {
+      clearStoredAdminPassword();
       setPasswordError("Incorrect password");
+    } finally {
+      setCheckingPassword(false);
     }
   }
 
@@ -55,8 +65,12 @@ export default function HomepageAdmin() {
               />
             </label>
             {passwordError && <p className="homepage-admin-error">{passwordError}</p>}
-            <button type="submit" className="homepage-admin-btn homepage-admin-btn-primary">
-              Unlock
+            <button
+              type="submit"
+              className="homepage-admin-btn homepage-admin-btn-primary"
+              disabled={checkingPassword}
+            >
+              {checkingPassword ? "Checking..." : "Unlock"}
             </button>
           </form>
         </div>

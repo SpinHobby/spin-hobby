@@ -10,49 +10,34 @@ import { TiArrowSortedDown, TiArrowSortedUp } from "react-icons/ti";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getSearch } from "../../../reducers";
-import { getCategories } from "../../../api/square";
+import { getDisplayCategories, IDisplayCategory } from "../../../api/square";
 
 interface Props {
   onNav?: boolean;
 }
 
-interface SearchCategory {
-  id: string;
-  name: string;
-}
-
-const DEFAULT_CATEGORIES = [
-  { id: "all", name: "All Categories" },
-  { id: "figures", name: "Scale Figures" },
-  { id: "nendoroids", name: "Nendoroids" },
-  { id: "plushies", name: "Plushies" },
-  { id: "apparel", name: "Anime Apparel" },
-];
+const ALL_CATEGORIES: IDisplayCategory = { name: "All Categories", categoryIds: [] };
 
 export default function Search({ onNav = true }: Props) {
   const [search, setSearch] = useState<string>("");
   const [openCategoryList, setOpenCategoryList] = useState<boolean>(false);
-  const [category, setCategory] = useState<SearchCategory>(
-    DEFAULT_CATEGORIES[0]
-  );
-  const [categories, setCategories] =
-    useState<SearchCategory[]>(DEFAULT_CATEGORIES);
+  const [category, setCategory] = useState<IDisplayCategory>(ALL_CATEGORIES);
+  const [categories, setCategories] = useState<IDisplayCategory[]>([ALL_CATEGORIES]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Fetch categories from the Square catalog
+  // Fetch the curated display categories (not Square's raw ~64, which are
+  // full of duplicates/typos - see the backend's categoryMapping.ts)
   useEffect(() => {
-    getCategories()
+    getDisplayCategories()
       .then((cats) => {
-        if (cats.length > 0) {
-          setCategories([DEFAULT_CATEGORIES[0], ...cats]);
-        }
+        if (cats.length > 0) setCategories([ALL_CATEGORIES, ...cats]);
       })
       .catch((error) => {
         console.error("Error fetching categories for search:", error);
-        // Keep default categories on error
+        // Keep "All Categories" only on error
       });
   }, []);
 
@@ -82,7 +67,7 @@ export default function Search({ onNav = true }: Props) {
     setOpenCategoryList(!openCategoryList);
   }
 
-  function handleOnSelectCategory(selectedCategory: SearchCategory) {
+  function handleOnSelectCategory(selectedCategory: IDisplayCategory) {
     setCategory(selectedCategory);
     setOpenCategoryList(false); // Close dropdown after selection
   }
@@ -90,24 +75,27 @@ export default function Search({ onNav = true }: Props) {
   function onSubmitHandler(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (search.trim().length === 0) {
-      return; // Don't search if empty
+    const trimmed = search.trim();
+    if (trimmed.length === 0 && category.categoryIds.length === 0) {
+      return; // Nothing to search or browse by
     }
 
-    // Dispatch search action to Redux
     dispatch(
       getSearch({
         page: 1,
-        searchString: search.trim(),
+        searchString: trimmed,
         category: category.name,
+        categoryIds: category.categoryIds.length > 0 ? category.categoryIds : undefined,
       })
     );
 
-    // Navigate to search results page with parameters
-    const searchParams = new URLSearchParams({
-      q: search.trim(),
-      category: category.name,
-    });
+    const searchParams = new URLSearchParams();
+    if (trimmed) searchParams.set("q", trimmed);
+    if (category.categoryIds.length > 0) {
+      searchParams.set("categoryIds", category.categoryIds.join(","));
+      searchParams.set("categoryName", category.name);
+    }
+    searchParams.set("category", category.name);
 
     navigate(`/search?${searchParams.toString()}`);
   }
@@ -153,18 +141,18 @@ function Dropdown({
   categories,
   handleOnSelectCategory,
 }: {
-  category: SearchCategory;
-  categories: SearchCategory[];
-  handleOnSelectCategory: (category: SearchCategory) => void;
+  category: IDisplayCategory;
+  categories: IDisplayCategory[];
+  handleOnSelectCategory: (category: IDisplayCategory) => void;
 }) {
   return (
     <div className="dropdown">
       <ul className="categories" id="categories">
         {categories.map((categoryOption) => (
           <li
-            key={categoryOption.id}
+            key={categoryOption.name}
             onClick={() => handleOnSelectCategory(categoryOption)}
-            className={category.id === categoryOption.id ? "selected" : ""}
+            className={category.name === categoryOption.name ? "selected" : ""}
           >
             {categoryOption.name}
           </li>

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { adminAuthHeaders } from "./adminAuth";
 
 const serverUrl =
   process.env.NODE_ENV === "production"
@@ -17,7 +18,7 @@ export interface IDatabaseStats {
 }
 
 export function getDatabaseStats(): Promise<IDatabaseStats> {
-  return axios.get(`${serverUrl}api/ops/database`).then((response) => {
+  return axios.get(`${serverUrl}api/ops/database`, { headers: adminAuthHeaders() }).then((response) => {
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to load database stats");
     }
@@ -34,7 +35,7 @@ export interface IAiToolBudget {
 }
 
 export function getAiUsage(): Promise<IAiToolBudget[]> {
-  return axios.get(`${serverUrl}api/ops/ai-usage`).then((response) => {
+  return axios.get(`${serverUrl}api/ops/ai-usage`, { headers: adminAuthHeaders() }).then((response) => {
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to load AI usage");
     }
@@ -48,7 +49,11 @@ export function updateAiBudget(
   stopThresholdUsd: number
 ): Promise<IAiToolBudget> {
   return axios
-    .put(`${serverUrl}api/ops/ai-usage/${tool}`, { warnThresholdUsd, stopThresholdUsd })
+    .put(
+      `${serverUrl}api/ops/ai-usage/${tool}`,
+      { warnThresholdUsd, stopThresholdUsd },
+      { headers: adminAuthHeaders() }
+    )
     .then((response) => {
       if (!response.data.success) {
         throw new Error(response.data.error || "Failed to update budget");
