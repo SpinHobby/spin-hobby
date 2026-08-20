@@ -7,6 +7,7 @@ import {
   getItemForEdit,
   updateItem,
   ISearchResultItem,
+  IArtworkCrop,
 } from "api/cashier";
 import "./cashier.scss";
 
@@ -99,6 +100,7 @@ function AddNewFlow() {
   const [category, setCategory] = useState<string>(PRODUCT_CATEGORIES[0]);
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [artworkCrop, setArtworkCrop] = useState<IArtworkCrop | undefined>(undefined);
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,7 +116,7 @@ function AddNewFlow() {
     setError("");
 
     try {
-      const result = await identifyPhoto(file);
+      const result = await identifyPhoto(file, condition);
       setTitle(result.title);
       setDescription(result.description);
       setCategory(
@@ -123,12 +125,14 @@ function AddNewFlow() {
           : PRODUCT_CATEGORIES[0]
       );
       setPrice("");
+      setArtworkCrop(result.artworkCrop);
       setStep("review");
     } catch (err: any) {
       setError(err.message || "Couldn't identify the item. Try again or enter it manually.");
       setTitle("");
       setDescription("");
       setPrice("");
+      setArtworkCrop(undefined);
       setStep("error");
     }
   }
@@ -142,6 +146,7 @@ function AddNewFlow() {
     setCategory(PRODUCT_CATEGORIES[0]);
     setPrice("");
     setQuantity("");
+    setArtworkCrop(undefined);
     setError("");
     setSaveError("");
   }
@@ -159,6 +164,7 @@ function AddNewFlow() {
         price: priceValue,
         hidden: mode === "pos",
         quantity: mode === "website" ? quantityValue : undefined,
+        artworkCrop,
       });
     } catch (err: any) {
       setSaveError(
@@ -243,6 +249,13 @@ function AddNewFlow() {
         {(step === "review" || step === "error") && (
           <div className="cashier-step cashier-review">
             {photoUrl && <img src={photoUrl} alt="Captured item" className="cashier-photo" />}
+            {condition === "sealed" && (
+              <p className="cashier-hint">
+                {artworkCrop
+                  ? "Found the box artwork — it'll be cropped and straightened automatically for the product photo."
+                  : "Couldn't confidently locate the box artwork in this photo — the full photo will be used as-is. Try a closer, more square-on shot if the result looks off."}
+              </p>
+            )}
 
             {error && <p className="cashier-error">{error}</p>}
 
