@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import classNames from "classnames";
 import { useCartSelector } from "../../../selectors";
 import UserMenu from "./UserMenu";
-import ThemeToggle from "./ThemeToggle";
 
 interface INavBarCommand {
   label: string;
@@ -77,7 +76,6 @@ export default function Commands() {
     <div className="navbar-commands">
       <UserMenu />
       {getCommandButtons(commands)}
-      <ThemeToggle />
     </div>
   );
 }

@@ -253,12 +253,11 @@
         }
       }
 
-      // Discord/Instagram/theme toggle move into the hamburger drawer
-      // (MobileMenu) on mobile, leaving just Cart + account in the bar.
+      // Discord/Instagram move into the hamburger drawer (MobileMenu) on
+      // mobile, leaving just Cart + account in the bar.
       @include mobile-only {
         &.navbar-command-discord,
-        &.navbar-command-instagram,
-        &.navbar-command-theme {
+        &.navbar-command-instagram {
           display: none;
         }
       }
