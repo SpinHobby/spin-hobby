@@ -382,8 +382,10 @@ function EditExistingFlow() {
   const [quantity, setQuantity] = useState("");
   const [hidden, setHidden] = useState(false);
   const [stockTracked, setStockTracked] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState("");
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -407,11 +409,14 @@ function EditExistingFlow() {
     setSaveError("");
     setPhotoFile(null);
     setPhotoUrl("");
+    setRemovePhoto(false);
+    setCurrentImageUrl(undefined);
     setLoadingItem(true);
     getItemForEdit(id)
       .then((item) => {
         setTitle(item.name);
         setDescription(item.description || "");
+        setCurrentImageUrl(item.imageUrl);
         setCategory(
           item.categoryName &&
             (PRODUCT_CATEGORIES as readonly string[]).includes(item.categoryName)
@@ -434,6 +439,17 @@ function EditExistingFlow() {
     if (!file) return;
     setPhotoFile(file);
     setPhotoUrl(URL.createObjectURL(file));
+    setRemovePhoto(false);
+  }
+
+  function handleRemovePhoto() {
+    setPhotoFile(null);
+    setPhotoUrl("");
+    setRemovePhoto(true);
+  }
+
+  function undoRemovePhoto() {
+    setRemovePhoto(false);
   }
 
   function saveChanges() {
@@ -442,6 +458,7 @@ function EditExistingFlow() {
     setSaveError("");
     updateItem(selectedId, {
       photo: photoFile || undefined,
+      removePhoto,
       title,
       description,
       category,
@@ -450,7 +467,11 @@ function EditExistingFlow() {
       hidden,
       quantity: !hidden && quantityValue >= 0 ? quantityValue : undefined,
     })
-      .then(() => setSaved(true))
+      .then(() => {
+        setSaved(true);
+        if (removePhoto) setCurrentImageUrl(undefined);
+        setRemovePhoto(false);
+      })
       .catch((err) => setSaveError(err.message || "Could not save changes"))
       .finally(() => setSaving(false));
   }
@@ -522,13 +543,34 @@ function EditExistingFlow() {
       {saveError && <p className="cashier-error">{saveError}</p>}
       {saved && <p className="cashier-final-instructions">Saved.</p>}
 
-      {photoUrl && <img src={photoUrl} alt="New photo" className="cashier-photo" />}
-      <button
-        className="cashier-btn cashier-btn-ghost"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        {photoUrl ? "Retake Photo" : "📷 Replace Photo (optional)"}
-      </button>
+      {photoUrl ? (
+        <img src={photoUrl} alt="New photo" className="cashier-photo" />
+      ) : !removePhoto && currentImageUrl ? (
+        <img src={currentImageUrl} alt="Current photo" className="cashier-photo" />
+      ) : (
+        <p className="cashier-hint">
+          {removePhoto ? "Photo will be removed on save." : "No photo on this item."}
+        </p>
+      )}
+      <div className="cashier-actions">
+        <button
+          className="cashier-btn cashier-btn-ghost"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {photoUrl || currentImageUrl ? "📷 Retake Photo" : "📷 Add Photo (optional)"}
+        </button>
+        {removePhoto ? (
+          <button className="cashier-btn cashier-btn-ghost" onClick={undoRemovePhoto}>
+            Undo Remove
+          </button>
+        ) : (
+          (photoUrl || currentImageUrl) && (
+            <button className="cashier-btn cashier-btn-danger" onClick={handleRemovePhoto}>
+              Remove Photo
+            </button>
+          )
+        )}
+      </div>
       <input
         ref={fileInputRef}
         type="file"

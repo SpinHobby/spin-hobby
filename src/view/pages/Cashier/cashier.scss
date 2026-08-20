@@ -279,6 +279,16 @@
   }
 }
 
+.cashier-btn-danger {
+  background: transparent;
+  color: $error-500;
+  border: 1px solid rgba($error-500, 0.3);
+
+  &:hover {
+    background: rgba($error-500, 0.08);
+  }
+}
+
 .cashier-final {
   align-items: center;
   text-align: center;

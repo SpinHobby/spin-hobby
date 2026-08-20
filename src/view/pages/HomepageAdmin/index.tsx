@@ -157,8 +157,10 @@ function ItemsSection() {
   const [quantity, setQuantity] = useState("");
   const [hidden, setHidden] = useState(false);
   const [stockTracked, setStockTracked] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState("");
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -254,11 +256,14 @@ function ItemsSection() {
     setSaveError("");
     setPhotoFile(null);
     setPhotoUrl("");
+    setRemovePhoto(false);
+    setCurrentImageUrl(undefined);
     setLoadingItem(true);
     getItemForEdit(id)
       .then((item) => {
         setTitle(item.name);
         setDescription(item.description || "");
+        setCurrentImageUrl(item.imageUrl);
         setCategory(
           item.categoryName &&
             (PRODUCT_CATEGORIES as readonly string[]).includes(item.categoryName)
@@ -281,6 +286,17 @@ function ItemsSection() {
     if (!file) return;
     setPhotoFile(file);
     setPhotoUrl(URL.createObjectURL(file));
+    setRemovePhoto(false);
+  }
+
+  function handleRemovePhoto() {
+    setPhotoFile(null);
+    setPhotoUrl("");
+    setRemovePhoto(true);
+  }
+
+  function undoRemovePhoto() {
+    setRemovePhoto(false);
   }
 
   const priceValue = parseFloat(price);
@@ -295,6 +311,7 @@ function ItemsSection() {
     setSaveError("");
     updateItem(selectedId, {
       photo: photoFile || undefined,
+      removePhoto,
       title,
       description,
       category,
@@ -305,10 +322,18 @@ function ItemsSection() {
     })
       .then(() => {
         setSaved(true);
+        if (removePhoto) setCurrentImageUrl(undefined);
+        setRemovePhoto(false);
         setResults((current) =>
           current.map((r) =>
             r.id === selectedId
-              ? { ...r, name: title, priceCents: Math.round(priceValue * 100), hidden }
+              ? {
+                  ...r,
+                  name: title,
+                  priceCents: Math.round(priceValue * 100),
+                  hidden,
+                  imageUrl: removePhoto ? undefined : photoUrl || r.imageUrl,
+                }
               : r
           )
         );
@@ -457,13 +482,38 @@ function ItemsSection() {
           {saveError && <p className="homepage-admin-error">{saveError}</p>}
           {saved && <p className="homepage-admin-hint">Saved.</p>}
 
-          {photoUrl && <img className="homepage-admin-thumb-large" src={photoUrl} alt="" />}
-          <button
-            className="homepage-admin-btn homepage-admin-btn-ghost"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {photoUrl ? "Replace Photo (again)" : "Replace Photo (optional)"}
-          </button>
+          {photoUrl ? (
+            <img className="homepage-admin-thumb-large" src={photoUrl} alt="New photo" />
+          ) : !removePhoto && currentImageUrl ? (
+            <img className="homepage-admin-thumb-large" src={currentImageUrl} alt="Current photo" />
+          ) : (
+            <p className="homepage-admin-hint">
+              {removePhoto ? "Photo will be removed on save." : "No photo on this item."}
+            </p>
+          )}
+
+          <div className="homepage-admin-actions">
+            <button
+              className="homepage-admin-btn homepage-admin-btn-ghost"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {photoUrl || currentImageUrl ? "Replace Photo" : "Add Photo"}
+            </button>
+            {removePhoto ? (
+              <button className="homepage-admin-btn homepage-admin-btn-ghost" onClick={undoRemovePhoto}>
+                Undo Remove
+              </button>
+            ) : (
+              (photoUrl || currentImageUrl) && (
+                <button
+                  className="homepage-admin-btn homepage-admin-btn-danger"
+                  onClick={handleRemovePhoto}
+                >
+                  Remove Photo
+                </button>
+              )
+            )}
+          </div>
           <input
             ref={fileInputRef}
             type="file"

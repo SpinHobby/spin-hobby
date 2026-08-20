@@ -149,6 +149,7 @@ export interface IEditableItem {
   categoryName?: string;
   hidden: boolean;
   stockCount: number | null;
+  imageUrl?: string;
 }
 
 export function getItemForEdit(id: string): Promise<IEditableItem> {
@@ -164,6 +165,7 @@ export function updateItem(
   id: string,
   params: {
     photo?: File;
+    removePhoto?: boolean;
     title: string;
     description: string;
     price: number; // dollars
@@ -175,6 +177,7 @@ export function updateItem(
 ): Promise<{ itemId?: string }> {
   const formData = new FormData();
   if (params.photo) formData.append("photo", params.photo);
+  if (params.removePhoto) formData.append("removePhoto", "true");
   formData.append("title", params.title);
   formData.append("description", params.description);
   formData.append("price", String(params.price));
