@@ -48,7 +48,7 @@ export default function UserMenu() {
           <span className="navbar-command-icon-wrap">
             <FiUser className="navbar-command-icon" size={"1.5em"} />
           </span>
-          <label>Sign In</label>
+          <label>Account</label>
         </div>
 
         {open && (
