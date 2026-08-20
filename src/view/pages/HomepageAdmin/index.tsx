@@ -19,7 +19,7 @@ import {
   clearStoredAdminPassword,
 } from "api/adminAuth";
 import {
-  searchItemsForEdit,
+  browseItems,
   getItemForEdit,
   updateItem,
   ISearchResultItem,
@@ -134,6 +134,9 @@ function ItemsSection() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ISearchResultItem[]>([]);
   const [searching, setSearching] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState("");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -153,14 +156,43 @@ function ItemsSection() {
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
+  // Blank query browses the full catalog page by page (like Square's own
+  // item list); a typed query filters it. Runs once on mount so the tab
+  // opens straight into a browsable list instead of an empty search box.
+  function loadFirstPage(q: string) {
     setSearching(true);
     setError("");
-    searchItemsForEdit(query.trim())
-      .then(setResults)
-      .catch((err) => setError(err.message || "Search failed"))
+    browseItems({ q: q || undefined })
+      .then(({ items, cursor: nextCursor }) => {
+        setResults(items);
+        setCursor(nextCursor);
+        setHasSearched(true);
+      })
+      .catch((err) => setError(err.message || "Failed to load items"))
       .finally(() => setSearching(false));
+  }
+
+  useEffect(() => {
+    loadFirstPage("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    loadFirstPage(query.trim());
+  }
+
+  function loadMore() {
+    if (!cursor) return;
+    setLoadingMore(true);
+    setError("");
+    browseItems({ q: query.trim() || undefined, cursor })
+      .then(({ items, cursor: nextCursor }) => {
+        setResults((current) => [...current, ...items]);
+        setCursor(nextCursor);
+      })
+      .catch((err) => setError(err.message || "Failed to load more items"))
+      .finally(() => setLoadingMore(false));
   }
 
   function selectItem(id: string) {
@@ -243,9 +275,9 @@ function ItemsSection() {
       <section className="homepage-admin-section">
         <h2>Manage Items</h2>
         <p className="homepage-admin-hint">
-          Search the catalog to edit any item, or hide it from the storefront without
-          deleting it from Square. Hidden items stay purchasable in-person via the cashier
-          tool.
+          Browse or search the catalog to edit any item, or hide it from the storefront
+          without deleting it from Square. Hidden items stay purchasable in-person via the
+          cashier tool.
         </p>
         {error && <p className="homepage-admin-error">{error}</p>}
 
@@ -254,33 +286,50 @@ function ItemsSection() {
             className="homepage-admin-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search items by name..."
+            placeholder="Search items by name (leave blank to browse all)..."
             autoFocus
           />
           <button type="submit" className="homepage-admin-btn homepage-admin-btn-primary">
-            {searching ? "Searching..." : "Search"}
+            {searching ? "Loading..." : "Search"}
           </button>
         </form>
 
-        {results.length > 0 && (
-          <div className="homepage-admin-table">
-            {results.map((item) => (
-              <div
-                className="homepage-admin-row homepage-admin-row-clickable"
-                key={item.id}
-                onClick={() => selectItem(item.id)}
-              >
-                {item.imageUrl ? (
-                  <img className="homepage-admin-thumb" src={item.imageUrl} alt="" />
-                ) : (
-                  <div className="homepage-admin-thumb homepage-admin-thumb-empty" />
-                )}
-                <span className="homepage-admin-featured-name">{item.name}</span>
-                <span>${(item.priceCents / 100).toFixed(2)}</span>
-                <span>{item.hidden ? "Hidden from site" : "Visible on site"}</span>
+        {searching ? (
+          <p>Loading items...</p>
+        ) : (
+          <>
+            {hasSearched && results.length === 0 && <p>No items found.</p>}
+            {results.length > 0 && (
+              <div className="homepage-admin-table">
+                {results.map((item) => (
+                  <div
+                    className="homepage-admin-row homepage-admin-row-clickable"
+                    key={item.id}
+                    onClick={() => selectItem(item.id)}
+                  >
+                    {item.imageUrl ? (
+                      <img className="homepage-admin-thumb" src={item.imageUrl} alt="" />
+                    ) : (
+                      <div className="homepage-admin-thumb homepage-admin-thumb-empty" />
+                    )}
+                    <span className="homepage-admin-featured-name">{item.name}</span>
+                    <span>${(item.priceCents / 100).toFixed(2)}</span>
+                    <span>{item.hidden ? "Hidden from site" : "Visible on site"}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+            {cursor && (
+              <button
+                className="homepage-admin-btn homepage-admin-btn-ghost"
+                onClick={loadMore}
+                disabled={loadingMore}
+                style={{ marginTop: "0.75rem" }}
+              >
+                {loadingMore ? "Loading..." : "Load More"}
+              </button>
+            )}
+          </>
         )}
       </section>
     );

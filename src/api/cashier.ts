@@ -118,6 +118,24 @@ export function searchItemsForEdit(query: string): Promise<ISearchResultItem[]> 
     });
 }
 
+// Paginated variant for the admin "browse all items" view - a blank query
+// returns the full catalog page by page instead of requiring a search term.
+export function browseItems(params: {
+  q?: string;
+  cursor?: string;
+}): Promise<{ items: ISearchResultItem[]; cursor?: string }> {
+  return axios
+    .get(`${serverUrl}api/cashier/search`, {
+      params: { q: params.q || undefined, cursor: params.cursor || undefined },
+    })
+    .then((response) => {
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Search failed");
+      }
+      return { items: response.data.items, cursor: response.data.cursor };
+    });
+}
+
 export interface IEditableItem {
   id: string;
   name: string;
