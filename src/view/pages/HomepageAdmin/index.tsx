@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   IAdminSlide,
   IAdminFeaturedProduct,
@@ -18,6 +18,13 @@ import {
   setStoredAdminPassword,
   clearStoredAdminPassword,
 } from "api/adminAuth";
+import {
+  searchItemsForEdit,
+  getItemForEdit,
+  updateItem,
+  ISearchResultItem,
+  PRODUCT_CATEGORIES,
+} from "api/cashier";
 import { IMerchPreview } from "../../../ts";
 import "./homepageAdmin.scss";
 
@@ -81,7 +88,7 @@ export default function HomepageAdmin() {
   return <HomepageAdminTool />;
 }
 
-type Tab = "homepage" | "ops";
+type Tab = "homepage" | "items" | "ops";
 
 function HomepageAdminTool() {
   const [tab, setTab] = useState<Tab>("homepage");
@@ -96,6 +103,9 @@ function HomepageAdminTool() {
             onClick={() => setTab("homepage")}
           >
             Homepage
+          </button>
+          <button className={tab === "items" ? "active" : ""} onClick={() => setTab("items")}>
+            Items
           </button>
           <button className={tab === "ops" ? "active" : ""} onClick={() => setTab("ops")}>
             Ops
@@ -112,9 +122,280 @@ function HomepageAdminTool() {
           </>
         )}
 
+        {tab === "items" && <ItemsSection />}
+
         {tab === "ops" && <OpsSection />}
       </div>
     </div>
+  );
+}
+
+function ItemsSection() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ISearchResultItem[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState("");
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loadingItem, setLoadingItem] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [existingCategoryId, setExistingCategoryId] = useState<string | undefined>(undefined);
+  const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [hidden, setHidden] = useState(false);
+  const [stockTracked, setStockTracked] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setSearching(true);
+    setError("");
+    searchItemsForEdit(query.trim())
+      .then(setResults)
+      .catch((err) => setError(err.message || "Search failed"))
+      .finally(() => setSearching(false));
+  }
+
+  function selectItem(id: string) {
+    setSelectedId(id);
+    setSaved(false);
+    setSaveError("");
+    setPhotoFile(null);
+    setPhotoUrl("");
+    setLoadingItem(true);
+    getItemForEdit(id)
+      .then((item) => {
+        setTitle(item.name);
+        setDescription(item.description || "");
+        setCategory(
+          item.categoryName &&
+            (PRODUCT_CATEGORIES as readonly string[]).includes(item.categoryName)
+            ? item.categoryName
+            : ""
+        );
+        setExistingCategoryId(item.categoryId);
+        setPrice((item.priceCents / 100).toFixed(2));
+        setHidden(item.hidden);
+        setStockTracked(item.stockCount != null);
+        setQuantity(item.stockCount != null ? String(item.stockCount) : "");
+      })
+      .catch((err) => setError(err.message || "Could not load item"))
+      .finally(() => setLoadingItem(false));
+  }
+
+  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoUrl(URL.createObjectURL(file));
+  }
+
+  const priceValue = parseFloat(price);
+  const priceIsValid = !isNaN(priceValue) && priceValue > 0;
+  const quantityValue = parseInt(quantity, 10);
+  const quantityIsValid = hidden || !stockTracked || (!isNaN(quantityValue) && quantityValue >= 0);
+  const canSave = !!title && priceIsValid && quantityIsValid;
+
+  function saveChanges() {
+    if (!selectedId) return;
+    setSaving(true);
+    setSaveError("");
+    updateItem(selectedId, {
+      photo: photoFile || undefined,
+      title,
+      description,
+      category,
+      categoryId: existingCategoryId,
+      price: priceValue,
+      hidden,
+      quantity: !hidden && quantityValue >= 0 ? quantityValue : undefined,
+    })
+      .then(() => {
+        setSaved(true);
+        setResults((current) =>
+          current.map((r) =>
+            r.id === selectedId
+              ? { ...r, name: title, priceCents: Math.round(priceValue * 100), hidden }
+              : r
+          )
+        );
+      })
+      .catch((err) => setSaveError(err.message || "Could not save changes"))
+      .finally(() => setSaving(false));
+  }
+
+  function backToSearch() {
+    setSelectedId(null);
+    setSaved(false);
+    setSaveError("");
+  }
+
+  if (!selectedId) {
+    return (
+      <section className="homepage-admin-section">
+        <h2>Manage Items</h2>
+        <p className="homepage-admin-hint">
+          Search the catalog to edit any item, or hide it from the storefront without
+          deleting it from Square. Hidden items stay purchasable in-person via the cashier
+          tool.
+        </p>
+        {error && <p className="homepage-admin-error">{error}</p>}
+
+        <form className="homepage-admin-add-form" onSubmit={handleSearch}>
+          <input
+            className="homepage-admin-input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search items by name..."
+            autoFocus
+          />
+          <button type="submit" className="homepage-admin-btn homepage-admin-btn-primary">
+            {searching ? "Searching..." : "Search"}
+          </button>
+        </form>
+
+        {results.length > 0 && (
+          <div className="homepage-admin-table">
+            {results.map((item) => (
+              <div
+                className="homepage-admin-row homepage-admin-row-clickable"
+                key={item.id}
+                onClick={() => selectItem(item.id)}
+              >
+                {item.imageUrl ? (
+                  <img className="homepage-admin-thumb" src={item.imageUrl} alt="" />
+                ) : (
+                  <div className="homepage-admin-thumb homepage-admin-thumb-empty" />
+                )}
+                <span className="homepage-admin-featured-name">{item.name}</span>
+                <span>${(item.priceCents / 100).toFixed(2)}</span>
+                <span>{item.hidden ? "Hidden from site" : "Visible on site"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="homepage-admin-section">
+      <button className="homepage-admin-btn homepage-admin-btn-ghost" onClick={backToSearch}>
+        ← Back to Search
+      </button>
+
+      {loadingItem ? (
+        <p>Loading item...</p>
+      ) : (
+        <>
+          {saveError && <p className="homepage-admin-error">{saveError}</p>}
+          {saved && <p className="homepage-admin-hint">Saved.</p>}
+
+          {photoUrl && <img className="homepage-admin-thumb-large" src={photoUrl} alt="" />}
+          <button
+            className="homepage-admin-btn homepage-admin-btn-ghost"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {photoUrl ? "Replace Photo (again)" : "Replace Photo (optional)"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhoto}
+            hidden
+          />
+
+          <label className="homepage-admin-field">
+            <span>Title</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+
+          <label className="homepage-admin-field">
+            <span>Description</span>
+            <textarea
+              className="homepage-admin-textarea"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </label>
+
+          <label className="homepage-admin-field">
+            <span>Category</span>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              {!category && (
+                <option value="">Keep existing category (not in our list)</option>
+              )}
+              {PRODUCT_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="homepage-admin-field">
+            <span>Price ($)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </label>
+
+          <label className="homepage-admin-checkbox">
+            <input
+              type="checkbox"
+              checked={hidden}
+              onChange={(e) => setHidden(e.target.checked)}
+            />
+            Hidden from website (Convention/POS only)
+          </label>
+
+          {!hidden && (
+            <label className="homepage-admin-field">
+              <span>Stock Count</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                step="1"
+                min="0"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder={
+                  stockTracked ? undefined : "Untracked - leave blank to keep it that way"
+                }
+              />
+            </label>
+          )}
+
+          <div className="homepage-admin-actions">
+            <button className="homepage-admin-btn homepage-admin-btn-ghost" onClick={backToSearch}>
+              Cancel
+            </button>
+            <button
+              className="homepage-admin-btn homepage-admin-btn-primary"
+              disabled={!canSave || saving}
+              onClick={saveChanges}
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 

@@ -237,6 +237,52 @@
   }
 }
 
+.homepage-admin-row-clickable {
+  cursor: pointer;
+
+  &:hover {
+    background: $surface-secondary;
+  }
+}
+
+.homepage-admin-thumb {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  object-fit: cover;
+  border-radius: $border-radius-base;
+  background: $surface-secondary;
+}
+
+.homepage-admin-thumb-empty {
+  border: 1px dashed $border;
+}
+
+.homepage-admin-thumb-large {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: $border-radius-base;
+  background: $surface-secondary;
+  margin-bottom: $spacing-2;
+}
+
+.homepage-admin-textarea {
+  @include text-body-sm;
+  padding: $spacing-3;
+  border: 1px solid $border;
+  border-radius: $border-radius-base;
+  background: $surface;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.homepage-admin-actions {
+  display: flex;
+  gap: $spacing-2;
+  margin-top: $spacing-4;
+}
+
 .homepage-admin-btn-danger {
   background: transparent;
   color: $error-500;

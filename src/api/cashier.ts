@@ -23,11 +23,26 @@ export const PRODUCT_CATEGORIES = [
   "Other",
 ] as const;
 
+export interface IArtworkCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotationDegrees: number;
+}
+
 export function identifyPhoto(
-  photo: File
-): Promise<{ title: string; description: string; category: string }> {
+  photo: File,
+  condition?: "sealed" | "used"
+): Promise<{
+  title: string;
+  description: string;
+  category: string;
+  artworkCrop?: IArtworkCrop;
+}> {
   const formData = new FormData();
   formData.append("photo", photo);
+  if (condition) formData.append("condition", condition);
 
   return axios
     .post(`${serverUrl}api/cashier/identify`, formData)
@@ -39,6 +54,7 @@ export function identifyPhoto(
         title: response.data.title,
         description: response.data.description,
         category: response.data.category,
+        artworkCrop: response.data.artworkCrop,
       };
     });
 }
@@ -52,6 +68,7 @@ export function recordItem(params: {
   quantity?: number; // only used when hidden is false
   category?: string;
   condition?: "sealed" | "used";
+  artworkCrop?: IArtworkCrop;
 }): Promise<{ itemId?: string }> {
   const formData = new FormData();
   if (params.photo) formData.append("photo", params.photo);
@@ -64,6 +81,13 @@ export function recordItem(params: {
   }
   if (params.category) formData.append("category", params.category);
   if (params.condition) formData.append("condition", params.condition);
+  if (params.artworkCrop) {
+    formData.append("artworkCropX", String(params.artworkCrop.x));
+    formData.append("artworkCropY", String(params.artworkCrop.y));
+    formData.append("artworkCropWidth", String(params.artworkCrop.width));
+    formData.append("artworkCropHeight", String(params.artworkCrop.height));
+    formData.append("artworkRotationDegrees", String(params.artworkCrop.rotationDegrees));
+  }
 
   return axios
     .post(`${serverUrl}api/cashier/record`, formData)
@@ -80,6 +104,7 @@ export interface ISearchResultItem {
   name: string;
   priceCents: number;
   hidden: boolean;
+  imageUrl?: string;
 }
 
 export function searchItemsForEdit(query: string): Promise<ISearchResultItem[]> {
