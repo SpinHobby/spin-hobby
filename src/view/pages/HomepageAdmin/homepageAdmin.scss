@@ -237,6 +237,18 @@
   }
 }
 
+.homepage-admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-2;
+  margin-bottom: $spacing-3;
+
+  select {
+    flex: 1;
+    min-width: 150px;
+  }
+}
+
 .homepage-admin-row-clickable {
   cursor: pointer;
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   IAdminSlide,
   IAdminFeaturedProduct,
@@ -139,6 +139,14 @@ function ItemsSection() {
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState("");
 
+  type VisibilityFilter = "all" | "visible" | "hidden";
+  type StockFilter = "all" | "in-stock" | "out-of-stock";
+  type SortOption = "name-asc" | "name-desc" | "price-asc" | "price-desc";
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("name-asc");
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadingItem, setLoadingItem] = useState(false);
   const [title, setTitle] = useState("");
@@ -194,6 +202,51 @@ function ItemsSection() {
       .catch((err) => setError(err.message || "Failed to load more items"))
       .finally(() => setLoadingMore(false));
   }
+
+  // Category options are derived from whatever's currently loaded, not a
+  // fixed list - covers real Square categories beyond our canonical
+  // PRODUCT_CATEGORIES set (e.g. legacy/typo categories from years of
+  // manual entry).
+  const categoryOptions = useMemo(() => {
+    const names = new Set<string>();
+    results.forEach((item) => item.categoryName && names.add(item.categoryName));
+    return Array.from(names).sort();
+  }, [results]);
+
+  // Filter/sort run client-side over whatever's currently loaded - simplest
+  // approach that still covers this catalog's actual size, and avoids
+  // Square's search API not supporting price sort or combined
+  // category+hidden filtering in one call.
+  const visibleResults = useMemo(() => {
+    let list = results;
+    if (categoryFilter !== "all") {
+      list = list.filter((item) => item.categoryName === categoryFilter);
+    }
+    if (visibilityFilter !== "all") {
+      list = list.filter((item) =>
+        visibilityFilter === "hidden" ? item.hidden : !item.hidden
+      );
+    }
+    if (stockFilter !== "all") {
+      list = list.filter((item) =>
+        stockFilter === "out-of-stock" ? item.stockCount === 0 : item.stockCount !== 0
+      );
+    }
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      switch (sortOption) {
+        case "name-asc":
+          return a.name.localeCompare(b.name);
+        case "name-desc":
+          return b.name.localeCompare(a.name);
+        case "price-asc":
+          return a.priceCents - b.priceCents;
+        case "price-desc":
+          return b.priceCents - a.priceCents;
+      }
+    });
+    return sorted;
+  }, [results, categoryFilter, visibilityFilter, stockFilter, sortOption]);
 
   function selectItem(id: string) {
     setSelectedId(id);
@@ -277,7 +330,8 @@ function ItemsSection() {
         <p className="homepage-admin-hint">
           Browse or search the catalog to edit any item, or hide it from the storefront
           without deleting it from Square. Hidden items stay purchasable in-person via the
-          cashier tool.
+          cashier tool. Filters and sorting apply to items already loaded below - use Load
+          More first if you don't see everything you expect.
         </p>
         {error && <p className="homepage-admin-error">{error}</p>}
 
@@ -294,14 +348,62 @@ function ItemsSection() {
           </button>
         </form>
 
+        {results.length > 0 && (
+          <div className="homepage-admin-filters">
+            <select
+              className="homepage-admin-input"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="all">All categories</option>
+              {categoryOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="homepage-admin-input"
+              value={visibilityFilter}
+              onChange={(e) => setVisibilityFilter(e.target.value as typeof visibilityFilter)}
+            >
+              <option value="all">Visible + hidden</option>
+              <option value="visible">Visible on site only</option>
+              <option value="hidden">Hidden only</option>
+            </select>
+            <select
+              className="homepage-admin-input"
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value as typeof stockFilter)}
+            >
+              <option value="all">Any stock level</option>
+              <option value="in-stock">In stock</option>
+              <option value="out-of-stock">Out of stock</option>
+            </select>
+            <select
+              className="homepage-admin-input"
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as typeof sortOption)}
+            >
+              <option value="name-asc">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+            </select>
+          </div>
+        )}
+
         {searching ? (
           <p>Loading items...</p>
         ) : (
           <>
             {hasSearched && results.length === 0 && <p>No items found.</p>}
-            {results.length > 0 && (
+            {results.length > 0 && visibleResults.length === 0 && (
+              <p>No items match the current filters.</p>
+            )}
+            {visibleResults.length > 0 && (
               <div className="homepage-admin-table">
-                {results.map((item) => (
+                {visibleResults.map((item) => (
                   <div
                     className="homepage-admin-row homepage-admin-row-clickable"
                     key={item.id}
@@ -314,6 +416,13 @@ function ItemsSection() {
                     )}
                     <span className="homepage-admin-featured-name">{item.name}</span>
                     <span>${(item.priceCents / 100).toFixed(2)}</span>
+                    <span>
+                      {item.stockCount === 0
+                        ? "Out of stock"
+                        : item.stockCount != null
+                        ? `${item.stockCount} in stock`
+                        : "Untracked"}
+                    </span>
                     <span>{item.hidden ? "Hidden from site" : "Visible on site"}</span>
                   </div>
                 ))}

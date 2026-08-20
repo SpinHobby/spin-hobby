@@ -105,6 +105,9 @@ export interface ISearchResultItem {
   priceCents: number;
   hidden: boolean;
   imageUrl?: string;
+  categoryId?: string;
+  categoryName?: string;
+  stockCount: number | null; // null = untracked in Square (unlimited)
 }
 
 export function searchItemsForEdit(query: string): Promise<ISearchResultItem[]> {
