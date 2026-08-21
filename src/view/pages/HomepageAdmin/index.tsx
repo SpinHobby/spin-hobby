@@ -26,6 +26,13 @@ import {
   PRODUCT_CATEGORIES,
 } from "api/cashier";
 import { IMerchPreview } from "../../../ts";
+import {
+  IAdminEvent,
+  getAdminEvents,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+} from "api/events";
 import "./homepageAdmin.scss";
 
 export default function HomepageAdmin() {
@@ -88,7 +95,7 @@ export default function HomepageAdmin() {
   return <HomepageAdminTool />;
 }
 
-type Tab = "homepage" | "items" | "ops";
+type Tab = "homepage" | "items" | "events" | "ops";
 
 function HomepageAdminTool() {
   const [tab, setTab] = useState<Tab>("homepage");
@@ -107,6 +114,9 @@ function HomepageAdminTool() {
           <button className={tab === "items" ? "active" : ""} onClick={() => setTab("items")}>
             Items
           </button>
+          <button className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}>
+            Events
+          </button>
           <button className={tab === "ops" ? "active" : ""} onClick={() => setTab("ops")}>
             Ops
           </button>
@@ -123,6 +133,8 @@ function HomepageAdminTool() {
         )}
 
         {tab === "items" && <ItemsSection />}
+
+        {tab === "events" && <EventsSection />}
 
         {tab === "ops" && <OpsSection />}
       </div>
@@ -928,6 +940,185 @@ function SlidesSection() {
         />
         <button type="submit" className="homepage-admin-btn homepage-admin-btn-primary">
           Add Slide
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function EventsSection() {
+  const [events, setEvents] = useState<IAdminEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newDateLabel, setNewDateLabel] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newLocation, setNewLocation] = useState("");
+  const [newLink, setNewLink] = useState("");
+  const [error, setError] = useState("");
+
+  function load() {
+    setLoading(true);
+    getAdminEvents()
+      .then(setEvents)
+      .catch((err) => setError(err.message || "Failed to load events"))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(load, []);
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newDateLabel.trim() || !newTitle.trim() || !newLocation.trim()) return;
+    createEvent({
+      dateLabel: newDateLabel.trim(),
+      title: newTitle.trim(),
+      location: newLocation.trim(),
+      link: newLink.trim() || undefined,
+      sortOrder: events.length,
+    })
+      .then(() => {
+        setNewDateLabel("");
+        setNewTitle("");
+        setNewLocation("");
+        setNewLink("");
+        load();
+      })
+      .catch((err) => setError(err.message || "Failed to add event"));
+  }
+
+  function handleFieldChange(
+    event: IAdminEvent,
+    field: "date_label" | "title" | "location" | "link" | "sort_order",
+    value: string
+  ) {
+    setEvents((current) =>
+      current.map((e) =>
+        e.id === event.id
+          ? { ...e, [field]: field === "sort_order" ? Number(value) || 0 : value }
+          : e
+      )
+    );
+  }
+
+  function handleSave(event: IAdminEvent) {
+    updateEvent(event.id, {
+      dateLabel: event.date_label,
+      title: event.title,
+      location: event.location,
+      link: event.link,
+      sortOrder: event.sort_order,
+    }).catch((err) => setError(err.message || "Failed to save event"));
+  }
+
+  function handleToggleVisible(event: IAdminEvent) {
+    updateEvent(event.id, { isVisible: !event.is_visible })
+      .then(load)
+      .catch((err) => setError(err.message || "Failed to update event"));
+  }
+
+  function handleDelete(event: IAdminEvent) {
+    deleteEvent(event.id)
+      .then(load)
+      .catch((err) => setError(err.message || "Failed to delete event"));
+  }
+
+  return (
+    <section className="homepage-admin-section">
+      <h2>Events</h2>
+      <p className="homepage-admin-hint">
+        Controls what appears on the public /events page. Hidden events stay saved here but
+        won't show on the site.
+      </p>
+      {error && <p className="homepage-admin-error">{error}</p>}
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <div className="homepage-admin-table">
+          {events.map((event) => (
+            <div className="homepage-admin-row" key={event.id}>
+              <input
+                className="homepage-admin-input"
+                value={event.date_label}
+                onChange={(e) => handleFieldChange(event, "date_label", e.target.value)}
+                placeholder="Date (e.g. April 23-26, 2026)"
+              />
+              <input
+                className="homepage-admin-input"
+                value={event.title}
+                onChange={(e) => handleFieldChange(event, "title", e.target.value)}
+                placeholder="Title"
+              />
+              <input
+                className="homepage-admin-input"
+                value={event.location}
+                onChange={(e) => handleFieldChange(event, "location", e.target.value)}
+                placeholder="Location"
+              />
+              <input
+                className="homepage-admin-input"
+                value={event.link || ""}
+                onChange={(e) => handleFieldChange(event, "link", e.target.value)}
+                placeholder="Link (optional)"
+              />
+              <input
+                className="homepage-admin-input homepage-admin-input-narrow"
+                type="number"
+                value={event.sort_order}
+                onChange={(e) => handleFieldChange(event, "sort_order", e.target.value)}
+                title="Order"
+              />
+              <label className="homepage-admin-checkbox">
+                <input
+                  type="checkbox"
+                  checked={event.is_visible}
+                  onChange={() => handleToggleVisible(event)}
+                />
+                Visible
+              </label>
+              <button
+                className="homepage-admin-btn homepage-admin-btn-ghost"
+                onClick={() => handleSave(event)}
+              >
+                Save
+              </button>
+              <button
+                className="homepage-admin-btn homepage-admin-btn-danger"
+                onClick={() => handleDelete(event)}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form className="homepage-admin-add-form" onSubmit={handleAdd}>
+        <h3>Add an event</h3>
+        <input
+          className="homepage-admin-input"
+          value={newDateLabel}
+          onChange={(e) => setNewDateLabel(e.target.value)}
+          placeholder="Date (e.g. April 23-26, 2026)"
+        />
+        <input
+          className="homepage-admin-input"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="Title"
+        />
+        <input
+          className="homepage-admin-input"
+          value={newLocation}
+          onChange={(e) => setNewLocation(e.target.value)}
+          placeholder="Location"
+        />
+        <input
+          className="homepage-admin-input"
+          value={newLink}
+          onChange={(e) => setNewLink(e.target.value)}
+          placeholder="Link (optional)"
+        />
+        <button type="submit" className="homepage-admin-btn homepage-admin-btn-primary">
+          Add Event
         </button>
       </form>
     </section>
