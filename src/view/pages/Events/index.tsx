@@ -75,6 +75,13 @@ const EVENTS = [
     link: "https://animethon.org/",
   },
   {
+    date: "August 14-15, 2026",
+    title: "Karuta Alley Market",
+    location: "Calgary, AB",
+    link: "https://www.karutaalleymarket.com/",
+    note: "This event has passed",
+  },
+  {
     date: "August 15, 2026",
     title: "Chinatown Street Festival",
     location: "Chinatown, Calgary, AB",
@@ -87,11 +94,11 @@ const EVENTS = [
     link: "https://fanexpohq.com/edmontonexpo/",
   },
   {
-    date: "September 26, 2026",
+    date: "September 26, 2026 (tentative)",
     title: "Rakku-Con Fall",
     location: "Genesis Centre, Calgary, AB",
     link: "https://www.instagram.com/rakkucon/",
-    note: "Application not opened yet",
+    note: "Date not yet confirmed · Application not opened yet",
   },
 ];
 
