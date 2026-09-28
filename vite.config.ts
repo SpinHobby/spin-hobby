@@ -5,7 +5,12 @@ import { resolve } from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), netlify()],
+  plugins: [
+    react(),
+    // This site has no Netlify edge functions or database. Leaving them on makes
+    // `npm run dev` try to boot Deno + a local Postgres, which crashes on most machines.
+    netlify({ edgeFunctions: { enabled: false }, database: { enabled: false } }),
+  ],
   root: ".",
   publicDir: "public",
   resolve: {

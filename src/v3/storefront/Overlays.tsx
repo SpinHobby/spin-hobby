@@ -58,8 +58,8 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onClose }: {
             <div className="sf-cart-foot">
               <div className="sf-cart-foot__row"><span>Subtotal</span><strong>{money(subtotal, currency)}</strong></div>
               <span className="sf-muted">Shipping and taxes are calculated at checkout. Charged in CAD.</span>
-              <button type="button" className="sh-btn sf-cart-foot__cta" disabled title="Checkout is being connected">Checkout</button>
-              <span className="sf-muted sf-center">Online checkout opens soon. Your cart is saved on this device.</span>
+              <a href="/checkout" className="sh-btn sf-cart-foot__cta sf-center">Checkout</a>
+              <span className="sf-muted sf-center">Secure payment with PayPal or card. Your cart is saved on this device.</span>
             </div>
           </>
         )}

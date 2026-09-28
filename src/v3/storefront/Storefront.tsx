@@ -9,12 +9,11 @@ import {
   type Filters, type NavKey,
 } from "./data";
 import { AccountMenu, CartDrawer, NotifyDialog } from "./Overlays";
+import { DISCORD_URL, EBAY_URL, SUPPORT_EMAIL } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
 
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
-const DISCORD_URL = "https://discord.gg/8RM9qPznR";
-const EBAY_URL = "https://www.ebay.ca/usr/spin-hobby";
 const PAGE = 48;
 const EVENT_COLORS = ["var(--red)", "var(--blue)", "var(--gold)", "var(--teal)"];
 
@@ -133,7 +132,7 @@ export default function Storefront() {
             <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a>
             <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>
             <a href="#events">Events</a>
-            <a href="mailto:support@spinhobby.com">Support</a>
+            <a href={`mailto:${SUPPORT_EMAIL}`}>Support</a>
           </div>
         </div>
       </div>
@@ -423,10 +422,10 @@ function Footer({ currency, onCurrency, onNav, onToast }: {
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Help</span>
-          <a href="mailto:support@spinhobby.com?subject=Pre-order%20policy">Pre-order policy</a>
-          <a href="mailto:support@spinhobby.com?subject=Shipping">Shipping &amp; duties</a>
-          <a href="mailto:support@spinhobby.com?subject=Order%20status">Order status</a>
-          <a href="mailto:support@spinhobby.com">Contact</a>
+          <a href={`mailto:${SUPPORT_EMAIL}?subject=Pre-order%20policy`}>Pre-order policy</a>
+          <a href={`mailto:${SUPPORT_EMAIL}?subject=Shipping`}>Shipping &amp; duties</a>
+          <a href={`mailto:${SUPPORT_EMAIL}?subject=Order%20status`}>Order status</a>
+          <a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a>
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Stay in the loop</span>
