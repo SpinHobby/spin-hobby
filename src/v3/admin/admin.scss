@@ -1,0 +1,182 @@
+// Spin Hobby admin — values from design_handoff_spinhobby_admin/README.md
+.ad { display: flex; min-height: 100vh; }
+:where(.ad) a { color: var(--blue); &:hover { text-decoration: underline; color: var(--blue); } }
+html[data-theme="dark"] .ad { --block: #161c2f; }
+
+.ad-muted { color: var(--muted); }
+.ad-text2 { color: var(--text2); }
+.ad-sm { font-size: 12.5px; }
+.ad-strong { font-weight: 700; }
+.ad-right { text-align: right; }
+.ad-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ad-row-gap { display: flex; gap: 10px; align-items: center; }
+.ad-error { color: var(--red); font-size: 13px; font-weight: 600; }
+.ad-link { border: 0; background: none; padding: 0; font-size: 13px; font-weight: 700; color: var(--blue); &:disabled { color: var(--muted); } }
+.ad-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ad-tag { font-size: 11px; font-weight: 800; letter-spacing: .1em; background: var(--gold); color: #1d2a53; padding: 3px 7px; border-radius: 5px; }
+.ad-btn-sm { font-size: 13px; padding: 7px 12px; border-radius: 9px; }
+
+// ------------------------------------------------------------ sidebar
+.ad-side {
+  flex: 0 0 232px; background: var(--block); color: #d6dae7; display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; z-index: 20;
+  &__brand { padding: 18px 18px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,.08);
+    img { height: 34px; width: auto; display: block; } }
+  &__nav { padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto;
+    button {
+      border: 0; background: transparent; color: #b8bed3; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 600; text-align: left;
+      &:hover { background: rgba(255,255,255,.08); }
+      &.is-active { background: rgba(255,255,255,.12); color: #fff; .ad-side__dot { background: var(--gold); } }
+    } }
+  &__item { display: flex; align-items: center; gap: 10px; }
+  &__dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.25); }
+  &__badge { font-size: 11px; font-weight: 800; background: var(--gold); color: #1d2a53; padding: 1px 7px; border-radius: 99px; }
+  &__foot { padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; }
+  &__status { display: flex; align-items: center; gap: 8px; }
+  &__sync { border: 1px solid rgba(255,255,255,.2); background: none; color: #fff; padding: 8px; border-radius: 9px; font-weight: 700;
+    &:hover:not(:disabled) { background: rgba(255,255,255,.08); } &:disabled { opacity: .6; } }
+}
+
+// ------------------------------------------------------------ top bar + content
+.ad-main { flex: 1 1 600px; min-width: 0; display: flex; flex-direction: column; }
+.ad-top {
+  position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  h1 { font-size: 22px; margin: 0; flex: 1; min-width: 120px; }
+  &__store { font-size: 14px; font-weight: 700; }
+}
+.ad-burger { display: none; }
+.ad-theme { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border); background: transparent; color: var(--text); &:hover { background: var(--surface2); } }
+.ad-user { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;
+  &__out { border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 600; padding: 0 0 0 4px; &:hover { color: var(--red); } } }
+.ad-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--gold); color: #1d2a53; display: grid; place-items: center; font-weight: 800; font-size: 12.5px; }
+
+.ad-content { padding: 22px 24px 48px; display: flex; flex-direction: column; gap: 18px; }
+.ad-banner {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; color: var(--text2);
+  background: color-mix(in srgb, var(--gold) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--gold) 50%, var(--border)); border-radius: 12px; padding: 10px 14px;
+  button { border: 0; background: none; color: var(--blue); font-weight: 700; }
+  &--error { background: color-mix(in srgb, var(--red) 10%, var(--surface)); border-color: color-mix(in srgb, var(--red) 40%, var(--border)); }
+}
+
+// ------------------------------------------------------------ cards
+.ad-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+  &__head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 800; }
+}
+.ad-pad { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; overflow: visible; }
+.ad-h3 { font-weight: 800; font-size: 16px; }
+.ad-empty { padding: 22px 18px; color: var(--muted); font-size: 13.5px; text-align: center; }
+.ad-stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ad-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; align-items: start; }
+
+.ad-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.ad-kpi {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;
+  text-align: left; color: var(--text); transition: border-color .15s, box-shadow .15s;
+  &:hover { border-color: var(--primary); box-shadow: var(--shadow-card); }
+  &__label { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  &__value { font-size: 28px; }
+  &__note { font-size: 12.5px; font-weight: 600; }
+}
+.ad-dash { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 14px; align-items: start; }
+
+.ad-line {
+  display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--border); font-size: 13.5px;
+  &:last-child { border-bottom: 0; }
+  &--btn { border-left: 0; border-right: 0; border-top: 0; background: transparent; width: 100%; text-align: left; color: var(--text); padding: 11px 18px; &:hover { background: var(--surface2); } }
+  &__id { font-weight: 800; width: 64px; flex: none; }
+  &__main { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  &__total { font-weight: 700; width: 76px; text-align: right; flex: none; }
+}
+
+// ------------------------------------------------------------ toolbar + tables
+.ad-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.ad-search { flex: 1 1 240px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; outline: 0; font-size: 14px; color: var(--text);
+  &:focus { border-color: var(--primary); } }
+.ad-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.ad-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow-x: auto; }
+.ad-table { min-width: 860px; }
+.ad-tr { display: grid; gap: 12px; padding: 10px 16px; align-items: center; border-bottom: 1px solid var(--border); font-size: 13.5px;
+  &:last-child { border-bottom: 0; }
+  &--click { cursor: pointer; &:hover, &:focus-visible { background: var(--surface2); outline: 0; } }
+  &.is-selected { background: var(--surface2); }
+}
+.ad-th { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ad-table--products .ad-tr { grid-template-columns: 52px minmax(220px, 2.2fr) 1.2fr 90px 70px 110px 150px 70px; }
+.ad-table--orders { min-width: 780px; .ad-tr { grid-template-columns: 80px 1.6fr 1.4fr 110px 80px 110px 100px; padding: 12px 16px; } .ad-th { padding: 10px 16px; } }
+.ad-cell-main { min-width: 0; }
+.ad-foot-note { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+// ------------------------------------------------------------ drawers
+.ad-summary { display: flex; gap: 14px; }
+.ad-field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--muted);
+  .sh-input { font-weight: 600; color: var(--text); } }
+.ad-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; &--track { grid-template-columns: 140px 1fr; } }
+.ad-callout { background: var(--surface2); border-radius: 12px; padding: 12px 14px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ad-label { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.ad-item { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.ad-pre-tag { margin-left: 6px; font-size: 10.5px; font-weight: 800; color: #fff; background: var(--blue); padding: 2px 6px; border-radius: 5px; vertical-align: 1px; }
+
+// ------------------------------------------------------------ homepage
+.ad-slide { display: flex; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); align-items: flex-start; transition: opacity .15s;
+  &:last-child { border-bottom: 0; }
+  &__order { display: flex; flex-direction: column; gap: 4px;
+    button { width: 26px; height: 22px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center; font-size: 11px; color: var(--text);
+      &:hover:not(:disabled) { background: var(--surface2); } &:disabled { opacity: .35; } } }
+  &__img { width: 96px; height: 54px; border-radius: 8px; flex: none; border: 1px solid var(--border); padding: 0; overflow: hidden;
+    display: grid; place-items: center; font-family: ui-monospace, monospace; font-size: 9px; color: var(--muted);
+    img { width: 100%; height: 100%; object-fit: cover; } }
+  &__fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  &__headline { font-weight: 700; padding: 7px 10px; border-radius: 8px; }
+  &__sub { font-size: 13px; padding: 7px 10px; border-radius: 8px; color: var(--text2); }
+}
+.ad-remove { align-self: flex-start; border: 0; background: none; padding: 0; font-size: 12px; font-weight: 600; color: var(--muted); &:hover { color: var(--red); } }
+.ad-event { display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-bottom: 1px solid var(--border); font-size: 13.5px; flex-wrap: wrap;
+  &__name { flex: 1 1 140px; min-width: 0; border: 1px solid transparent; background: transparent; border-radius: 8px; padding: 6px 8px; font-weight: 600; outline: 0; color: var(--text);
+    &:hover, &:focus { border-color: var(--border); background: var(--surface); } }
+  &__date { width: 140px; padding: 6px 9px; font-size: 13px; border-radius: 8px; }
+}
+.ad-x { border: 0; background: none; width: 26px; height: 26px; border-radius: 50%; font-size: 16px; color: var(--muted); &:hover { background: var(--surface2); color: var(--red); } }
+
+// ------------------------------------------------------------ settings
+.ad-providers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ad-provider { border: 2px solid var(--border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); text-align: left; color: var(--text);
+  &:hover:not(:disabled) { border-color: var(--muted); }
+  &.is-active { border-color: var(--primary); background: var(--surface2); }
+  &__name { font-weight: 800; font-size: 15px; }
+  &__state { font-size: 12.5px; font-weight: 700; }
+}
+.ad-checks { background: var(--surface2); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.ad-check { display: flex; gap: 10px; align-items: center; font-size: 13px;
+  span { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; flex: none; } }
+.ad-kv { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px;
+  > .sh-input { width: 110px; text-align: right; font-weight: 700; padding: 7px 10px; border-radius: 8px; } }
+.ad-range { display: flex; align-items: center; gap: 6px; .sh-input { width: 52px; text-align: right; font-weight: 700; padding: 7px 10px; border-radius: 8px; } }
+.ad-save-bar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+
+// ------------------------------------------------------------ sign-in gate
+.ad-gate { display: grid; place-items: center; padding: 24px; background: var(--block) !important;
+  background-image: radial-gradient(circle at 85% 20%, rgba(243,183,47,.18) 0 180px, transparent 181px) !important;
+  &__card { width: min(400px, 100%); background: var(--surface); border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 30px 60px rgba(0,0,0,.3);
+    h1 { margin: 6px 0 0; font-size: 26px; } p { margin: 0 0 6px; color: var(--text2); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+    .sh-btn { padding: 12px; } > img { height: 40px; width: auto; align-self: flex-start; } }
+  &__brand { display: flex; align-items: center; gap: 10px; img { height: 40px; width: auto; } }
+  &__back { font-size: 13px; font-weight: 700; text-align: center; margin-top: 4px; color: var(--blue); }
+}
+
+// ------------------------------------------------------------ responsive
+@media (max-width: 860px) {
+  .ad-side { position: fixed; left: 0; top: 0; bottom: 0; height: auto; z-index: 45; transform: translateX(-105%); transition: transform .2s ease-out; }
+  .ad-side.is-open { transform: none; }
+  .ad-nav-overlay { z-index: 44; }
+  .ad-burger { display: grid; width: 36px; height: 36px; margin-left: -8px; }
+  .ad-top { padding: 10px 16px; gap: 10px; h1 { font-size: 20px; } }
+  .ad-top__store, .ad-user__role { display: none; }
+  .ad-content { padding: 16px 16px 40px; }
+  .ad-grid2 { grid-template-columns: 1fr; }
+  .ad-kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ad-kpi { padding: 14px; &__value { font-size: 24px; } }
+}

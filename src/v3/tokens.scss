@@ -1,0 +1,140 @@
+// Design tokens from design_handoff_spinhobby_storefront / _admin (v3).
+.sh {
+  --bg: #f4f5f8;
+  --surface: #ffffff;
+  --surface2: #eef0f5;
+  --text: #171a2b;
+  --text2: #4a4e61;
+  --muted: #6b6f80;
+  --border: #e3e5ec;
+  --primary: #1d2a53;
+  --on-primary: #ffffff;
+  --block: #1d2a53;
+  --gold: #f3b72f;
+  --red: #d93f44;
+  --teal: #1f8a67;
+  --blue: #3f57a3;
+  --ph1: #eceef4;
+  --ph2: #e4e7ef;
+  --shadow-card: 0 12px 28px -16px rgba(15, 20, 45, 0.35);
+  --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "M PLUS Rounded 1c", "Plus Jakarta Sans", system-ui, sans-serif;
+
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+
+}
+// Zero-specificity resets so component classes always win.
+:where(.sh) {
+  *, *::before, *::after { box-sizing: border-box; }
+  a { color: var(--text); text-decoration: none; }
+  a:hover { color: var(--blue); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  img { max-width: 100%; }
+  :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+}
+
+html[data-theme="dark"] .sh {
+  --bg: #121319;
+  --surface: #1a1c24;
+  --surface2: #23262f;
+  --text: #f2f2f3;
+  --text2: #b2b5bd;
+  --muted: #8a8d96;
+  --border: #2e313b;
+  --primary: #93aae0;
+  --on-primary: #121319;
+  --block: #182036;
+  --red: #f06a6e;
+  --teal: #3fbf92;
+  --blue: #93aae0;
+  --ph1: #1f222b;
+  --ph2: #252832;
+  color-scheme: dark;
+}
+
+body { margin: 0; }
+
+// Shared primitives
+.sh-display { font-family: var(--font-display); font-weight: 800; }
+.sh-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.sh-ph {
+  background: repeating-linear-gradient(135deg, var(--ph1) 0 8px, var(--ph2) 8px 16px);
+  &--sm { background: repeating-linear-gradient(135deg, var(--ph1) 0 6px, var(--ph2) 6px 12px); }
+  &--xs { background: repeating-linear-gradient(135deg, var(--ph1) 0 5px, var(--ph2) 5px 10px); }
+}
+.sh-thumb {
+  flex: none; overflow: hidden; border-radius: 10px;
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+.sh-badge {
+  display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.02em;
+  padding: 4px 8px; border-radius: 6px; color: #fff; white-space: nowrap;
+}
+.sh-chip {
+  white-space: nowrap; padding: 8px 13px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+  &.is-active { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+}
+.sh-toggle {
+  position: relative; flex: none; width: 38px; height: 22px; border-radius: 99px; border: 0; padding: 0;
+  background: var(--border); transition: background 0.15s;
+  &::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; transition: left 0.15s;
+  }
+  &.is-on { background: var(--teal); &::after { left: 19px; } }
+}
+.sh-icon-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent;
+  display: grid; place-items: center; font-size: 16px; color: var(--text);
+  &:hover { background: var(--surface2); }
+}
+.sh-btn {
+  border: 1px solid transparent; border-radius: 10px; padding: 10px 16px; font-weight: 700; font-size: 14px;
+  background: var(--primary); color: var(--on-primary); transition: filter 0.15s;
+  &:hover:not(:disabled) { filter: brightness(1.08); }
+  &:disabled { opacity: 0.55; }
+  &--ghost { background: transparent; color: var(--text); border-color: var(--border); &:hover:not(:disabled) { background: var(--surface2); filter: none; } }
+  &--danger { background: transparent; color: var(--red); border-color: var(--border); }
+  &--gold { background: var(--gold); color: #1d2a53; }
+}
+.sh-input {
+  width: 100%; border: 1px solid var(--border); background: var(--surface); border-radius: 9px;
+  padding: 9px 10px; font-size: 14px; outline: 0; color: var(--text);
+  &:focus { border-color: var(--primary); }
+}
+.sh-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 60;
+  background: #171a2b; color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); max-width: calc(100vw - 32px);
+  animation: sh-toast-in 0.2s ease-out;
+}
+@keyframes sh-toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+.sh-overlay { position: fixed; inset: 0; background: rgba(10, 14, 30, 0.35); z-index: 40; animation: sh-fade 0.15s; }
+.sh-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100vw); z-index: 41;
+  background: var(--surface); box-shadow: -20px 0 40px rgba(0, 0, 0, 0.18);
+  display: flex; flex-direction: column; animation: sh-slide 0.2s ease-out;
+  &__head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 800; font-size: 16px; }
+  &__body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; flex: 1; }
+  &__foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+}
+@keyframes sh-fade { from { opacity: 0; } }
+@keyframes sh-slide { from { transform: translateX(24px); opacity: 0.6; } }
+.sh-skeleton {
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 37%, var(--surface2) 63%);
+  background-size: 400% 100%; animation: sh-shimmer 1.4s ease infinite; border-radius: 8px;
+}
+@keyframes sh-shimmer { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+.sh-visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sh *, .sh *::before, .sh *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

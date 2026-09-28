@@ -1,0 +1,87 @@
+import type { Product, ProductStatus } from "./types";
+
+export type Currency = "CAD" | "USD";
+
+export const FX_CAD_USD = 0.73;
+
+export function money(cents: number | null | undefined, currency: Currency = "CAD", fx = FX_CAD_USD) {
+  const value = (cents ?? 0) / 100;
+  const converted = currency === "USD" ? value * fx : value;
+  return (currency === "USD" ? "US$" : "$") + converted.toFixed(2);
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2027-03" | "2027-03-01" → "Mar 2027" */
+export function monthLabel(value: string | null | undefined) {
+  if (!value) return "TBA";
+  const match = /^(\d{4})-(\d{2})/.exec(value);
+  if (!match) return value;
+  return `${MONTHS[Number(match[2]) - 1]} ${match[1]}`;
+}
+
+/** ISO date → "Oct 20" */
+export function dayLabel(value: string | null | undefined) {
+  if (!value) return "TBA";
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  return `${MONTHS[Number(match[2]) - 1]} ${Number(match[3])}`;
+}
+
+export function relativeAge(iso: string) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours < 1) return "just now";
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+export function shortDate(iso: string | null | undefined) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export function normalizeStatus(status: Product["status"]): ProductStatus {
+  if (status === "in" || status === "low" || status === "pre" || status === "out") return status;
+  return "out"; // "closed" pre-orders and anything unknown can't be bought
+}
+
+export const STATUS_META: Record<ProductStatus, { badge: string; color: string }> = {
+  in: { badge: "IN STOCK", color: "var(--teal)" },
+  low: { badge: "LOW STOCK", color: "var(--red)" },
+  pre: { badge: "PRE-ORDER", color: "var(--blue)" },
+  out: { badge: "SOLD OUT", color: "var(--muted)" },
+};
+
+// Copy rules from server/src/lib/status.ts in the handoff.
+export function statusLabel(p: Product) {
+  const s = normalizeStatus(p.status);
+  const n = p.stockCount;
+  switch (s) {
+    case "in": return n ? `${n} in stock · ships in 2–3 days` : "In stock · ships in 2–3 days";
+    case "low": return `Only ${n ?? "a few"} left`;
+    case "pre": return `Release ${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}`;
+    case "out": return p.status === "closed" ? "Pre-order closed" : "Sold out · restock alerts available";
+  }
+}
+
+export function statusShort(p: Product) {
+  const s = normalizeStatus(p.status);
+  switch (s) {
+    case "in": return "In stock";
+    case "low": return `Only ${p.stockCount ?? "a few"} left`;
+    case "pre": return `Pre-order · ${monthLabel(p.releaseMonth)}`;
+    case "out": return "Sold out";
+  }
+}
+
+export function discountPct(p: Product) {
+  if (!p.compareAtCents || p.compareAtCents <= p.priceCents) return 0;
+  return Math.round((1 - p.priceCents / p.compareAtCents) * 100);
+}
+
+export function initials(email: string | null | undefined) {
+  if (!email) return "SH";
+  const name = email.split("@")[0].replace(/[^a-zA-Z]/g, " ").trim().split(/\s+/);
+  return ((name[0]?.[0] ?? "S") + (name[1]?.[0] ?? name[0]?.[1] ?? "H")).toUpperCase();
+}

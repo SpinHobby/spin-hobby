@@ -1,6 +1,12 @@
-import StorefrontV3 from "./view/pages/StorefrontV3";
-import AdminV3 from "./view/pages/AdminV3";
+import { lazy, Suspense } from "react";
+import Storefront from "./v3/storefront/Storefront";
+
+// The admin bundle is only downloaded by staff visiting /admin.
+const Admin = lazy(() => import("./v3/admin/Admin"));
 
 export default function App() {
-  return window.location.pathname.startsWith("/admin") ? <AdminV3 /> : <StorefrontV3 />;
+  if (window.location.pathname.startsWith("/admin")) {
+    return <Suspense fallback={null}><Admin /></Suspense>;
+  }
+  return <Storefront />;
 }
