@@ -33,7 +33,9 @@ export const AVAIL = [
 ] as const;
 export type AvailName = (typeof AVAIL)[number]["name"];
 
-export const SORTS: { value: SortKey; label: string }[] = [
+export type ShopSort = SortKey | "featured";
+export const SORTS: { value: ShopSort; label: string }[] = [
+  { value: "featured", label: "Featured" },
   { value: "new", label: "Newest" },
   { value: "release", label: "Release date" },
   { value: "price_asc", label: "Price: low to high" },
@@ -46,7 +48,7 @@ export interface Filters {
   category: string; // "All categories" or a category name
   avail: Record<AvailName, boolean>;
   price: PriceName;
-  sort: SortKey;
+  sort: ShopSort;
   query: string;
 }
 
@@ -62,7 +64,7 @@ export function inNav(p: Product, nav: NavKey) {
   return re ? re.test(p.category ?? "") : true;
 }
 
-export function applyFilters(products: Product[], f: Filters) {
+export function applyFilters(products: Product[], f: Filters, featured: string[] = []) {
   const q = f.query.trim().toLowerCase();
   const price = PRICES.find((x) => x.name === f.price) ?? PRICES[0];
   const allowed = new Set(AVAIL.filter((a) => f.avail[a.name]).flatMap((a) => a.statuses));
@@ -76,8 +78,12 @@ export function applyFilters(products: Product[], f: Filters) {
   });
   const order = new Map(products.map((p, i) => [p.id, i])); // API returns newest first
   const rel = (p: Product) => (p.releaseMonth ? Date.parse(p.releaseMonth.slice(0, 7) + "-01") : 0);
-  const sorters: Record<SortKey, (a: Product, b: Product) => number> = {
-    new: (a, b) => order.get(a.id)! - order.get(b.id)!,
+  const pick = new Map(featured.map((id, i) => [id, i]));
+  const byNew = (a: Product, b: Product) => order.get(a.id)! - order.get(b.id)!;
+  const sorters: Record<ShopSort, (a: Product, b: Product) => number> = {
+    // Admin-featured products first (in their homepage order), then newest.
+    featured: (a, b) => (pick.get(a.id) ?? 1e9) - (pick.get(b.id) ?? 1e9) || byNew(a, b),
+    new: byNew,
     release: (a, b) => rel(a) - rel(b),
     price_asc: (a, b) => a.priceCents - b.priceCents,
     price_desc: (a, b) => b.priceCents - a.priceCents,

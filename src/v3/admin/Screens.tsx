@@ -1,8 +1,11 @@
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { dayLabel, money, monthLabel, normalizeStatus, relativeAge, shortDate, STATUS_META } from "../format";
+import { dayLabel, discountPct, money, monthLabel, normalizeStatus, relativeAge, shortDate, STATUS_META, statusLabel } from "../format";
+import { ProductCard, type CardActions } from "../storefront/ProductViews";
+import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
 import type { Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
+import { DEFAULT_SLIDES } from "../demo";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 
 export interface Ctx {
@@ -43,6 +46,27 @@ function Thumb({ src, size = 44 }: { src?: string | null; size?: number }) {
   return (
     <div className={`sh-thumb ${src ? "" : "sh-ph sh-ph--xs"}`} style={{ width: size, height: size, borderRadius: 9 }}>
       {src && <img src={src} alt="" loading="lazy" />}
+    </div>
+  );
+}
+
+const PREVIEW_ACTIONS: CardActions = {
+  currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {},
+};
+
+/** Mirrors the server's product_status() so previews match what shoppers will see after saving. */
+function previewStatus(availability: Availability, stock: number | null, orderBy: string | null, lowThreshold: number): Product["status"] {
+  if (availability === "preorder") return orderBy && Date.parse(orderBy) < Date.now() - 86_400_000 ? "closed" : "pre";
+  if (stock == null) return "in";
+  if (stock <= 0) return "out";
+  return stock <= lowThreshold ? "low" : "in";
+}
+
+function StorefrontPreview({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`ad-preview ${className}`}>
+      <div className="ad-preview__label"><span className="ad-dot" style={{ background: "var(--teal)" }} />{label}</div>
+      <div className="sf ad-preview__stage">{children}</div>
     </div>
   );
 }
@@ -258,6 +282,28 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
               <a href={squareUrl} target="_blank" rel="noreferrer" className="ad-link ad-sm" style={{ display: "inline-block", marginTop: 6 }}>Edit in Square ↗</a>
             </div>
           </div>
+          {(() => {
+            const compare = form.compareAt.trim() ? Math.round(Number(form.compareAt) * 100) : null;
+            const preview: Product = {
+              ...p, series: form.series.trim() || null, janCode: form.jan.trim() || null,
+              compareAtCents: compare && Number.isFinite(compare) ? compare : null,
+              releaseMonth: form.release || null, orderByDate: form.orderBy || null,
+              status: previewStatus(form.availability, p.stockCount, form.orderBy || null, ctx.data.settings.low_stock_threshold),
+            };
+            return form.availability === "hidden" ? (
+              <div className="ad-callout"><span>Hidden products don't appear anywhere on the storefront.</span></div>
+            ) : (
+              <StorefrontPreview label="Storefront preview · updates as you edit">
+                <div className="ad-preview__card"><ProductCard p={preview} a={PREVIEW_ACTIONS} /></div>
+                <div className="ad-preview__meta">
+                  <span><b>Shoppers see:</b> {statusLabel(preview)}</span>
+                  {discountPct(preview) > 0 && <span>Shows a <b>-{discountPct(preview)}%</b> sale chip and appears under <b>Sale</b>.</span>}
+                  {preview.status === "pre" && <span>Appears in <b>New pre-orders</b>{form.orderBy ? ` until ${dayLabel(form.orderBy)}` : ""}.</span>}
+                  {p.isFeatured && <span>Featured: listed first in the catalog.</span>}
+                </div>
+              </StorefrontPreview>
+            );
+          })()}
           <label className="ad-field">Availability
             <select className="sh-input" value={form.availability} onChange={set("availability")}>
               <option value="auto">Auto (from Square stock)</option>
@@ -410,6 +456,10 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
             <div className="ad-strong">{customerName(o)}</div>
             <div className="ad-text2" style={{ fontSize: 13.5 }}><a href={`mailto:${o.billing_email}`}>{o.billing_email}</a></div>
             <div className="ad-text2" style={{ fontSize: 13.5, marginTop: 4 }}>{addressLine(o)}</div>
+            {o.shipping_address?.phone && <div className="ad-text2" style={{ fontSize: 13.5 }}><a href={`tel:${o.shipping_address.phone}`}>{o.shipping_address.phone}</a></div>}
+            {o.billing_address && addressLine({ ...o, shipping_address: o.billing_address }) !== addressLine(o) && (
+              <div className="ad-muted" style={{ fontSize: 12.5, marginTop: 6 }}>Billing: {addressLine({ ...o, shipping_address: o.billing_address })}</div>
+            )}
           </div>
           <div>
             <div className="ad-label">Items</div>
@@ -457,7 +507,7 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
 export function HomepageScreen({ ctx }: { ctx: Ctx }) {
   const slides = ctx.data.slides;
   const setSlides = (next: HeroSlide[]) => ctx.setData((d) => ({ ...d, slides: next }));
-  const featured = ctx.data.products.filter((p) => p.isFeatured);
+  const featured = ctx.data.products.filter((p) => p.isFeatured).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   const saveSlide = async (s: HeroSlide, patch: Partial<HeroSlide>) => {
     const next = { ...s, ...patch };
@@ -497,7 +547,28 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     catch (e) { ctx.flash(errMsg(e)); ctx.reload(); }
   };
 
+  const visibleSlides = slides.filter((sl) => sl.is_visible);
+  const closingSoon = ctx.data.products.filter((p) => p.status === "pre" && p.orderByDate && Date.parse(p.orderByDate) <= Date.now() + 30 * 86_400_000 && Date.parse(p.orderByDate) >= Date.now() - 86_400_000).length;
+  const maxOff = ctx.data.products.reduce((m, p) => Math.max(m, discountPct(p)), 0);
+
+  const moveFeatured = async (i: number, dir: number) => {
+    const j = i + dir;
+    if (j < 0 || j >= featured.length) return;
+    const next = [...featured];
+    [next[i], next[j]] = [next[j], next[i]];
+    const order = new Map(next.map((p, k) => [p.id, k]));
+    ctx.setData((d) => ({ ...d, products: d.products.map((p) => (order.has(p.id) ? { ...p, sortOrder: order.get(p.id) } : p)) }));
+    if (ctx.demo) return;
+    try { await Promise.all([next[i], next[j]].map((p) => patchProduct(ctx, p.id, { sort_order: order.get(p.id) }))); }
+    catch (e) { ctx.flash(errMsg(e)); ctx.reload(); }
+  };
+
   return (
+    <>
+    <StorefrontPreview label={visibleSlides.length ? `Storefront hero · ${visibleSlides.length} visible slide${visibleSlides.length === 1 ? "" : "s"}` : "Storefront hero · no visible slides, so the default welcome slides show"} className="ad-preview--hero">
+      <HeroRow key={visibleSlides.map((sl) => sl.id + sl.headline + sl.subheading + sl.image_url).join("|")}
+        slides={visibleSlides.length ? visibleSlides : DEFAULT_SLIDES} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => {}} onSale={() => {}} />
+    </StorefrontPreview>
     <div className="ad-two">
       <Card title="Hero slides" action={<button type="button" className="sh-btn ad-btn-sm" onClick={addSlide}>+ Add slide</button>}>
         {slides.length === 0 && <Empty>No slides yet. The storefront shows its default welcome slides until you add one.</Empty>}
@@ -506,12 +577,22 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
       <div className="ad-stack">
         <Card title={<>Featured products <span className="ad-muted" style={{ fontWeight: 600, fontSize: 13 }}>· toggle in Products</span></>}>
           {featured.length === 0 ? <Empty>No featured products. Switch on “Featured” in Products.</Empty> : featured.map((p, i) => (
-            <div key={p.id} className="ad-line"><span className="ad-muted" style={{ fontWeight: 800, width: 18 }}>{i + 1}</span><span className="ad-line__main">{p.name}</span><span className="ad-strong">{money(p.priceCents)}</span></div>
+            <div key={p.id} className="ad-line">
+              <span className="ad-slide__order ad-slide__order--row">
+                <button type="button" onClick={() => moveFeatured(i, -1)} disabled={i === 0} aria-label={`Move ${p.name} up`}>▲</button>
+                <button type="button" onClick={() => moveFeatured(i, 1)} disabled={i === featured.length - 1} aria-label={`Move ${p.name} down`}>▼</button>
+              </span>
+              <span className="ad-muted" style={{ fontWeight: 800, width: 18 }}>{i + 1}</span>
+              <span className="ad-line__main">{p.name}</span>
+              <span className="ad-strong">{money(p.priceCents)}</span>
+            </div>
           ))}
+          <div className="ad-muted ad-sm" style={{ padding: "10px 18px" }}>Shown first, in this order, when shoppers browse the catalog (the default “Featured” sort).</div>
         </Card>
         <EventsCard ctx={ctx} />
       </div>
     </div>
+    </>
   );
 }
 
@@ -521,27 +602,28 @@ function SlideRow({ s, first, last, onMove, onSave, onRemove }: {
   const [headline, setHeadline] = useState(s.headline);
   const [sub, setSub] = useState(s.subheading ?? "");
   const [image, setImage] = useState(s.image_url ?? "");
-  const [showImage, setShowImage] = useState(false);
+  const [link, setLink] = useState(s.link_url ?? "");
+  const url = (v: string) => v.trim() || null;
   return (
     <div className="ad-slide" style={{ opacity: s.is_visible ? 1 : 0.55 }}>
       <div className="ad-slide__order">
         <button type="button" onClick={() => onMove(-1)} disabled={first} aria-label="Move up">▲</button>
         <button type="button" onClick={() => onMove(1)} disabled={last} aria-label="Move down">▼</button>
       </div>
-      <button type="button" className={`ad-slide__img ${s.image_url ? "" : "sh-ph sh-ph--xs"}`} onClick={() => setShowImage((v) => !v)} title="Set image URL">
-        {s.image_url ? <img src={s.image_url} alt="" /> : "[ image ]"}
-      </button>
+      <div className={`ad-slide__img ${s.image_url ? "" : "sh-ph sh-ph--xs"}`} aria-hidden>
+        {s.image_url ? <img src={s.image_url} alt="" /> : "[ mascot ]"}
+      </div>
       <div className="ad-slide__fields">
-        <input className="sh-input ad-slide__headline" value={headline} onChange={(e) => setHeadline(e.target.value)} aria-label="Headline"
+        <input className="sh-input ad-slide__headline" value={headline} onChange={(e) => setHeadline(e.target.value)} aria-label="Headline" maxLength={160}
           onBlur={() => headline.trim() && headline !== s.headline && onSave({ headline: headline.trim() })} />
-        <input className="sh-input ad-slide__sub" value={sub} onChange={(e) => setSub(e.target.value)} aria-label="Subheading"
+        <input className="sh-input ad-slide__sub" value={sub} onChange={(e) => setSub(e.target.value)} aria-label="Subheading" placeholder="Subheading" maxLength={300}
           onBlur={() => sub !== (s.subheading ?? "") && onSave({ subheading: sub || null })} />
-        {showImage && (
-          <div className="ad-row-gap">
-            <input className="sh-input ad-slide__sub" placeholder="https://… image URL (leave blank for mascot)" value={image} onChange={(e) => setImage(e.target.value)} aria-label="Image URL" />
-            <button type="button" className="sh-btn ad-btn-sm" onClick={() => { onSave({ image_url: image.trim() || null }); setShowImage(false); }}>Save</button>
-          </div>
-        )}
+        <div className="ad-slide__urls">
+          <input className="sh-input ad-slide__sub" value={image} onChange={(e) => setImage(e.target.value)} aria-label="Image URL" placeholder="Image URL"
+            onBlur={() => url(image) !== s.image_url && onSave({ image_url: url(image) })} />
+          <input className="sh-input ad-slide__sub" value={link} onChange={(e) => setLink(e.target.value)} aria-label="Link URL" placeholder="Link URL (optional)"
+            onBlur={() => url(link) !== s.link_url && onSave({ link_url: url(link) })} />
+        </div>
         <button type="button" className="ad-remove" onClick={onRemove}>Remove</button>
       </div>
       <button type="button" className={`sh-toggle ${s.is_visible ? "is-on" : ""}`} style={{ marginTop: 6 }} aria-pressed={s.is_visible} aria-label="Visible on storefront" onClick={() => onSave({ is_visible: !s.is_visible })} />
@@ -589,12 +671,16 @@ function EventsCard({ ctx }: { ctx: Ctx }) {
 
 function EventRow({ e, onSave, onRemove }: { e: StoreEvent; onSave: (patch: Partial<StoreEvent>) => void; onRemove: () => void }) {
   const [name, setName] = useState(e.name);
+  const [city, setCity] = useState(e.city ?? "");
+  const named = name.trim();
   return (
     <div className="ad-event">
       <input className="ad-event__name" value={name} placeholder="Event name" aria-label="Event name" onChange={(x) => setName(x.target.value)}
-        onBlur={() => name.trim() && name !== e.name && onSave({ name: name.trim() })} />
-      <input className="sh-input ad-event__date" type="date" aria-label="Start date" value={e.start_date ?? ""} onChange={(x) => name.trim() && onSave({ name: name.trim(), start_date: x.target.value || null })} />
-      <input className="sh-input ad-event__date" type="date" aria-label="End date" value={e.end_date ?? ""} onChange={(x) => name.trim() && onSave({ name: name.trim(), end_date: x.target.value || null })} />
+        onBlur={() => named && name !== e.name && onSave({ name: named })} />
+      <input className="ad-event__name ad-event__city" value={city} placeholder="City" aria-label="City" onChange={(x) => setCity(x.target.value)}
+        onBlur={() => named && city !== (e.city ?? "") && onSave({ name: named, city: city.trim() || null })} />
+      <input className="sh-input ad-event__date" type="date" aria-label="Start date" value={e.start_date ?? ""} onChange={(x) => named && onSave({ name: named, start_date: x.target.value || null })} />
+      <input className="sh-input ad-event__date" type="date" aria-label="End date" value={e.end_date ?? ""} onChange={(x) => named && onSave({ name: named, end_date: x.target.value || null })} />
       <button type="button" className="ad-x" onClick={onRemove} aria-label={`Remove ${e.name}`}>×</button>
     </div>
   );
@@ -687,6 +773,7 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
               <span className="ad-range"><input className="sh-input" inputMode="numeric" aria-label="Minimum days" {...field("hMin")} />–<input className="sh-input" inputMode="numeric" aria-label="Maximum days" {...field("hMax")} /></span>
             </div>
           </section>
+          <SettingsPreview form={form} />
           {ctx.isOwner && (
             <div className="ad-save-bar">
               {dirty && <span className="ad-muted ad-sm">Unsaved changes</span>}
@@ -697,6 +784,23 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
     </>
+  );
+}
+
+function SettingsPreview({ form }: { form: ReturnType<typeof toForm> }) {
+  const free = Number(form.free);
+  const fx = Number(form.fx);
+  const days = form.hMin === form.hMax ? form.hMin : `${form.hMin}–${form.hMax}`;
+  const low = Number(form.low);
+  return (
+    <StorefrontPreview label="How shoppers see these settings">
+      <div className="ad-preview__bar"><span style={{ color: "var(--gold)" }}>●</span> Free shipping on orders ${Number.isFinite(free) ? (Number.isInteger(free) ? free : free.toFixed(2)) : "—"}+ · Canada &amp; US</div>
+      <div className="ad-preview__lines">
+        <span style={{ color: "var(--teal)" }}>In stock · ships in {days} days</span>
+        <span style={{ color: "var(--red)" }}>Only {Number.isFinite(low) && low > 0 ? low : "a few"} left <span className="ad-muted">(LOW STOCK at {Number.isFinite(low) ? low : "—"} or fewer)</span></span>
+        <span>$100.00 CAD shows as <b>US${Number.isFinite(fx) ? (100 * fx).toFixed(2) : "—"}</b> when a shopper picks USD</span>
+      </div>
+    </StorefrontPreview>
   );
 }
 

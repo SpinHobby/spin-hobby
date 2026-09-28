@@ -27,6 +27,7 @@ export interface Product {
   janCode?: string | null;
   availability?: Availability | null;
   isFeatured?: boolean;
+  sortOrder?: number;
   alertsWaiting?: number;
 }
 

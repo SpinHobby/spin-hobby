@@ -1,19 +1,19 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { api, signIn } from "../../lib/api";
-import { money, type Currency } from "../format";
+import { money, storeFormat, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
 import type { CartLine } from "./data";
 
-const FREE_SHIPPING_CENTS = 7500;
 
 export function CartDrawer({ lines, subtotal, currency, onQty, onClose }: {
   lines: CartLine[]; subtotal: number; currency: Currency;
   onQty: (variationId: string, qty: number) => void; onClose: () => void;
 }) {
   useEscape(onClose);
-  const remaining = Math.max(FREE_SHIPPING_CENTS - subtotal, 0);
-  const progress = Math.min(subtotal / FREE_SHIPPING_CENTS, 1);
+  const threshold = storeFormat.freeShippingThresholdCents;
+  const remaining = Math.max(threshold - subtotal, 0);
+  const progress = threshold ? Math.min(subtotal / threshold, 1) : 1;
   return (
     <>
       <div className="sh-overlay" onClick={onClose} />

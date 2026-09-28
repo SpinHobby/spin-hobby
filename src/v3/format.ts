@@ -2,9 +2,15 @@ import type { Product, ProductStatus } from "./types";
 
 export type Currency = "CAD" | "USD";
 
-export const FX_CAD_USD = 0.73;
+/** Store-wide display settings. Defaults mirror store_settings; replaced by /checkout/config on load. */
+export const storeFormat = { fxCadUsd: 0.73, handlingDaysMin: 2, handlingDaysMax: 3, freeShippingThresholdCents: 7500 };
 
-export function money(cents: number | null | undefined, currency: Currency = "CAD", fx = FX_CAD_USD) {
+export function handlingLabel() {
+  const { handlingDaysMin: a, handlingDaysMax: b } = storeFormat;
+  return a === b ? `${a} day${a === 1 ? "" : "s"}` : `${a}–${b} days`;
+}
+
+export function money(cents: number | null | undefined, currency: Currency = "CAD", fx = storeFormat.fxCadUsd) {
   const value = (cents ?? 0) / 100;
   const converted = currency === "USD" ? value * fx : value;
   return (currency === "USD" ? "US$" : "$") + converted.toFixed(2);
@@ -58,7 +64,7 @@ export function statusLabel(p: Product) {
   const s = normalizeStatus(p.status);
   const n = p.stockCount;
   switch (s) {
-    case "in": return n ? `${n} in stock · ships in 2–3 days` : "In stock · ships in 2–3 days";
+    case "in": return n ? `${n} in stock · ships in ${handlingLabel()}` : `In stock · ships in ${handlingLabel()}`;
     case "low": return `Only ${n ?? "a few"} left`;
     case "pre": return `Release ${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}`;
     case "out": return p.status === "closed" ? "Pre-order closed" : "Sold out · restock alerts available";

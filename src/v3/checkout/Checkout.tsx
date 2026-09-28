@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { money } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
+import { loadStoreConfig } from "../storeConfig";
 import { useCart, type CartLine } from "../storefront/data";
 import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
@@ -60,15 +61,14 @@ export default function Checkout() {
   useEffect(() => { if (!email && auth.email) setEmail(auth.email); }, [auth.email, email, setEmail]);
 
   useEffect(() => {
-    api<CheckoutConfig & { success: true }>("/checkout/config")
-      .then(setConfig)
-      .catch(() => {
-        if (ENV_PAYPAL_ID) {
-          setConfig({ provider: "paypal", paypalClientId: ENV_PAYPAL_ID, paypalEnv: "sandbox", squareApplicationId: null, squareLocationId: null, squareEnv: "sandbox", shippingStandardCents: 899, shippingExpressCents: 1999, freeShippingThresholdCents: 7500 });
-        } else {
-          setConfigError("Online payment isn't available right now.");
-        }
-      });
+    loadStoreConfig().then((c) => {
+      if (c) setConfig(c);
+      else if (ENV_PAYPAL_ID) {
+        setConfig({ provider: "paypal", paypalClientId: ENV_PAYPAL_ID, paypalEnv: "sandbox", squareApplicationId: null, squareLocationId: null, squareEnv: "sandbox", shippingStandardCents: 899, shippingExpressCents: 1999, freeShippingThresholdCents: 7500 });
+      } else {
+        setConfigError("Online payment isn't available right now.");
+      }
+    });
   }, []);
 
   const quoteInput = useMemo(() => ({

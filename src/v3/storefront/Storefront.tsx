@@ -3,10 +3,11 @@ import "../tokens.scss";
 import "./storefront.scss";
 import { dayLabel, discountPct, normalizeStatus, type Currency } from "../format";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
-import type { Product, SortKey, StoreEvent } from "../types";
+import type { Product, StoreEvent } from "../types";
+import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import {
   ALL, applyFilters, AVAIL, DEFAULT_AVAIL, NAV, PRICES, SORTS, useCart, useCatalog, useWishlist,
-  type Filters, type NavKey,
+  type Filters, type NavKey, type ShopSort,
 } from "./data";
 import { AccountMenu, CartDrawer, NotifyDialog } from "./Overlays";
 import { DISCORD_URL, EBAY_URL, SUPPORT_EMAIL } from "../links";
@@ -33,8 +34,9 @@ export default function Storefront() {
   const cart = useCart();
   const wishlist = useWishlist(!!auth.session, flash);
   const [currency, setCurrency] = useLocalState<Currency>("spinhobby-currency", "CAD");
+  useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
 
-  const [filters, setFilters] = useState<Filters>({ nav: "Home", category: ALL, avail: DEFAULT_AVAIL, price: "Any", sort: "new", query: "" });
+  const [filters, setFilters] = useState<Filters>({ nav: "Home", category: ALL, avail: DEFAULT_AVAIL, price: "Any", sort: "featured", query: "" });
   const [draftQuery, setDraftQuery] = useState("");
   const [view, setView] = useLocalState<"grid" | "list">("spinhobby-view", "grid");
   const [wishOnly, setWishOnly] = useState(false);
@@ -84,10 +86,11 @@ export default function Storefront() {
     return [...counts].sort((a, b) => a[0].localeCompare(b[0]));
   }, [products]);
 
+  const featuredIds = useMemo(() => (home.featuredItems.length ? home.featuredItems : products.filter((p) => p.isFeatured)).map((p) => p.id), [home.featuredItems, products]);
   const results = useMemo(() => {
-    const list = applyFilters(products, filters);
+    const list = applyFilters(products, filters, featuredIds);
     return wishOnly ? list.filter((p) => wishlist.ids.has(p.id)) : list;
-  }, [products, filters, wishOnly, wishlist.ids]);
+  }, [products, filters, featuredIds, wishOnly, wishlist.ids]);
 
   const isHome = filters.nav === "Home" && filters.category === ALL && !filters.query.trim() && !wishOnly;
   const hasFilters = filters.price !== "Any" || Object.values(filters.avail).some((v) => !v) || filters.category !== ALL;
@@ -127,7 +130,7 @@ export default function Storefront() {
       {/* Utility bar */}
       <div className="sf-utility">
         <div className="sf-wrap sf-utility__inner">
-          <span><span className="sf-gold">●</span> Free shipping on orders $75+ · Canada &amp; US</span>
+          <span><span className="sf-gold">●</span> Free shipping on orders {freeShippingLabel()}+ · Canada &amp; US</span>
           <div className="sf-utility__links">
             <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a>
             <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>
@@ -222,7 +225,7 @@ export default function Storefront() {
 
           {isHome && (
             <>
-              <HeroRow slides={home.slides} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => setNav("Pre-Orders")} onSale={() => setNav("Sale")} />
+              <HeroRow slides={home.slides.map((sl) => (sl.id.startsWith("default-") ? { ...sl, headline: sl.headline.replace("$75+", `${freeShippingLabel()}+`) } : sl))} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => setNav("Pre-Orders")} onSale={() => setNav("Sale")} />
 
               {preorders.length > 0 && (
                 <section aria-labelledby="pre-title">
@@ -259,7 +262,7 @@ export default function Storefront() {
               <div className="sf-shop__tools">
                 <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>Filters{hasFilters ? " •" : ""}</button>
                 <label className="sf-muted sf-sort-label" htmlFor="sf-sort">Sort</label>
-                <select id="sf-sort" className="sf-select" value={filters.sort} onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as SortKey }))}>
+                <select id="sf-sort" className="sf-select" value={filters.sort} onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ShopSort }))}>
                   {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
                 <div className="sf-seg" role="group" aria-label="Layout">
@@ -334,7 +337,7 @@ export default function Storefront() {
   );
 }
 
-function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
+export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
   slides: { id: string; headline: string; subheading: string | null; image_url: string | null; link_url: string | null }[];
   closingSoon: number; maxOff: number; onPreorders: () => void; onSale: () => void;
 }) {

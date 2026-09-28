@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import "../tokens.scss";
+import "../storefront/storefront.scss"; // previews render real storefront components
 import "./admin.scss";
 import { api, signIn } from "../../lib/api";
 import { initials, relativeAge } from "../format";
