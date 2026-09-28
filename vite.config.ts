@@ -1,10 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import netlify from "@netlify/vite-plugin";
 import { resolve } from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), netlify()],
   root: ".",
   publicDir: "public",
   resolve: {
