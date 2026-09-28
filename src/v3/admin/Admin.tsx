@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import "../tokens.scss";
 import "../storefront/storefront.scss"; // previews render real storefront components
 import "./admin.scss";
-import { api, signIn } from "../../lib/api";
+import { api } from "../../lib/api";
+import { SignInPanel } from "../SignIn";
 import { initials, relativeAge } from "../format";
 
 function syncAgo(iso: string | null | undefined) {
@@ -141,27 +142,23 @@ export default function Admin() {
 }
 
 function Gate({ signedInAs, onSignOut }: { signedInAs: string | null; onSignOut: () => void }) {
-  const [error, setError] = useState("");
-  const login = (provider: "google" | "discord") => signIn(provider).catch((e: Error) => setError(e.message));
   return (
     <div className="sh ad-gate">
       <div className="ad-gate__card">
         <div className="ad-gate__brand"><img src={LOGO} alt="Spin Hobby" /><span className="ad-tag">ADMIN</span></div>
         {signedInAs ? (
           <>
-            <h1 className="sh-display">No admin access</h1>
-            <p><b>{signedInAs}</b> is signed in but isn't a staff or owner account. Ask the store owner to set your role in Supabase.</p>
-            <button type="button" className="sh-btn" onClick={onSignOut}>Sign in with another account</button>
+            <h1 className="sh-display">No admin access yet</h1>
+            <p>You're signed in as <b>{signedInAs}</b>, but this account isn't staff or owner. Ask the store owner to add your email to the admin list, then sign in again.</p>
+            <button type="button" className="sh-btn" onClick={onSignOut}>Sign out</button>
           </>
         ) : (
           <>
             <h1 className="sh-display">Staff sign in</h1>
             <p>Manage products, orders, homepage content and payments for spinhobby.com.</p>
-            <button type="button" className="sh-btn" onClick={() => login("google")}>Continue with Google</button>
-            <button type="button" className="sh-btn sh-btn--ghost" onClick={() => login("discord")}>Continue with Discord</button>
+            <SignInPanel returnPath="/admin" />
           </>
         )}
-        {error && <span className="ad-error">{error}</span>}
         <a href="/" className="ad-gate__back">← Back to the store</a>
       </div>
     </div>

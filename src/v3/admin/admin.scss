@@ -159,7 +159,7 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 
 // ------------------------------------------------------------ sign-in gate
 .ad-gate { display: grid; place-items: center; padding: 24px; background: var(--block) !important;
-  background-image: radial-gradient(circle at 85% 20%, rgba(243,183,47,.18) 0 180px, transparent 181px) !important;
+  background-image: radial-gradient(circle at 88% 16%, #f3b72f 0 150px, transparent 151px) !important;
   &__card { width: min(400px, 100%); background: var(--surface); border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 30px 60px rgba(0,0,0,.3);
     h1 { margin: 6px 0 0; font-size: 26px; } p { margin: 0 0 6px; color: var(--text2); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
     .sh-btn { padding: 12px; } > img { height: 40px; width: auto; align-self: flex-start; } }

@@ -138,3 +138,17 @@ body { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   .sh *, .sh *::before, .sh *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+// Sign-in panel (admin gate + storefront account menu)
+.sh-signin {
+  display: flex; flex-direction: column; gap: 10px;
+  &__oauth { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; }
+  &__or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; font-weight: 700;
+    &::before, &::after { content: ""; flex: 1; height: 1px; background: var(--border); } }
+  &__form { display: flex; flex-direction: column; gap: 8px; .sh-btn { padding: 11px; } }
+  &__sent { font-size: 13.5px; line-height: 1.5; color: var(--text2); background: var(--surface2); border-radius: 10px; padding: 10px 12px; overflow-wrap: anywhere; }
+  &__row { display: flex; justify-content: space-between; gap: 8px; }
+  &__link { border: 0; background: none; padding: 0; color: var(--blue); font-size: 13px; font-weight: 700; }
+  &__error { color: var(--red); font-size: 13px; font-weight: 600; }
+  &--compact { gap: 8px; .sh-signin__oauth, .sh-signin__form .sh-btn { padding: 9px; font-size: 13.5px; } }
+}

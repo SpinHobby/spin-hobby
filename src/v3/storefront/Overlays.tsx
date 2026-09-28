@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { api, signIn } from "../../lib/api";
+import { api } from "../../lib/api";
+import { SignInPanel } from "../SignIn";
 import { money, storeFormat, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
@@ -110,8 +111,8 @@ export function NotifyDialog({ product, email, onClose, onDone }: {
   );
 }
 
-export function AccountMenu({ email, user, onSignOut, onError }: {
-  email: string | null; user: AppUser | null; onSignOut: () => void; onError: (m: string) => void;
+export function AccountMenu({ email, user, onSignOut }: {
+  email: string | null; user: AppUser | null; onSignOut: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -123,7 +124,6 @@ export function AccountMenu({ email, user, onSignOut, onError }: {
   }, [open]);
   useEscape(open ? () => setOpen(false) : null);
 
-  const login = (provider: "google" | "discord") => signIn(provider).catch((e: Error) => onError(e.message));
   const isStaff = user?.role === "staff" || user?.role === "owner";
 
   return (
@@ -142,8 +142,7 @@ export function AccountMenu({ email, user, onSignOut, onError }: {
           ) : (
             <>
               <div className="sf-menu__label">Sign in to sync your wishlist and track orders</div>
-              <button role="menuitem" type="button" onClick={() => login("google")}>Continue with Google</button>
-              <button role="menuitem" type="button" onClick={() => login("discord")}>Continue with Discord</button>
+              <div className="sf-menu__signin"><SignInPanel compact /></div>
             </>
           )}
         </div>

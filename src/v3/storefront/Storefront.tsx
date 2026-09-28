@@ -159,7 +159,7 @@ export default function Storefront() {
           </form>
           <div className="sf-header__actions">
             <button type="button" className="sh-icon-btn" onClick={toggleTheme} title="Toggle theme" aria-label="Toggle dark mode">{theme === "dark" ? "☀" : "☾"}</button>
-            <AccountMenu email={auth.email} user={auth.user} onSignOut={auth.signOut} onError={flash} />
+            <AccountMenu email={auth.email} user={auth.user} onSignOut={auth.signOut} />
             <button type="button" className={`sf-head-link sf-wish ${wishOnly ? "is-on" : ""}`} aria-pressed={wishOnly}
               onClick={() => { setWishOnly((w) => !w); scrollShop(); }} aria-label={`Wishlist, ${wishlist.count} items`}>
               <span className="sf-red">♥</span>{wishlist.count}
