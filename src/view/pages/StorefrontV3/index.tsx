@@ -16,11 +16,23 @@ type Product = {
   variationId?: string | null;
 };
 
+type ApiProduct = {
+  id: string;
+  name: string;
+  category?: string | null;
+  status?: string | null;
+  priceCents?: number | null;
+  compareAtCents?: number | null;
+  images?: string[] | null;
+  releaseMonth?: string | null;
+  variationId?: string | null;
+};
+
 type Homepage = {
-  hero?: { eyebrow?: string; title?: string; description?: string; imageUrl?: string };
-  arrivals?: Product[];
-  preorder?: Product[];
-  ranks?: Product[];
+  slides?: { eyebrow?: string; title?: string; description?: string; image_url?: string }[];
+  newInStock?: ApiProduct[];
+  preorders?: ApiProduct[];
+  ranking?: ApiProduct[];
 };
 
 const tabs = ["All", "New Arrivals", "Pre-Orders", "Top Ranked"];
@@ -28,6 +40,18 @@ const categoryOptions = ["Figures", "Model Kits", "Trading Cards", "Plush", "Col
 
 const money = (value?: number | null) =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(value ?? 0);
+
+const productFromApi = (item: ApiProduct): Product => ({
+  id: item.id,
+  name: item.name,
+  category: item.category,
+  status: item.status,
+  price: (item.priceCents ?? 0) / 100,
+  compareAtPrice: item.compareAtCents ? item.compareAtCents / 100 : null,
+  imageUrl: item.images?.[0] ?? null,
+  releaseDate: item.releaseMonth ?? null,
+  variationId: item.variationId ?? null,
+});
 
 function ProductCard({ item, onAdd }: { item: Product; onAdd: (item: Product) => void }) {
   const unavailable = item.status === "out";
@@ -69,11 +93,11 @@ export default function StorefrontV3() {
     let active = true;
     Promise.all([
       api<Homepage>("/homepage").catch(() => ({})),
-      api<{ items?: Product[] }>("/products?limit=36").catch(() => ({ items: [] })),
+      api<{ items?: ApiProduct[] }>("/products?limit=36").catch(() => ({ items: [] })),
     ]).then(([home, catalog]) => {
       if (!active) return;
       setHomepage(home);
-      setProducts(catalog.items ?? []);
+      setProducts((catalog.items ?? []).map(productFromApi));
       setIsLoading(false);
     });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => setEmail(session?.user.email ?? null));
@@ -116,6 +140,10 @@ export default function StorefrontV3() {
     document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const hero = homepage.slides?.[0];
+  const preorderProducts = (homepage.preorders ?? []).map(productFromApi);
+  const rankedProducts = (homepage.ranking ?? []).map(productFromApi);
+
   return (
     <div className="storefront">
       <div className="utility"><span>Free Canada-wide shipping on orders over $150</span><span>Edmonton, Alberta · <a href="mailto:hello@spinhobby.ca">Need help?</a></span></div>
@@ -134,13 +162,13 @@ export default function StorefrontV3() {
       <main>
         <section className="hero">
           <div className="hero__copy">
-            <p className="eyebrow">{homepage.hero?.eyebrow ?? "Edmonton’s hobby destination"}</p>
-            <h1>{homepage.hero?.title ?? "Collect what moves you."}</h1>
-            <p>{homepage.hero?.description ?? "Figures, model kits, cards, and collectibles picked for people who love the hobby as much as we do."}</p>
+            <p className="eyebrow">{hero?.eyebrow ?? "Edmonton’s hobby destination"}</p>
+            <h1>{hero?.title ?? "Collect what moves you."}</h1>
+            <p>{hero?.description ?? "Figures, model kits, cards, and collectibles picked for people who love the hobby as much as we do."}</p>
             <div className="hero__buttons"><a href="#catalog" className="button button--primary">Shop new arrivals</a><a href="#preorders" className="button button--ghost">Explore pre-orders</a></div>
           </div>
           <div className="hero__art">
-            {homepage.hero?.imageUrl ? <img src={homepage.hero.imageUrl} alt="Featured Spin Hobby collection" /> : <><img src="/assets/transparent%20mascot%20chibi%20rotated.png" alt="Spin Hobby mascot" /><div className="hero__halo" /></>}
+            {hero?.image_url ? <img src={hero.image_url} alt="Featured Spin Hobby collection" /> : <><img src="/assets/transparent%20mascot%20chibi%20rotated.png" alt="Spin Hobby mascot" /><div className="hero__halo" /></>}
           </div>
         </section>
 
@@ -149,8 +177,8 @@ export default function StorefrontV3() {
         <section className="feature-section" id="preorders">
           <div className="section-heading"><div><p className="eyebrow">Reserve the next release</p><h2>Pre-orders worth watching</h2></div><a href="#catalog">View all products →</a></div>
           <div className="product-strip">
-            {(homepage.preorder?.length ? homepage.preorder : products.filter((item) => item.status === "pre").slice(0, 4)).map((item) => <ProductCard key={item.id} item={item} onAdd={addToCart} />)}
-            {!isLoading && !(homepage.preorder?.length || products.some((item) => item.status === "pre")) && <div className="empty-card"><strong>Pre-orders are being synced from Square.</strong><span>Check back soon for upcoming releases.</span></div>}
+            {(preorderProducts.length ? preorderProducts : products.filter((item) => item.status === "pre").slice(0, 4)).map((item) => <ProductCard key={item.id} item={item} onAdd={addToCart} />)}
+            {!isLoading && !(preorderProducts.length || products.some((item) => item.status === "pre")) && <div className="empty-card"><strong>Pre-orders are being synced from Square.</strong><span>Check back soon for upcoming releases.</span></div>}
           </div>
         </section>
 
@@ -169,7 +197,7 @@ export default function StorefrontV3() {
           </div>
         </section>
 
-        <section className="rankings" id="rankings"><div><p className="eyebrow">Community radar</p><h2>What collectors are watching</h2><p>Rankings update from live storefront activity as products arrive.</p></div><ol>{(homepage.ranks ?? []).slice(0, 3).map((item, index) => <li key={item.id}><b>0{index + 1}</b><span>{item.name}</span><em>{money(item.price)}</em></li>)}{!homepage.ranks?.length && <li><b>01</b><span>Live rankings will appear here after the first catalog sync.</span><em>Coming soon</em></li>}</ol></section>
+        <section className="rankings" id="rankings"><div><p className="eyebrow">Community radar</p><h2>What collectors are watching</h2><p>Rankings update from live storefront activity as products arrive.</p></div><ol>{rankedProducts.slice(0, 3).map((item, index) => <li key={item.id}><b>0{index + 1}</b><span>{item.name}</span><em>{money(item.price)}</em></li>)}{!rankedProducts.length && <li><b>01</b><span>Live rankings will appear here after the first catalog sync.</span><em>Coming soon</em></li>}</ol></section>
 
         <section className="newsletter" id="community"><div><p className="eyebrow">Join the spin</p><h2>New drops, event nights, and collector news.</h2></div><form onSubmit={(event) => { event.preventDefault(); setMessage("Thanks — you’re on the list."); }}><input type="email" placeholder="Your email address" required /><button className="button button--primary">Subscribe</button></form></section>
       </main>
