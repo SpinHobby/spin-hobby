@@ -6,6 +6,7 @@ import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
 import type { Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { DEFAULT_SLIDES } from "../demo";
+import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 
 export interface Ctx {
@@ -151,6 +152,7 @@ async function patchProduct(ctx: Ctx, id: string, body: Record<string, unknown>)
 export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const products = ctx.data.products;
   const q = query.trim().toLowerCase();
   const rows = products
@@ -171,6 +173,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
     <>
       <div className="ad-toolbar">
         <input className="ad-search" type="search" placeholder="Search name, series, JAN…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search products" />
+        <button type="button" className="sh-btn ad-add-btn" onClick={() => setAdding(true)}>+ Add product</button>
         <div className="ad-chips">
           {Object.keys(PRODUCT_FILTERS).map((n) => (
             <button key={n} type="button" className={`sh-chip ${ctx.productFilter === n ? "is-active" : ""}`} onClick={() => ctx.setProductFilter(n)}>
@@ -185,7 +188,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
             <span /><span>Product</span><span>Category</span><span>Price</span><span>Stock</span><span>Status</span><span>Release / order by</span><span>Featured</span>
           </div>
           {ctx.data.loading ? <Empty>Loading products…</Empty> : rows.length === 0 ? (
-            <Empty>{products.length ? "No products match." : "No products yet. Run “Sync with Square” to import the catalog."}</Empty>
+            <Empty>{products.length ? "No products match." : <>No products yet. <button type="button" className="ad-link" onClick={() => setAdding(true)}>Add one by hand</button> or run “Sync with Square”.</>}</Empty>
           ) : rows.map((p) => {
             const st = adminStatus(p);
             return (
@@ -194,11 +197,14 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                 <Thumb src={p.images[0]} />
                 <div className="ad-cell-main">
                   <div className="ad-strong ad-ellipsis">{p.name}</div>
-                  <div className="ad-muted ad-sm ad-ellipsis">{[p.series, p.janCode].filter(Boolean).join(" · ") || "—"}</div>
+                  <div className="ad-muted ad-sm ad-ellipsis">
+                    {p.source === "manual" && <span className="ad-tag-manual">Manual</span>}
+                    {[p.series, p.janCode].filter(Boolean).join(" · ") || (p.source === "manual" ? "" : "—")}
+                  </div>
                 </div>
                 <span className="ad-text2">{p.category ?? "—"}</span>
                 <span className="ad-strong">{money(p.priceCents)}</span>
-                <span className="ad-strong" style={{ color: st.color }}>{p.stockCount == null ? "∞" : p.stockCount}</span>
+                <span className="ad-strong" style={{ color: st.color }}>{p.source === "manual" ? <InlineStock ctx={ctx} p={p} /> : p.stockCount == null ? "∞" : p.stockCount}</span>
                 <span><span className="sh-badge" style={{ background: st.color }}>{st.badge}</span></span>
                 <span className="ad-text2 ad-sm">{p.status === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}</span>
                 <span onClick={(e) => e.stopPropagation()}>
@@ -209,8 +215,9 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           })}
         </div>
       </div>
-      <p className="ad-foot-note">Name, price, photos and stock are managed in Square Dashboard and sync automatically. Storefront fields (pre-order, dates, series, sale price, featured) are edited here.</p>
+      <p className="ad-foot-note">Square products: name, price, photos and stock come from Square Dashboard. Products you add here (tagged Manual) are fully editable here, with − / + to adjust stock right in the table.</p>
       {open && <ProductDrawer key={open.id} ctx={ctx} p={open} onClose={() => setOpenId(null)} onSaved={(patch) => update(open.id, patch)} />}
+      {adding && <AddProductDrawer ctx={ctx} onClose={() => setAdding(false)} />}
     </>
   );
 }
@@ -226,8 +233,11 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     series: p.series ?? "",
     jan: p.janCode ?? "",
   });
+  const manual = p.source === "manual";
+  const [catalog, setCatalog] = useState({ name: p.name, category: p.category ?? "", price: (p.priceCents / 100).toFixed(2), stock: p.stockCount, photos: p.images });
   const [busy, setBusy] = useState(false);
   const [notifying, setNotifying] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const squareUrl = `https://app.squareup.com/dashboard/items/library/${encodeURIComponent(p.id)}`;
 
@@ -237,8 +247,16 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     if (compare !== null && (!Number.isFinite(compare) || compare < 0)) { ctx.flash("Compare-at price must be a number"); return; }
     if (maxPer !== null && (!Number.isInteger(maxPer) || maxPer < 1)) { ctx.flash("Max per customer must be a whole number"); return; }
     if (form.availability === "preorder" && !form.orderBy) { ctx.flash("Pre-orders need an order-by date"); return; }
+    const priceCents = Math.round(Number(catalog.price) * 100);
+    if (manual && (!catalog.name.trim() || !Number.isFinite(priceCents) || priceCents <= 0)) { ctx.flash("Name and a price above $0 are required"); return; }
     setBusy(true);
     try {
+      if (manual && !ctx.demo) {
+        await api(`/admin/products/${encodeURIComponent(p.id)}/catalog`, { method: "PATCH", body: JSON.stringify({
+          name: catalog.name.trim(), category: catalog.category.trim() || null, priceCents, stockCount: catalog.stock, imageUrls: catalog.photos,
+        }) });
+      }
+      if (manual) onSaved({ name: catalog.name.trim(), category: catalog.category.trim() || null, priceCents, stockCount: catalog.stock, images: catalog.photos });
       await patchProduct(ctx, p.id, {
         availability: form.availability,
         release_month: form.release ? `${form.release}-01` : "",
@@ -259,6 +277,17 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     } catch (e) { ctx.flash(errMsg(e)); } finally { setBusy(false); }
   };
 
+  const archive = async () => {
+    if (!confirmArchive) { setConfirmArchive(true); return; }
+    setBusy(true);
+    try {
+      if (!ctx.demo) await api(`/admin/products/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+      ctx.setData((d) => ({ ...d, products: d.products.filter((x) => x.id !== p.id) }));
+      ctx.flash(`${p.name} removed from the shop`);
+      onClose();
+    } catch (e) { ctx.flash(errMsg(e)); setBusy(false); }
+  };
+
   const notify = async () => {
     setNotifying(true);
     try {
@@ -274,21 +303,37 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
       <aside className="sh-drawer" role="dialog" aria-modal="true" aria-label="Edit storefront details">
         <div className="sh-drawer__head"><span>Edit storefront details</span><button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close">×</button></div>
         <div className="sh-drawer__body">
-          <div className="ad-summary">
-            <Thumb src={p.images[0]} size={84} />
-            <div>
-              <div className="ad-strong" style={{ fontSize: 15, fontWeight: 800 }}>{p.name}</div>
-              <div className="ad-muted" style={{ fontSize: 13, marginTop: 2 }}>{p.category ?? "Uncategorised"} · {money(p.priceCents)} · stock {p.stockCount == null ? "∞" : p.stockCount}</div>
-              <a href={squareUrl} target="_blank" rel="noreferrer" className="ad-link ad-sm" style={{ display: "inline-block", marginTop: 6 }}>Edit in Square ↗</a>
+          {manual ? (
+            <section className="ad-manual">
+              <div className="ad-between"><span className="ad-label" style={{ margin: 0 }}>Product</span><span className="ad-tag-manual">Added manually</span></div>
+              <PhotoUploader urls={catalog.photos} onChange={(photos) => setCatalog((c) => ({ ...c, photos }))} demo={ctx.demo} />
+              <label className="ad-field">Name<input className="sh-input" value={catalog.name} onChange={(e) => setCatalog((c) => ({ ...c, name: e.target.value }))} maxLength={200} /></label>
+              <div className="ad-grid2">
+                <label className="ad-field">Category<input className="sh-input" value={catalog.category} onChange={(e) => setCatalog((c) => ({ ...c, category: e.target.value }))} maxLength={120} /></label>
+                <label className="ad-field">Price (CAD)<div className="ad-money"><span>$</span><input className="sh-input" inputMode="decimal" value={catalog.price} onChange={(e) => setCatalog((c) => ({ ...c, price: e.target.value.replace(/[^\d.]/g, "") }))} /></div></label>
+              </div>
+              <div className="ad-field">Stock<StockField value={catalog.stock} onChange={(stock) => setCatalog((c) => ({ ...c, stock }))} /></div>
+            </section>
+          ) : (
+            <div className="ad-summary">
+              <Thumb src={p.images[0]} size={84} />
+              <div>
+                <div className="ad-strong" style={{ fontSize: 15, fontWeight: 800 }}>{p.name}</div>
+                <div className="ad-muted" style={{ fontSize: 13, marginTop: 2 }}>{p.category ?? "Uncategorised"} · {money(p.priceCents)} · stock {p.stockCount == null ? "∞" : p.stockCount}</div>
+                <a href={squareUrl} target="_blank" rel="noreferrer" className="ad-link ad-sm" style={{ display: "inline-block", marginTop: 6 }}>Edit in Square ↗</a>
+              </div>
             </div>
-          </div>
+          )}
           {(() => {
             const compare = form.compareAt.trim() ? Math.round(Number(form.compareAt) * 100) : null;
+            const liveStock = manual ? catalog.stock : p.stockCount;
+            const livePrice = manual ? Math.round(Number(catalog.price) * 100) || 0 : p.priceCents;
             const preview: Product = {
-              ...p, series: form.series.trim() || null, janCode: form.jan.trim() || null,
+              ...p, ...(manual ? { name: catalog.name || p.name, category: catalog.category || null, images: catalog.photos, priceCents: livePrice, stockCount: liveStock } : {}),
+              series: form.series.trim() || null, janCode: form.jan.trim() || null,
               compareAtCents: compare && Number.isFinite(compare) ? compare : null,
               releaseMonth: form.release || null, orderByDate: form.orderBy || null,
-              status: previewStatus(form.availability, p.stockCount, form.orderBy || null, ctx.data.settings.low_stock_threshold),
+              status: previewStatus(form.availability, liveStock, form.orderBy || null, ctx.data.settings.low_stock_threshold),
             };
             return form.availability === "hidden" ? (
               <div className="ad-callout"><span>Hidden products don't appear anywhere on the storefront.</span></div>
@@ -327,6 +372,11 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
           )}
         </div>
         <div className="sh-drawer__foot">
+          {manual && (
+            <button type="button" className="sh-btn sh-btn--danger" style={{ marginRight: "auto" }} onClick={archive} disabled={busy}>
+              {confirmArchive ? "Confirm remove" : "Remove from shop"}
+            </button>
+          )}
           <button type="button" className="sh-btn sh-btn--ghost" onClick={onClose}>Cancel</button>
           <button type="button" className="sh-btn" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
         </div>
@@ -572,7 +622,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     <div className="ad-two">
       <Card title="Hero slides" action={<button type="button" className="sh-btn ad-btn-sm" onClick={addSlide}>+ Add slide</button>}>
         {slides.length === 0 && <Empty>No slides yet. The storefront shows its default welcome slides until you add one.</Empty>}
-        {slides.map((s, i) => <SlideRow key={s.id} s={s} first={i === 0} last={i === slides.length - 1} onMove={(d) => move(i, d)} onSave={(patch) => saveSlide(s, patch)} onRemove={() => removeSlide(s)} />)}
+        {slides.map((s, i) => <SlideRow key={s.id} s={s} demo={ctx.demo} first={i === 0} last={i === slides.length - 1} onMove={(d) => move(i, d)} onSave={(patch) => saveSlide(s, patch)} onRemove={() => removeSlide(s)} />)}
       </Card>
       <div className="ad-stack">
         <Card title={<>Featured products <span className="ad-muted" style={{ fontWeight: 600, fontSize: 13 }}>· toggle in Products</span></>}>
@@ -596,12 +646,11 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
   );
 }
 
-function SlideRow({ s, first, last, onMove, onSave, onRemove }: {
-  s: HeroSlide; first: boolean; last: boolean; onMove: (d: number) => void; onSave: (patch: Partial<HeroSlide>) => void; onRemove: () => void;
+function SlideRow({ s, first, last, demo, onMove, onSave, onRemove }: {
+  s: HeroSlide; first: boolean; last: boolean; demo: boolean; onMove: (d: number) => void; onSave: (patch: Partial<HeroSlide>) => void; onRemove: () => void;
 }) {
   const [headline, setHeadline] = useState(s.headline);
   const [sub, setSub] = useState(s.subheading ?? "");
-  const [image, setImage] = useState(s.image_url ?? "");
   const [link, setLink] = useState(s.link_url ?? "");
   const url = (v: string) => v.trim() || null;
   return (
@@ -610,20 +659,18 @@ function SlideRow({ s, first, last, onMove, onSave, onRemove }: {
         <button type="button" onClick={() => onMove(-1)} disabled={first} aria-label="Move up">▲</button>
         <button type="button" onClick={() => onMove(1)} disabled={last} aria-label="Move down">▼</button>
       </div>
-      <div className={`ad-slide__img ${s.image_url ? "" : "sh-ph sh-ph--xs"}`} aria-hidden>
-        {s.image_url ? <img src={s.image_url} alt="" /> : "[ mascot ]"}
+      <div className="ad-slide__photo">
+        <PhotoUploader single folder="slides" demo={demo} urls={s.image_url ? [s.image_url] : []}
+          onChange={(urls) => onSave({ image_url: urls[0] ?? null })} />
+        {!s.image_url && <span className="ad-muted ad-sm">No photo: the mascot shows instead</span>}
       </div>
       <div className="ad-slide__fields">
         <input className="sh-input ad-slide__headline" value={headline} onChange={(e) => setHeadline(e.target.value)} aria-label="Headline" maxLength={160}
           onBlur={() => headline.trim() && headline !== s.headline && onSave({ headline: headline.trim() })} />
         <input className="sh-input ad-slide__sub" value={sub} onChange={(e) => setSub(e.target.value)} aria-label="Subheading" placeholder="Subheading" maxLength={300}
           onBlur={() => sub !== (s.subheading ?? "") && onSave({ subheading: sub || null })} />
-        <div className="ad-slide__urls">
-          <input className="sh-input ad-slide__sub" value={image} onChange={(e) => setImage(e.target.value)} aria-label="Image URL" placeholder="Image URL"
-            onBlur={() => url(image) !== s.image_url && onSave({ image_url: url(image) })} />
-          <input className="sh-input ad-slide__sub" value={link} onChange={(e) => setLink(e.target.value)} aria-label="Link URL" placeholder="Link URL (optional)"
-            onBlur={() => url(link) !== s.link_url && onSave({ link_url: url(link) })} />
-        </div>
+        <input className="sh-input ad-slide__sub" value={link} onChange={(e) => setLink(e.target.value)} aria-label="Link when clicked" placeholder="Link when clicked (optional)"
+          onBlur={() => url(link) !== s.link_url && onSave({ link_url: url(link) })} />
         <button type="button" className="ad-remove" onClick={onRemove}>Remove</button>
       </div>
       <button type="button" className={`sh-toggle ${s.is_visible ? "is-on" : ""}`} style={{ marginTop: 6 }} aria-pressed={s.is_visible} aria-label="Visible on storefront" onClick={() => onSave({ is_visible: !s.is_visible })} />

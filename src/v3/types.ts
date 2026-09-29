@@ -28,6 +28,8 @@ export interface Product {
   availability?: Availability | null;
   isFeatured?: boolean;
   sortOrder?: number;
+  source?: "square" | "manual";
+  description?: string | null;
   alertsWaiting?: number;
 }
 
