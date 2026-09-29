@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { api } from "../lib/api";
-import { supabase } from "../lib/supabase";
+import { api, completeOAuthRedirect, getSession, onSessionChange, signOut, type Session } from "../lib/api";
 import type { AppUser } from "./types";
 
 const THEME_KEY = "spinhobby-theme"; // same key the existing app + index.html use
@@ -36,36 +34,22 @@ export function useToast(duration = 2200) {
   return { toast, flash };
 }
 
-/** Supabase session + the app profile (role) from /auth/me. */
+/** Signed-in account (from the API session) + its role. */
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<AppUser | null>(null);
+  const [session, setSession] = useState<Session | null>(getSession);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    const load = async (next: Session | null) => {
-      if (!active) return;
-      setSession(next);
-      if (!next) { setUser(null); setReady(true); return; }
-      try {
-        const me = await api<{ user: AppUser }>("/auth/me");
-        if (active) setUser(me.user);
-      } catch {
-        if (active) setUser(null);
-      } finally {
-        if (active) setReady(true);
-      }
-    };
-    supabase.auth.getSession().then(({ data }) => load(data.session));
-    const { data } = supabase.auth.onAuthStateChange((event, next) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") load(next);
-    });
-    return () => { active = false; data.subscription.unsubscribe(); };
+    const off = onSessionChange(setSession);
+    // Finish a Google/Discord sign-in, then confirm the stored session is still valid.
+    completeOAuthRedirect()
+      .then(() => (getSession() ? api<{ user: AppUser }>("/auth/me").then(() => undefined).catch(() => undefined) : undefined))
+      .finally(() => setReady(true));
+    return off;
   }, []);
 
-  const signOut = useCallback(() => supabase.auth.signOut(), []);
-  return { session, user, email: session?.user.email ?? null, ready, signOut };
+  const doSignOut = useCallback(() => signOut(), []);
+  return { session, user: session?.user ?? null, email: session?.user.email ?? null, ready, signOut: doSignOut };
 }
 
 export function useLocalState<T>(key: string, initial: T) {
@@ -89,6 +73,3 @@ export function useEscape(onEscape: (() => void) | null) {
     return () => window.removeEventListener("keydown", handler);
   }, [onEscape]);
 }
-
-/** Demo data is only allowed locally or when explicitly enabled for a preview deploy. */
-export const DEMO_ALLOWED = import.meta.env.DEV || import.meta.env.VITE_DEMO_DATA === "true";

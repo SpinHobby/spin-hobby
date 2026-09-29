@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import "../tokens.scss";
 import "../storefront/storefront.scss"; // previews render real storefront components
 import "./admin.scss";
@@ -13,20 +13,20 @@ function syncAgo(iso: string | null | undefined) {
   if (min < 60) return `${min} min ago`;
   return `${relativeAge(iso)} ago`;
 }
-import { DEMO_ALLOWED, useAuth, useTheme, useToast } from "../hooks";
+import { useAuth, useTheme, useToast } from "../hooks";
 import { SCREENS, useAdminData, type Screen } from "./data";
+import { CategoriesScreen } from "./Categories";
 import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, SettingsScreen, type Ctx } from "./Screens";
 
 const LOGO = "/logo/logo%20cropped.png";
 
 export default function Admin() {
-  const demo = DEMO_ALLOWED && new URLSearchParams(window.location.search).has("demo");
   const auth = useAuth();
   const { theme, toggle } = useTheme();
   const { toast, flash } = useToast();
-  const isStaff = demo || auth.user?.role === "staff" || auth.user?.role === "owner";
-  const isOwner = demo || auth.user?.role === "owner";
-  const { data, setData, reload } = useAdminData(isStaff, demo);
+  const isStaff = auth.user?.role === "staff" || auth.user?.role === "owner";
+  const isOwner = auth.user?.role === "owner";
+  const { data, setData, reload } = useAdminData(isStaff);
 
   const [screen, setScreenState] = useState<Screen>(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1));
@@ -46,13 +46,14 @@ export default function Admin() {
     window.scrollTo({ top: 0 });
   }, []);
 
-  const toShipCount = useMemo(() => data.orders.filter((o) => o.status === "paid" || o.status === "fulfilled").length, [data.orders]);
-  const lowCount = useMemo(() => data.products.filter((p) => p.status === "low" || p.status === "out").length, [data.products]);
+  // Sidebar badges come straight from the server's dashboard numbers.
+  const toShipCount = data.dashboard?.toShip ?? 0;
+  const lowCount = data.dashboard?.lowStock ?? 0;
 
-  if (!demo && !auth.ready) {
+  if (!auth.ready) {
     return <div className="sh ad-gate"><div className="ad-gate__card"><img src={LOGO} alt="Spin Hobby" /><div className="sh-skeleton" style={{ height: 14, width: "70%" }} /></div></div>;
   }
-  if (!demo && (!auth.session || !isStaff)) {
+  if (!auth.session || !isStaff) {
     return <Gate signedInAs={auth.session ? auth.email : null} onSignOut={auth.signOut} />;
   }
 
@@ -60,10 +61,9 @@ export default function Admin() {
     if (!isOwner) { flash("Only the owner can run a full Square sync"); return; }
     setSyncing(true);
     try {
-      if (!demo) await api("/admin/square/sync", { method: "POST" });
+      await api("/admin/square/sync", { method: "POST" });
       flash("Synced catalog & inventory from Square");
-      if (demo) setData((d) => ({ ...d, readiness: d.readiness && { ...d.readiness, lastSyncAt: new Date().toISOString() } }));
-      else reload();
+      reload();
     } catch (e) {
       flash(e instanceof Error ? e.message : "Sync failed");
     } finally {
@@ -71,7 +71,7 @@ export default function Admin() {
     }
   };
 
-  const ctx: Ctx = { data, setData, reload, demo, isOwner, flash, go, productFilter, setProductFilter, orderTab, setOrderTab };
+  const ctx: Ctx = { data, setData, reload, isOwner, flash, go, productFilter, setProductFilter, orderTab, setOrderTab };
   const lastSync = data.readiness?.lastSyncAt;
   const connected = !!data.readiness?.appAndLocationConnected;
 
@@ -114,14 +114,13 @@ export default function Admin() {
           <button type="button" className="ad-theme" onClick={toggle} aria-label="Toggle dark mode">{theme === "dark" ? "☀" : "☾"}</button>
           <a href="/" target="_blank" rel="noreferrer" className="ad-top__store">View store ↗</a>
           <div className="ad-user" title={auth.email ?? "Demo"}>
-            <span className="ad-avatar">{demo ? "SH" : initials(auth.email)}</span>
-            <span className="ad-user__role">{demo ? "Demo" : auth.user?.role === "owner" ? "Owner" : "Staff"}</span>
-            {!demo && <button type="button" className="ad-user__out" onClick={auth.signOut}>Sign out</button>}
+            <span className="ad-avatar">{initials(auth.email)}</span>
+            <span className="ad-user__role">{auth.user?.role === "owner" ? "Owner" : "Staff"}</span>
+            <button type="button" className="ad-user__out" onClick={auth.signOut}>Sign out</button>
           </div>
         </header>
 
         <main className="ad-content">
-          {demo && <div className="ad-banner">Demo mode: sample data, and changes are not saved.</div>}
           {data.errors.length > 0 && (
             <div className="ad-banner ad-banner--error" role="alert">
               <span>Some data couldn't load: {data.errors.join(" · ")}</span>
@@ -130,6 +129,7 @@ export default function Admin() {
           )}
           {screen === "Dashboard" && <DashboardScreen ctx={ctx} />}
           {screen === "Products" && <ProductsScreen ctx={ctx} />}
+          {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
           {screen === "Orders" && <OrdersScreen ctx={ctx} />}
           {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
           {screen === "Settings" && <SettingsScreen ctx={ctx} />}

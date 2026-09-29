@@ -12,6 +12,7 @@ export interface Product {
   series: string | null;
   character: string | null;
   category: string | null;
+  categoryId?: string | null;
   images: string[];
   priceCents: number;
   compareAtCents: number | null;
@@ -56,6 +57,15 @@ export interface StoreEvent {
   sort_order: number;
 }
 
+export interface ShopCategory {
+  id: string;
+  parentId: string | null;
+  name: string;
+  sortOrder: number;
+  isVisible?: boolean;     // admin only
+  productCount?: number;   // admin only: products directly in this category
+}
+
 export interface Homepage {
   success: true;
   slides: HeroSlide[];
@@ -64,6 +74,7 @@ export interface Homepage {
   ranking: Product[];
   newInStock: Product[];
   events: StoreEvent[];
+  categories?: ShopCategory[];
 }
 
 export type Role = "customer" | "staff" | "owner";
@@ -113,6 +124,8 @@ export interface Dashboard {
   toShip: number;
   oldestToShipDays: number;
   openPreorders: number;
+  preorderProducts?: number;
+  ordersToday?: number;
   reservedUnits: number;
   lowStock: number;
   alertsWaiting: number;

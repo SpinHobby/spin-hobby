@@ -34,7 +34,7 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
           {p === "google" && <GoogleMark />}{LABEL[p]}
         </button>
       ))}
-      {providers.email && (
+      {providers.password && (
         <>
           {oauthOn.length > 0 && <div className="sh-signin__or"><span>or</span></div>}
           <form className="sh-signin__form" onSubmit={passwordLogin}>
@@ -44,7 +44,8 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
           </form>
         </>
       )}
-      {!providers.email && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
+      {!providers.password && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
+      {providers.dev && <div className="sh-signin__sent">Local dev: <b>owner@spinhobby.test</b> / <b>spinhobby</b></div>}
       {error && <div className="sh-signin__error" role="alert">{error}</div>}
     </div>
   );
