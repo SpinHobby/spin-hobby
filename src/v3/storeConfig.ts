@@ -15,6 +15,8 @@ export interface StoreConfig {
   handlingDaysMin: number;
   handlingDaysMax: number;
   fxCadUsd: number;
+  maintenanceMode: boolean;
+  maintenanceMessage: string | null;
 }
 
 let cached: Promise<StoreConfig | null> | null = null;

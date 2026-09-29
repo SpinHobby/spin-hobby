@@ -1,0 +1,76 @@
+.mp {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+}
+
+.mp-theme {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.mp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  padding: 40px 32px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+
+.mp-logo {
+  height: 40px;
+  margin-bottom: 16px;
+}
+
+.mp-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.mp-card h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.mp-card p {
+  color: var(--text2);
+  line-height: 1.5;
+  margin: 0 0 24px;
+  white-space: pre-wrap;
+}
+
+.mp-retry {
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 15px;
+  width: 100%;
+  margin-bottom: 16px;
+
+  &:hover {
+    opacity: 0.92;
+  }
+}
+
+.mp-ebay {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

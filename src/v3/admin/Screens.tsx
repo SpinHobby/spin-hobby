@@ -787,6 +787,14 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
     ctx.setData((d) => ({ ...d, settings: res.settings }));
   };
 
+  const toggleMaintenance = async () => {
+    if (!ctx.isOwner) { ctx.flash("Only the owner can change this"); return; }
+    try {
+      await put({ maintenance_mode: !s.maintenance_mode });
+      ctx.flash(s.maintenance_mode ? "Site is back online" : "Site is now showing the maintenance page");
+    } catch (e) { ctx.flash(errMsg(e)); }
+  };
+
   const pickProvider = async (id: "paypal" | "square", name: string) => {
     if (!ctx.isOwner) { ctx.flash("Only the owner can change payments"); return; }
     if (id === s.payment_provider) return;
@@ -795,12 +803,13 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
 
   const save = async () => {
     const cents = (v: string) => Math.round(Number(v) * 100);
-    const patch: Partial<StoreSettings> = {
+    const numeric = {
       shipping_standard_cents: cents(form.standard), shipping_express_cents: cents(form.express), free_shipping_threshold_cents: cents(form.free),
       low_stock_threshold: Number(form.low), fx_cad_usd: Number(form.fx), handling_days_min: Number(form.hMin), handling_days_max: Number(form.hMax),
     };
-    if (Object.values(patch).some((v) => !Number.isFinite(v as number) || (v as number) < 0)) { ctx.flash("Check the numbers. Values must be zero or more"); return; }
-    if (patch.handling_days_max! < patch.handling_days_min!) { ctx.flash("Handling max must be at least the min"); return; }
+    if (Object.values(numeric).some((v) => !Number.isFinite(v) || v < 0)) { ctx.flash("Check the numbers. Values must be zero or more"); return; }
+    if (numeric.handling_days_max < numeric.handling_days_min) { ctx.flash("Handling max must be at least the min"); return; }
+    const patch: Partial<StoreSettings> = { ...numeric, maintenance_message: form.maintenanceMessage.trim() || null };
     setSaving(true);
     try { await put(patch); ctx.flash("Settings saved"); } catch (e) { ctx.flash(errMsg(e)); } finally { setSaving(false); }
   };
@@ -819,6 +828,39 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
   return (
     <>
       {!ctx.isOwner && <div className="ad-banner">Settings are read-only for staff accounts.</div>}
+      <section className="ad-card ad-pad" style={{ marginBottom: 16, borderColor: s.maintenance_mode ? "var(--red)" : undefined }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <div className="ad-h3">Maintenance mode</div>
+            <div className="ad-muted" style={{ fontSize: 13 }}>
+              {s.maintenance_mode
+                ? "The storefront and checkout are showing the maintenance page to everyone right now. Admin stays reachable."
+                : "Takes the storefront and checkout offline for shoppers and shows a maintenance page instead. Admin stays reachable either way."}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="sh-btn"
+            style={s.maintenance_mode ? { background: "var(--red)" } : undefined}
+            disabled={!ctx.isOwner}
+            onClick={toggleMaintenance}
+          >
+            {s.maintenance_mode ? "Turn maintenance mode off" : "Turn maintenance mode on"}
+          </button>
+        </div>
+        <label style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12, fontSize: 14 }}>
+          <span>Message shown to shoppers (optional)</span>
+          <textarea
+            className="sh-input"
+            style={{ width: "100%", resize: "vertical" }}
+            rows={2}
+            placeholder="Spin Hobby is currently down for maintenance. We'll be back shortly."
+            value={form.maintenanceMessage}
+            onChange={(e) => setForm((f) => ({ ...f, maintenanceMessage: e.target.value }))}
+            disabled={!ctx.isOwner}
+          />
+        </label>
+      </section>
       <div className="ad-two">
         <section className="ad-card ad-pad">
           <div><div className="ad-h3">Payment provider</div><div className="ad-muted" style={{ fontSize: 13 }}>Checkout switches instantly. Both use the same order flow.</div></div>
@@ -892,5 +934,6 @@ function toForm(s: StoreSettings) {
     standard: (s.shipping_standard_cents / 100).toFixed(2), express: (s.shipping_express_cents / 100).toFixed(2),
     free: (s.free_shipping_threshold_cents / 100).toFixed(2), low: String(s.low_stock_threshold), fx: String(Number(s.fx_cad_usd)),
     hMin: String(s.handling_days_min), hMax: String(s.handling_days_max),
+    maintenanceMessage: s.maintenance_message ?? "",
   };
 }

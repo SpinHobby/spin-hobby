@@ -8,6 +8,7 @@ export const SCREENS: Screen[] = ["Dashboard", "Products", "Categories", "Orders
 export const DEFAULT_SETTINGS: StoreSettings = {
   payment_provider: "paypal", shipping_standard_cents: 899, shipping_express_cents: 1999, free_shipping_threshold_cents: 7500,
   low_stock_threshold: 3, fx_cad_usd: 0.73, handling_days_min: 2, handling_days_max: 3,
+  maintenance_mode: false, maintenance_message: null,
 };
 
 export interface AdminData {
