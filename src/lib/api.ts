@@ -47,20 +47,6 @@ export async function signInWithPassword(email: string, password: string) {
   if (error) throw error;
 }
 
-/** Passwordless sign-in: emails a one-time link (and code, if the email template includes it). */
-export async function sendEmailLink(email: string, returnPath = window.location.pathname) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email: email.trim().toLowerCase(),
-    options: { emailRedirectTo: window.location.origin + returnPath, shouldCreateUser: true },
-  });
-  if (error) throw error;
-}
-
-export async function verifyEmailCode(email: string, token: string) {
-  const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: token.trim(), type: "email" });
-  if (error) throw error;
-}
-
 export interface AuthProviders { email: boolean; google: boolean; discord: boolean }
 
 let providersPromise: Promise<AuthProviders> | null = null;

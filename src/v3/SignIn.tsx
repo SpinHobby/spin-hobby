@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { authProviders, sendEmailLink, signIn, signInWithPassword, verifyEmailCode, type AuthProviders, type OAuthProvider } from "../lib/api";
+import { authProviders, signIn, signInWithPassword, type AuthProviders, type OAuthProvider } from "../lib/api";
 
 const LABEL: Record<OAuthProvider, string> = { google: "Continue with Google", discord: "Continue with Discord" };
 
@@ -8,9 +8,6 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordMode, setPasswordMode] = useState(false);
-  const [code, setCode] = useState("");
-  const [sentTo, setSentTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,25 +15,11 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
 
   const oauth = (p: OAuthProvider) => { setError(""); signIn(p, returnPath).catch((e: Error) => setError(e.message)); };
 
-  const send = async (e?: FormEvent) => {
-    e?.preventDefault();
-    setBusy(true); setError("");
-    try { await sendEmailLink(email, returnPath); setSentTo(email.trim().toLowerCase()); }
-    catch (err) { setError(friendly(err)); }
-    finally { setBusy(false); }
-  };
-
-  const verify = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true); setError("");
-    try { await verifyEmailCode(sentTo, code); } // onAuthStateChange picks up the new session
-    catch (err) { setError(friendly(err)); setBusy(false); }
-  };
-
+  // Email + password only: no sign-in emails are sent (Supabase's built-in mailer is heavily rate-limited).
   const passwordLogin = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true); setError("");
-    try { await signInWithPassword(email, password); }
+    try { await signInWithPassword(email, password); } // onAuthStateChange picks up the new session
     catch (err) { setError(friendly(err)); }
     finally { setBusy(false); }
   };
@@ -54,30 +37,11 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
       {providers.email && (
         <>
           {oauthOn.length > 0 && <div className="sh-signin__or"><span>or</span></div>}
-          {passwordMode ? (
-            <form className="sh-signin__form" onSubmit={passwordLogin}>
-              <input className="sh-input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
-              <input className="sh-input" type="password" required autoComplete="current-password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
-              <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-              <button type="button" className="sh-signin__link" onClick={() => { setPasswordMode(false); setPassword(""); }}>Use an email sign-in link instead</button>
-            </form>
-          ) : sentTo ? (
-            <form className="sh-signin__form" onSubmit={verify}>
-              <div className="sh-signin__sent">Check <b>{sentTo}</b> for a sign-in link. Open it in this browser.</div>
-              <input className="sh-input" inputMode="numeric" autoComplete="one-time-code" placeholder="Or enter the code from the email" value={code} onChange={(e) => setCode(e.target.value)} />
-              <button className="sh-btn" disabled={busy || code.trim().length < 6}>{busy ? "Checking…" : "Verify code"}</button>
-              <div className="sh-signin__row">
-                <button type="button" className="sh-signin__link" onClick={() => send()} disabled={busy}>Resend</button>
-                <button type="button" className="sh-signin__link" onClick={() => { setSentTo(""); setCode(""); }}>Use a different email</button>
-              </div>
-            </form>
-          ) : (
-            <form className="sh-signin__form" onSubmit={send}>
-              <input className="sh-input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
-              <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>{busy ? "Sending…" : "Email me a sign-in link"}</button>
-              <button type="button" className="sh-signin__link" onClick={() => setPasswordMode(true)}>Use email and password</button>
-            </form>
-          )}
+          <form className="sh-signin__form" onSubmit={passwordLogin}>
+            <input className="sh-input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+            <input className="sh-input" type="password" required autoComplete="current-password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
+            <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+          </form>
         </>
       )}
       {!providers.email && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
@@ -88,8 +52,9 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
 
 function friendly(err: unknown) {
   const m = err instanceof Error ? err.message : String(err);
-  if (/rate limit|too many|seconds/i.test(m)) return "Too many emails just now. Wait a minute and try again.";
-  if (/expired|invalid/i.test(m)) return "That code is invalid or expired. Request a new link.";
+  if (/invalid login credentials/i.test(m)) return "Wrong email or password.";
+  if (/email not confirmed/i.test(m)) return "This account isn't activated yet. Ask the store owner to confirm it.";
+  if (/rate limit|too many/i.test(m)) return "Too many attempts. Wait a few minutes and try again.";
   return m;
 }
 
