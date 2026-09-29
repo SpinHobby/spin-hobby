@@ -1,35 +1,33 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
-import { DEFAULT_EVENTS, DEFAULT_SLIDES, DEMO_PRODUCTS } from "../demo";
-import { DEMO_ALLOWED, useLocalState } from "../hooks";
-import { normalizeStatus } from "../format";
-import type { Homepage, Product, ProductPage, ProductStatus, SortKey } from "../types";
+import { useLocalState } from "../hooks";
+import type { Homepage, Product, ProductPage, ProductStatus, ShopCategory, SortKey } from "../types";
+
+// All filtering, sorting, counting and paging happens on the server (GET /products, /products/facets).
+// This file only turns what the shopper clicked into query parameters.
 
 export const NAV = ["Home", "New Arrivals", "Pre-Orders", "Figures", "Plushies", "Trading Cards", "Goods", "Books & Media", "Sale"] as const;
 export type NavKey = (typeof NAV)[number] | "Category";
 
-// Square category names aren't fixed, so top-nav groups match by keyword.
-const NAV_MATCH: Partial<Record<NavKey, RegExp>> = {
-  Figures: /figure|figma|nendoroid|model kit|gunpla|statue/i,
-  Plushies: /plush/i,
-  "Trading Cards": /card|tcg/i,
-  Goods: /badge|acrylic|keychain|blind|apparel|poster|tapestry|goods|sticker|stand/i,
-  "Books & Media": /book|doujin|manga|video|music|media|cd|dvd|blu-?ray/i,
+/** Storefront menu → server section (see GROUPS in the API's catalog service). */
+const NAV_GROUP: Partial<Record<NavKey, string>> = {
+  "New Arrivals": "new", "Pre-Orders": "preorders", Sale: "sale",
+  Figures: "figures", Plushies: "plushies", "Trading Cards": "cards", Goods: "goods", "Books & Media": "media",
 };
 
 export const PRICES = [
-  { name: "Any", min: 0, max: Infinity },
+  { name: "Any", min: null, max: null },
   { name: "Under $25", min: 0, max: 25 },
   { name: "$25–75", min: 25, max: 75 },
   { name: "$75–150", min: 75, max: 150 },
-  { name: "$150+", min: 150, max: Infinity },
+  { name: "$150+", min: 150, max: null },
 ] as const;
 export type PriceName = (typeof PRICES)[number]["name"];
 
 export const AVAIL = [
   { name: "In stock", statuses: ["in", "low"] as ProductStatus[], color: "var(--teal)" },
   { name: "Pre-order", statuses: ["pre"] as ProductStatus[], color: "var(--blue)" },
-  { name: "Sold out", statuses: ["out"] as ProductStatus[], color: "var(--muted)" },
+  { name: "Sold out", statuses: ["out", "closed"] as (ProductStatus | "closed")[], color: "var(--muted)" },
 ] as const;
 export type AvailName = (typeof AVAIL)[number]["name"];
 
@@ -45,7 +43,8 @@ export const SORTS: { value: ShopSort; label: string }[] = [
 
 export interface Filters {
   nav: NavKey;
-  category: string; // "All categories" or a category name
+  category: string; // "All categories" or a Square category name (only when the shop has no category tree)
+  categoryId: string | null; // shop category; the server includes all of its subcategories
   avail: Record<AvailName, boolean>;
   price: PriceName;
   sort: ShopSort;
@@ -54,98 +53,83 @@ export interface Filters {
 
 export const ALL = "All categories";
 export const DEFAULT_AVAIL: Filters["avail"] = { "In stock": true, "Pre-order": true, "Sold out": true };
+const PAGE = 24;
 
-export function inNav(p: Product, nav: NavKey) {
-  if (nav === "Home" || nav === "Category") return true;
-  if (nav === "New Arrivals") return p.status === "in" || p.status === "low";
-  if (nav === "Pre-Orders") return p.status === "pre";
-  if (nav === "Sale") return !!p.compareAtCents && p.compareAtCents > p.priceCents;
-  const re = NAV_MATCH[nav];
-  return re ? re.test(p.category ?? "") : true;
+function toQuery(f: Filters, wishlistIds: string[] | null) {
+  const q = new URLSearchParams({ limit: String(PAGE), sort: f.sort });
+  const group = NAV_GROUP[f.nav];
+  if (group) q.set("group", group);
+  if (f.categoryId) q.set("categoryId", f.categoryId);
+  else if (f.category !== ALL) q.set("category", f.category);
+  const statuses = AVAIL.filter((a) => f.avail[a.name]).flatMap((a) => a.statuses);
+  if (statuses.length < AVAIL.flatMap((a) => a.statuses).length) q.set("status", statuses.length ? statuses.join(",") : "none");
+  const price = PRICES.find((p) => p.name === f.price)!;
+  if (price.min !== null) q.set("min", String(price.min));
+  if (price.max !== null) q.set("max", String(price.max));
+  if (f.query.trim()) q.set("q", f.query.trim());
+  if (wishlistIds) q.set("ids", wishlistIds.join(","));
+  return q;
 }
 
-export function applyFilters(products: Product[], f: Filters, featured: string[] = []) {
-  const q = f.query.trim().toLowerCase();
-  const price = PRICES.find((x) => x.name === f.price) ?? PRICES[0];
-  const allowed = new Set(AVAIL.filter((a) => f.avail[a.name]).flatMap((a) => a.statuses));
-  const list = products.filter((p) => {
-    const dollars = p.priceCents / 100;
-    return inNav(p, f.nav)
-      && (f.category === ALL || p.category === f.category)
-      && allowed.has(normalizeStatus(p.status))
-      && dollars >= price.min && dollars < price.max
-      && (!q || [p.name, p.series, p.character, p.category, p.janCode].some((v) => v?.toLowerCase().includes(q)));
-  });
-  const order = new Map(products.map((p, i) => [p.id, i])); // API returns newest first
-  const rel = (p: Product) => (p.releaseMonth ? Date.parse(p.releaseMonth.slice(0, 7) + "-01") : 0);
-  const pick = new Map(featured.map((id, i) => [id, i]));
-  const byNew = (a: Product, b: Product) => order.get(a.id)! - order.get(b.id)!;
-  const sorters: Record<ShopSort, (a: Product, b: Product) => number> = {
-    // Admin-featured products first (in their homepage order), then newest.
-    featured: (a, b) => (pick.get(a.id) ?? 1e9) - (pick.get(b.id) ?? 1e9) || byNew(a, b),
-    new: byNew,
-    release: (a, b) => rel(a) - rel(b),
-    price_asc: (a, b) => a.priceCents - b.priceCents,
-    price_desc: (a, b) => b.priceCents - a.priceCents,
-    pop: (a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9),
-  };
-  return [...list].sort(sorters[f.sort]);
+export interface Facets {
+  total: number;
+  categories: { name: string; count: number }[];
+  shopCategories: (ShopCategory & { total: number })[];
+  status: { in: number; pre: number; out: number };
 }
 
-const MAX_PAGES = 20; // 20 × 60 = 1,200 items; plenty for the current catalog
+export type HomeData = Omit<Homepage, "success"> & { promos?: { closingSoon: number; maxDiscountPct: number }; freeShippingThresholdCents?: number };
 
-async function loadAllProducts() {
-  const items: Product[] = [];
-  let cursor: string | undefined = "0";
-  for (let page = 0; cursor !== undefined && page < MAX_PAGES; page += 1) {
-    const res: ProductPage = await api<ProductPage>(`/products?limit=60&sort=new&cursor=${cursor}`);
-    items.push(...res.items);
-    cursor = res.cursor;
-  }
-  return items;
-}
-
-export type CatalogState = {
-  products: Product[];
-  home: Omit<Homepage, "success">;
-  loading: boolean;
-  error: string | null;
-  demo: boolean;
-  reload: () => void;
-};
-
-const EMPTY_HOME: CatalogState["home"] = { slides: [], featuredItems: [], preorders: [], ranking: [], newInStock: [], events: [] };
-
-export function useCatalog(): CatalogState {
-  const [state, setState] = useState<Omit<CatalogState, "reload">>({ products: [], home: EMPTY_HOME, loading: true, error: null, demo: false });
+/** Homepage sections + sidebar counts: loaded once per visit. */
+export function useStorefront() {
+  const [home, setHome] = useState<HomeData | null>(null);
+  const [facets, setFacets] = useState<Facets | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
+  useEffect(() => {
+    let on = true;
+    setError(null);
+    Promise.all([api<HomeData>("/homepage"), api<Facets>("/products/facets")])
+      .then(([h, f]) => { if (on) { setHome(h); setFacets(f); } })
+      .catch((e: Error) => { if (on) setError(e.message); });
+    return () => { on = false; };
+  }, [nonce]);
+  return { home, facets, error, reload: useCallback(() => setNonce((n) => n + 1), []) };
+}
+
+/** One page of products for the current filters, with "load more". Re-queries when filters change. */
+export function useProducts(filters: Filters, wishlistIds: string[] | null) {
+  const query = useMemo(() => toQuery(filters, wishlistIds).toString(), [filters, wishlistIds]);
+  const [state, setState] = useState<{ items: Product[]; total: number; cursor?: string; loading: boolean; loadingMore: boolean; error: string | null }>(
+    { items: [], total: 0, loading: true, loadingMore: false, error: null },
+  );
+  const latest = useRef(query);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let active = true;
+    latest.current = query;
     setState((s) => ({ ...s, loading: true, error: null }));
-    Promise.allSettled([loadAllProducts(), api<Homepage>("/homepage")]).then(([productsRes, homeRes]) => {
-      if (!active) return;
-      const products = productsRes.status === "fulfilled" ? productsRes.value : [];
-      const home = homeRes.status === "fulfilled" ? homeRes.value : EMPTY_HOME;
-      const failed = productsRes.status === "rejected";
-      const useDemo = DEMO_ALLOWED && products.length === 0;
-      setState({
-        products: useDemo ? DEMO_PRODUCTS : products,
-        home: {
-          ...home,
-          slides: home.slides?.length ? home.slides : DEFAULT_SLIDES,
-          events: home.events?.length ? home.events : DEFAULT_EVENTS,
-        },
-        loading: false,
-        error: failed && !useDemo ? (productsRes.reason as Error)?.message ?? "The catalog could not be loaded." : null,
-        demo: useDemo,
-      });
-    });
-    return () => { active = false; };
-  }, [nonce]);
+    // Small debounce so typing in search or toggling filters doesn't fire a request per keystroke.
+    const timer = window.setTimeout(() => {
+      api<ProductPage>(`/products?${query}`)
+        .then((page) => { if (latest.current === query) setState({ items: page.items, total: page.total, cursor: page.cursor, loading: false, loadingMore: false, error: null }); })
+        .catch((e: Error) => { if (latest.current === query) setState((s) => ({ ...s, loading: false, error: e.message })); });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [query, attempt]);
 
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
-  return { ...state, reload };
+  const loadMore = useCallback(() => {
+    if (!state.cursor || state.loadingMore) return;
+    const q = new URLSearchParams(query);
+    q.set("cursor", state.cursor);
+    setState((s) => ({ ...s, loadingMore: true }));
+    api<ProductPage>(`/products?${q}`)
+      .then((page) => { if (latest.current === query) setState((s) => ({ ...s, items: [...s.items, ...page.items], cursor: page.cursor, loadingMore: false })); })
+      .catch((e: Error) => setState((s) => ({ ...s, loadingMore: false, error: e.message })));
+  }, [query, state.cursor, state.loadingMore]);
+
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  return { ...state, loadMore, retry };
 }
 
 // ---------------------------------------------------------------- cart
@@ -201,12 +185,13 @@ export function useWishlist(signedIn: boolean, onError: (message: string) => voi
   const toggle = useCallback((p: Product) => {
     const on = ids.includes(p.id);
     setIds((current) => (on ? current.filter((id) => id !== p.id) : [...current, p.id]));
-    if (!signedIn || p.id.startsWith("DEMO_")) return;
+    if (!signedIn) return;
     const request = on
       ? api(`/wishlist/${encodeURIComponent(p.id)}`, { method: "DELETE" })
       : api("/wishlist", { method: "POST", body: JSON.stringify({ squareItemId: p.id }) });
     request.catch((e: Error) => onError(e.message));
   }, [ids, setIds, signedIn, onError]);
 
-  return { ids: new Set(ids), count: ids.length, toggle };
+  const set = useMemo(() => new Set(ids), [ids]);
+  return { ids: set, list: ids, count: ids.length, toggle };
 }

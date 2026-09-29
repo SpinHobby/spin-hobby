@@ -66,8 +66,7 @@ export async function prepareImage(file: File, maxSize = 1200, quality = 0.82): 
 }
 
 /** Uploads an already-prepared image to the product-images bucket and returns its public URL. */
-export async function uploadPrepared(image: PreparedImage, folder: "products" | "slides", demo: boolean): Promise<string> {
-  if (demo) return URL.createObjectURL(image.blob);
+export async function uploadPrepared(image: PreparedImage, folder: "products" | "slides"): Promise<string> {
   const res = await api<{ url: string }>("/admin/uploads", {
     method: "POST",
     body: JSON.stringify({ data: image.dataUrl, contentType: image.type, folder }),

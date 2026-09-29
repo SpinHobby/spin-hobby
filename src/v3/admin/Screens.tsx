@@ -1,19 +1,19 @@
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { dayLabel, discountPct, money, monthLabel, normalizeStatus, relativeAge, shortDate, STATUS_META, statusLabel } from "../format";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
 import type { Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
-import { DEFAULT_SLIDES } from "../demo";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
+import { CategorySelect } from "./Categories";
+import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 
 export interface Ctx {
   data: AdminData;
   setData: Dispatch<SetStateAction<AdminData>>;
   reload: () => void;
-  demo: boolean;
   isOwner: boolean;
   flash: (m: string) => void;
   go: (s: Screen, extra?: { productFilter?: string; orderTab?: string }) => void;
@@ -77,11 +77,11 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
   const d = ctx.data.dashboard;
   const loading = ctx.data.loading;
   const toShip = ctx.data.orders.filter((o) => o.status === "paid" || o.status === "fulfilled");
-  const ordersToday = ctx.data.orders.filter((o) => new Date(o.created_at).toDateString() === new Date().toDateString()).length;
+  const ordersToday = d?.ordersToday ?? 0;
   const kpis = [
     { label: "Today's sales", value: money(d?.salesTodayCents ?? 0), note: `${ordersToday} order${ordersToday === 1 ? "" : "s"} today`, color: "var(--muted)", go: () => ctx.go("Orders") },
     { label: "Orders to ship", value: String(d?.toShip ?? 0), note: d?.toShip ? `Oldest ${d.oldestToShipDays} day${d.oldestToShipDays === 1 ? "" : "s"}` : "All caught up", color: d?.toShip ? "var(--red)" : "var(--teal)", go: () => ctx.go("Orders", { orderTab: "To ship" }) },
-    { label: "Open pre-orders", value: String(ctx.data.products.filter((p) => p.status === "pre").length), note: `${d?.reservedUnits ?? 0} units reserved`, color: "var(--blue)", go: () => ctx.go("Products", { productFilter: "Pre-order" }) },
+    { label: "Open pre-orders", value: String(d?.preorderProducts ?? 0), note: `${d?.reservedUnits ?? 0} units reserved`, color: "var(--blue)", go: () => ctx.go("Products", { productFilter: "Pre-order" }) },
     { label: "Low / sold out", value: String(d?.lowStock ?? 0), note: `${d?.alertsWaiting ?? 0} restock alerts waiting`, color: "var(--teal)", go: () => ctx.go("Products", { productFilter: "Low / sold out" }) },
   ];
   const openOrder = (id: number) => { ctx.go("Orders"); window.setTimeout(() => window.dispatchEvent(new CustomEvent("ad:open-order", { detail: id })), 0); };
@@ -146,18 +146,38 @@ const PRODUCT_FILTERS: Record<string, (p: Product) => boolean> = {
 };
 
 async function patchProduct(ctx: Ctx, id: string, body: Record<string, unknown>) {
-  if (!ctx.demo) await api(`/admin/products/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
+  await api(`/admin/products/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
 }
 
 export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>(""); // "" all, "none" uncategorised, or a category id
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkTarget, setBulkTarget] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const tree = useMemo(() => buildTree(ctx.data.categories), [ctx.data.categories]);
   const products = ctx.data.products;
   const q = query.trim().toLowerCase();
+  const inCategory = categoryFilter && categoryFilter !== "none" ? tree.descendants(categoryFilter) : null;
   const rows = products
     .filter(PRODUCT_FILTERS[ctx.productFilter] ?? (() => true))
+    .filter((p) => (categoryFilter === "none" ? !p.categoryId : !inCategory || (p.categoryId != null && inCategory.has(p.categoryId))))
     .filter((p) => !q || [p.name, p.series, p.janCode, p.category].some((v) => v?.toLowerCase().includes(q)));
+  const allSelected = rows.length > 0 && rows.every((p) => selected.has(p.id));
+  const toggleSelect = (id: string) => setSelected((cur) => { const next = new Set(cur); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const bulkMove = async () => {
+    if (!bulkTarget) return;
+    const categoryId = bulkTarget === "none" ? null : bulkTarget;
+    setBulkBusy(true);
+    try {
+      const res = await api<{ updated: number }>("/admin/products/bulk-category", { method: "POST", body: JSON.stringify({ ids: [...selected], categoryId }) });
+      ctx.flash(`Moved ${res.updated} product${res.updated === 1 ? "" : "s"} ${categoryId ? `to ${tree.path(categoryId).join(" › ")}` : "out of their category"}`);
+      setSelected(new Set()); setBulkTarget("");
+      ctx.reload();
+    } catch (e) { ctx.flash(errMsg(e)); } finally { setBulkBusy(false); }
+  };
   const open = products.find((p) => p.id === openId) ?? null;
 
   const update = (id: string, patch: Partial<Product>) => ctx.setData((d) => ({ ...d, products: d.products.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
@@ -173,6 +193,13 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
     <>
       <div className="ad-toolbar">
         <input className="ad-search" type="search" placeholder="Search name, series, JAN…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search products" />
+        {tree.flat.length > 0 && (
+          <select className="sh-input ad-cat-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Filter by category">
+            <option value="">All categories</option>
+            <option value="none">Uncategorised</option>
+            {tree.flat.map((c) => <option key={c.id} value={c.id}>{indentLabel(c)}</option>)}
+          </select>
+        )}
         <button type="button" className="sh-btn ad-add-btn" onClick={() => setAdding(true)}>+ Add product</button>
         <div className="ad-chips">
           {Object.keys(PRODUCT_FILTERS).map((n) => (
@@ -182,9 +209,24 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           ))}
         </div>
       </div>
+      {selected.size > 0 && (
+        <div className="ad-bulk" role="region" aria-label="Bulk actions">
+          <span>{selected.size} selected</span>
+          <select className="sh-input" value={bulkTarget} onChange={(e) => setBulkTarget(e.target.value)} aria-label="Move to category">
+            <option value="">Move to category…</option>
+            <option value="none">— Remove from category —</option>
+            {tree.flat.map((c) => <option key={c.id} value={c.id}>{indentLabel(c)}</option>)}
+          </select>
+          <button type="button" className="sh-btn ad-btn-sm" disabled={!bulkTarget || bulkBusy} onClick={bulkMove}>{bulkBusy ? "Moving…" : "Move"}</button>
+          <button type="button" className="ad-link" onClick={() => setSelected(new Set())}>Clear</button>
+          {!tree.flat.length && <span className="ad-muted ad-sm">Create categories first in the Categories screen.</span>}
+        </div>
+      )}
       <div className="ad-table-wrap">
         <div className="ad-table ad-table--products" role="table" aria-label="Products">
           <div className="ad-tr ad-th" role="row">
+            <span className="ad-checkcell"><input type="checkbox" checked={allSelected} aria-label="Select all shown"
+              onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((p) => p.id)))} /></span>
             <span /><span>Product</span><span>Category</span><span>Price</span><span>Stock</span><span>Status</span><span>Release / order by</span><span>Featured</span>
           </div>
           {ctx.data.loading ? <Empty>Loading products…</Empty> : rows.length === 0 ? (
@@ -194,6 +236,9 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
             return (
               <div key={p.id} role="row" tabIndex={0} className={`ad-tr ad-tr--click ${openId === p.id ? "is-selected" : ""}`}
                 onClick={() => setOpenId(p.id)} onKeyDown={(e) => { if (e.key === "Enter") setOpenId(p.id); }}>
+                <span className="ad-checkcell" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} aria-label={`Select ${p.name}`} />
+                </span>
                 <Thumb src={p.images[0]} />
                 <div className="ad-cell-main">
                   <div className="ad-strong ad-ellipsis">{p.name}</div>
@@ -202,7 +247,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                     {[p.series, p.janCode].filter(Boolean).join(" · ") || (p.source === "manual" ? "" : "—")}
                   </div>
                 </div>
-                <span className="ad-text2">{p.category ?? "—"}</span>
+                <span className="ad-text2 ad-ellipsis" title={p.categoryId ? tree.path(p.categoryId).join(" › ") : undefined}>{p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "—"}</span>
                 <span className="ad-strong">{money(p.priceCents)}</span>
                 <span className="ad-strong" style={{ color: st.color }}>{p.source === "manual" ? <InlineStock ctx={ctx} p={p} /> : p.stockCount == null ? "∞" : p.stockCount}</span>
                 <span><span className="sh-badge" style={{ background: st.color }}>{st.badge}</span></span>
@@ -232,6 +277,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     maxPer: p.maxPerCustomer ? String(p.maxPerCustomer) : "",
     series: p.series ?? "",
     jan: p.janCode ?? "",
+    categoryId: p.categoryId ?? "",
   });
   const manual = p.source === "manual";
   const [catalog, setCatalog] = useState({ name: p.name, category: p.category ?? "", price: (p.priceCents / 100).toFixed(2), stock: p.stockCount, photos: p.images });
@@ -251,7 +297,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     if (manual && (!catalog.name.trim() || !Number.isFinite(priceCents) || priceCents <= 0)) { ctx.flash("Name and a price above $0 are required"); return; }
     setBusy(true);
     try {
-      if (manual && !ctx.demo) {
+      if (manual) {
         await api(`/admin/products/${encodeURIComponent(p.id)}/catalog`, { method: "PATCH", body: JSON.stringify({
           name: catalog.name.trim(), category: catalog.category.trim() || null, priceCents, stockCount: catalog.stock, imageUrls: catalog.photos,
         }) });
@@ -265,15 +311,15 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
         max_per_customer: maxPer ?? "",
         series: form.series.trim(),
         jan_code: form.jan.trim(),
+        category_id: form.categoryId || null,
       });
       onSaved({
         availability: form.availability, releaseMonth: form.release || null, orderByDate: form.orderBy || null, compareAtCents: compare,
-        maxPerCustomer: maxPer, series: form.series.trim() || null, janCode: form.jan.trim() || null,
-        ...(ctx.demo ? { status: form.availability === "preorder" ? "pre" : p.status === "pre" ? "in" : p.status } : {}),
+        maxPerCustomer: maxPer, series: form.series.trim() || null, janCode: form.jan.trim() || null, categoryId: form.categoryId || null,
       });
       ctx.flash("Product saved");
       onClose();
-      if (!ctx.demo) ctx.reload(); // status is derived server-side
+      ctx.reload(); // status is derived server-side
     } catch (e) { ctx.flash(errMsg(e)); } finally { setBusy(false); }
   };
 
@@ -281,7 +327,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     if (!confirmArchive) { setConfirmArchive(true); return; }
     setBusy(true);
     try {
-      if (!ctx.demo) await api(`/admin/products/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+      await api(`/admin/products/${encodeURIComponent(p.id)}`, { method: "DELETE" });
       ctx.setData((d) => ({ ...d, products: d.products.filter((x) => x.id !== p.id) }));
       ctx.flash(`${p.name} removed from the shop`);
       onClose();
@@ -291,7 +337,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
   const notify = async () => {
     setNotifying(true);
     try {
-      const res = ctx.demo ? { sent: p.alertsWaiting ?? 0 } : await api<{ sent: number }>(`/admin/products/${encodeURIComponent(p.id)}/notify-restock`, { method: "POST" });
+      const res = await api<{ sent: number }>(`/admin/products/${encodeURIComponent(p.id)}/notify-restock`, { method: "POST" });
       onSaved({ alertsWaiting: 0 });
       ctx.flash(`Emailed ${res.sent} customer${res.sent === 1 ? "" : "s"}`);
     } catch (e) { ctx.flash(errMsg(e)); } finally { setNotifying(false); }
@@ -306,7 +352,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
           {manual ? (
             <section className="ad-manual">
               <div className="ad-between"><span className="ad-label" style={{ margin: 0 }}>Product</span><span className="ad-tag-manual">Added manually</span></div>
-              <PhotoUploader urls={catalog.photos} onChange={(photos) => setCatalog((c) => ({ ...c, photos }))} demo={ctx.demo} />
+              <PhotoUploader urls={catalog.photos} onChange={(photos) => setCatalog((c) => ({ ...c, photos }))} />
               <label className="ad-field">Name<input className="sh-input" value={catalog.name} onChange={(e) => setCatalog((c) => ({ ...c, name: e.target.value }))} maxLength={200} /></label>
               <div className="ad-grid2">
                 <label className="ad-field">Category<input className="sh-input" value={catalog.category} onChange={(e) => setCatalog((c) => ({ ...c, category: e.target.value }))} maxLength={120} /></label>
@@ -349,6 +395,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
               </StorefrontPreview>
             );
           })()}
+          <CategorySelect ctx={ctx} label="Shop category" value={form.categoryId || null} onChange={(id) => setForm((f) => ({ ...f, categoryId: id ?? "" }))} />
           <label className="ad-field">Availability
             <select className="sh-input" value={form.availability} onChange={set("availability")}>
               <option value="auto">Auto (from Square stock)</option>
@@ -460,7 +507,7 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
     if (!tracking.trim()) { ctx.flash("Add a tracking number first"); return; }
     setBusy("ship");
     try {
-      if (!ctx.demo) await api(`/admin/orders/${o.id}/ship`, { method: "POST", body: JSON.stringify({ trackingNumber: tracking.trim(), carrier }) });
+      await api(`/admin/orders/${o.id}/ship`, { method: "POST", body: JSON.stringify({ trackingNumber: tracking.trim(), carrier }) });
       update({ status: "shipped", tracking_number: tracking.trim(), carrier, shipped_at: new Date().toISOString() });
       ctx.flash(`Order #${o.id} marked shipped`);
       onClose();
@@ -471,7 +518,7 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
     if (!confirmRefund) { setConfirmRefund(true); return; }
     setBusy("refund");
     try {
-      const res = ctx.demo ? { status: "refunded" as const } : await api<{ status: Order["status"] }>(`/admin/orders/${o.id}/refund`, { method: "POST", body: "{}" });
+      const res = await api<{ status: Order["status"] }>(`/admin/orders/${o.id}/refund`, { method: "POST", body: "{}" });
       update({ status: res.status });
       ctx.flash(`Refund issued via ${provider}`);
       onClose();
@@ -483,9 +530,7 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
     if (!win) { ctx.flash("Allow pop-ups to open the packing slip"); return; }
     setBusy("slip");
     try {
-      const html = ctx.demo
-        ? `<!doctype html><title>Packing slip #${o.id}</title><body style="font:14px system-ui;margin:32px"><h1>Spin Hobby · Packing slip #${o.id}</h1><p>${addressLine(o)}</p><ul>${(o.order_items ?? []).map((i) => `<li>${i.name} × ${i.quantity}</li>`).join("")}</ul></body>`
-        : (await api<{ html: string }>(`/admin/orders/${o.id}/packing-slip`)).html;
+      const html = (await api<{ html: string }>(`/admin/orders/${o.id}/packing-slip`)).html;
       win.document.open(); win.document.write(html); win.document.close();
       win.focus();
     } catch (e) { win.close(); ctx.flash(errMsg(e)); } finally { setBusy(""); }
@@ -562,7 +607,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
   const saveSlide = async (s: HeroSlide, patch: Partial<HeroSlide>) => {
     const next = { ...s, ...patch };
     setSlides(slides.map((x) => (x.id === s.id ? next : x)));
-    if (ctx.demo || s.id.startsWith("default-")) return;
+    if (s.id.startsWith("default-")) return;
     try {
       await api(`/admin/homepage/slides/${s.id}`, { method: "PUT", body: JSON.stringify({ headline: next.headline, subheading: next.subheading, imageUrl: next.image_url, linkUrl: next.link_url, isVisible: next.is_visible, sortOrder: next.sort_order }) });
       ctx.flash("Slide saved");
@@ -575,14 +620,12 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     const next = [...slides];
     [next[i], next[j]] = [next[j], next[i]];
     setSlides(next.map((s, k) => ({ ...s, sort_order: k })));
-    if (ctx.demo) return;
     try { await api("/admin/homepage/slides/reorder", { method: "PUT", body: JSON.stringify({ ids: next.map((s) => s.id) }) }); }
     catch (e) { ctx.flash(errMsg(e)); ctx.reload(); }
   };
 
   const addSlide = async () => {
     const draft = { headline: "New slide headline", subheading: "Subheading", image_url: null, link_url: null, is_visible: false, sort_order: slides.length };
-    if (ctx.demo) { setSlides([...slides, { id: `demo-${Date.now()}`, ...draft }]); return; }
     try {
       const res = await api<{ slide: HeroSlide }>("/admin/homepage/slides", { method: "POST", body: JSON.stringify({ headline: draft.headline, subheading: draft.subheading, isVisible: false, sortOrder: draft.sort_order }) });
       setSlides([...slides, res.slide]);
@@ -592,7 +635,6 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
 
   const removeSlide = async (s: HeroSlide) => {
     setSlides(slides.filter((x) => x.id !== s.id));
-    if (ctx.demo) return;
     try { await api(`/admin/homepage/slides/${s.id}`, { method: "DELETE" }); ctx.flash("Slide removed"); }
     catch (e) { ctx.flash(errMsg(e)); ctx.reload(); }
   };
@@ -608,7 +650,6 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     [next[i], next[j]] = [next[j], next[i]];
     const order = new Map(next.map((p, k) => [p.id, k]));
     ctx.setData((d) => ({ ...d, products: d.products.map((p) => (order.has(p.id) ? { ...p, sortOrder: order.get(p.id) } : p)) }));
-    if (ctx.demo) return;
     try { await Promise.all([next[i], next[j]].map((p) => patchProduct(ctx, p.id, { sort_order: order.get(p.id) }))); }
     catch (e) { ctx.flash(errMsg(e)); ctx.reload(); }
   };
@@ -617,12 +658,12 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     <>
     <StorefrontPreview label={visibleSlides.length ? `Storefront hero · ${visibleSlides.length} visible slide${visibleSlides.length === 1 ? "" : "s"}` : "Storefront hero · no visible slides, so the default welcome slides show"} className="ad-preview--hero">
       <HeroRow key={visibleSlides.map((sl) => sl.id + sl.headline + sl.subheading + sl.image_url).join("|")}
-        slides={visibleSlides.length ? visibleSlides : DEFAULT_SLIDES} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => {}} onSale={() => {}} />
+        slides={visibleSlides.length ? visibleSlides : ctx.data.previewSlides} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => {}} onSale={() => {}} />
     </StorefrontPreview>
     <div className="ad-two">
       <Card title="Hero slides" action={<button type="button" className="sh-btn ad-btn-sm" onClick={addSlide}>+ Add slide</button>}>
         {slides.length === 0 && <Empty>No slides yet. The storefront shows its default welcome slides until you add one.</Empty>}
-        {slides.map((s, i) => <SlideRow key={s.id} s={s} demo={ctx.demo} first={i === 0} last={i === slides.length - 1} onMove={(d) => move(i, d)} onSave={(patch) => saveSlide(s, patch)} onRemove={() => removeSlide(s)} />)}
+        {slides.map((s, i) => <SlideRow key={s.id} s={s} first={i === 0} last={i === slides.length - 1} onMove={(d) => move(i, d)} onSave={(patch) => saveSlide(s, patch)} onRemove={() => removeSlide(s)} />)}
       </Card>
       <div className="ad-stack">
         <Card title={<>Featured products <span className="ad-muted" style={{ fontWeight: 600, fontSize: 13 }}>· toggle in Products</span></>}>
@@ -646,8 +687,8 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
   );
 }
 
-function SlideRow({ s, first, last, demo, onMove, onSave, onRemove }: {
-  s: HeroSlide; first: boolean; last: boolean; demo: boolean; onMove: (d: number) => void; onSave: (patch: Partial<HeroSlide>) => void; onRemove: () => void;
+function SlideRow({ s, first, last, onMove, onSave, onRemove }: {
+  s: HeroSlide; first: boolean; last: boolean; onMove: (d: number) => void; onSave: (patch: Partial<HeroSlide>) => void; onRemove: () => void;
 }) {
   const [headline, setHeadline] = useState(s.headline);
   const [sub, setSub] = useState(s.subheading ?? "");
@@ -660,7 +701,7 @@ function SlideRow({ s, first, last, demo, onMove, onSave, onRemove }: {
         <button type="button" onClick={() => onMove(1)} disabled={last} aria-label="Move down">▼</button>
       </div>
       <div className="ad-slide__photo">
-        <PhotoUploader single folder="slides" demo={demo} urls={s.image_url ? [s.image_url] : []}
+        <PhotoUploader single folder="slides" urls={s.image_url ? [s.image_url] : []}
           onChange={(urls) => onSave({ image_url: urls[0] ?? null })} />
         {!s.image_url && <span className="ad-muted ad-sm">No photo: the mascot shows instead</span>}
       </div>
@@ -686,7 +727,6 @@ function EventsCard({ ctx }: { ctx: Ctx }) {
     const next = { ...e, ...patch };
     if (next.start_date && next.end_date && next.end_date < next.start_date) { ctx.flash("End date must be after the start date"); return; }
     setEvents(events.map((x) => (x.id === e.id ? next : x)));
-    if (ctx.demo) return;
     const body = JSON.stringify({ name: next.name, city: next.city, startDate: next.start_date, endDate: next.end_date, boothInfo: next.booth_info, isVisible: next.is_visible, sortOrder: next.sort_order });
     try {
       if (e.id.startsWith("default-") || e.id.startsWith("new-")) {
@@ -701,7 +741,7 @@ function EventsCard({ ctx }: { ctx: Ctx }) {
 
   const remove = async (e: StoreEvent) => {
     setEvents(events.filter((x) => x.id !== e.id));
-    if (ctx.demo || e.id.startsWith("default-") || e.id.startsWith("new-")) return;
+    if (e.id.startsWith("default-") || e.id.startsWith("new-")) return;
     try { await api(`/admin/events/${e.id}`, { method: "DELETE" }); ctx.flash("Event removed"); } catch (err) { ctx.flash(errMsg(err)); ctx.reload(); }
   };
 
@@ -743,12 +783,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
   const dirty = JSON.stringify(form) !== JSON.stringify(toForm(s));
 
   const put = async (patch: Partial<StoreSettings>) => {
-    if (!ctx.demo) {
-      const res = await api<{ settings: StoreSettings }>("/admin/settings", { method: "PUT", body: JSON.stringify(patch) });
-      ctx.setData((d) => ({ ...d, settings: res.settings }));
-    } else {
-      ctx.setData((d) => ({ ...d, settings: { ...d.settings, ...patch } }));
-    }
+    const res = await api<{ settings: StoreSettings }>("/admin/settings", { method: "PUT", body: JSON.stringify(patch) });
+    ctx.setData((d) => ({ ...d, settings: res.settings }));
   };
 
   const pickProvider = async (id: "paypal" | "square", name: string) => {

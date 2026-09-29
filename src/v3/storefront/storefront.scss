@@ -95,7 +95,7 @@
 .sf-cats {
   padding: 8px;
   &__label { padding: 10px 10px 6px; }
-  button {
+  > button { // flat list (used when the shop has no category tree)
     border: 0; background: transparent; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;
     padding: 8px 10px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--text); text-align: left;
     &:hover { background: var(--surface2); }
@@ -128,6 +128,28 @@
   strong { font-weight: 800; font-size: 15px; max-width: 140px; }
   span { font-size: 13px; font-weight: 700; text-decoration: underline; }
   &:hover img { transform: translateY(-4px) rotate(-4deg); }
+}
+
+// category tree (shop categories with subcategories)
+.sf-cats__head { display: flex; justify-content: space-between; align-items: baseline; padding-right: 8px; }
+.sf-cats__toggle { border: 0; background: none; padding: 0; font-size: 12px; font-weight: 700; color: var(--blue); }
+.sf-tree { list-style: none; margin: 0; padding: 0; }
+.sf-tree__row {
+  display: flex; align-items: center; gap: 2px; border-radius: 9px;
+  &:hover { background: var(--surface2); }
+  &.is-active { background: var(--surface2); .sf-tree__name { color: var(--blue); font-weight: 700; } }
+}
+.sf-tree__chev {
+  flex: none; width: 24px; height: 28px; border: 0; background: none; padding: 0; color: var(--muted);
+  font-size: 16px; font-weight: 700; display: grid; place-items: center; transition: transform .15s;
+  &.is-open { transform: rotate(90deg); }
+  &--leaf { display: inline-block; }
+  &:hover:not(.sf-tree__chev--leaf) { color: var(--text); }
+}
+.sf-tree__name {
+  flex: 1; min-width: 0; border: 0; background: none; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 7px 8px 7px 2px; font-size: 14px; font-weight: 500; color: var(--text); text-align: left;
+  span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 // ------------------------------------------------------------ main column
@@ -233,6 +255,7 @@
 }
 .sf-filter-btn { display: none; border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
 
+.sf-grid.is-refreshing, .sf-list.is-refreshing { opacity: .55; transition: opacity .15s; }
 .sf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
 
 .sf-img {

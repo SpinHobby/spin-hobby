@@ -1,21 +1,22 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "../tokens.scss";
 import "./storefront.scss";
-import { dayLabel, discountPct, normalizeStatus, type Currency } from "../format";
+import { dayLabel, normalizeStatus, type Currency } from "../format";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
 import type { Product, StoreEvent } from "../types";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import {
-  ALL, applyFilters, AVAIL, DEFAULT_AVAIL, NAV, PRICES, SORTS, useCart, useCatalog, useWishlist,
+  ALL, AVAIL, DEFAULT_AVAIL, NAV, PRICES, SORTS, useCart, useProducts, useStorefront, useWishlist,
   type Filters, type NavKey, type ShopSort,
 } from "./data";
 import { AccountMenu, CartDrawer, NotifyDialog } from "./Overlays";
+import { CategoryNav } from "./CategoryNav";
+import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, SUPPORT_EMAIL } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
 
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
-const PAGE = 48;
 const EVENT_COLORS = ["var(--red)", "var(--blue)", "var(--gold)", "var(--teal)"];
 
 function eventDates(e: StoreEvent) {
@@ -30,26 +31,25 @@ export default function Storefront() {
   const { theme, toggle: toggleTheme } = useTheme();
   const { toast, flash } = useToast(2400);
   const auth = useAuth();
-  const catalog = useCatalog();
+  const store = useStorefront();
   const cart = useCart();
   const wishlist = useWishlist(!!auth.session, flash);
   const [currency, setCurrency] = useLocalState<Currency>("spinhobby-currency", "CAD");
   useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
 
-  const [filters, setFilters] = useState<Filters>({ nav: "Home", category: ALL, avail: DEFAULT_AVAIL, price: "Any", sort: "featured", query: "" });
+  const [filters, setFilters] = useState<Filters>({ nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", sort: "featured", query: "" });
   const [draftQuery, setDraftQuery] = useState("");
   const [view, setView] = useLocalState<"grid" | "list">("spinhobby-view", "grid");
   const [wishOnly, setWishOnly] = useState(false);
-  const [visible, setVisible] = useState(PAGE);
   const [cartOpen, setCartOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [notify, setNotify] = useState<Product | null>(null);
   const shopRef = useRef<HTMLElement>(null);
 
-  const { products, home } = catalog;
-  useEffect(() => setVisible(PAGE), [filters, wishOnly]);
+  const home = store.home;
+  const facets = store.facets;
+  const results = useProducts(filters, wishOnly ? wishlist.list : null);
   useEscape(filtersOpen ? () => setFiltersOpen(false) : null);
-
   const scrollShop = useCallback(() => {
     window.setTimeout(() => {
       const el = shopRef.current;
@@ -59,13 +59,15 @@ export default function Storefront() {
 
   const setNav = (nav: NavKey) => {
     setWishOnly(false);
-    setFilters((f) => ({ ...f, nav, category: ALL }));
+    setFilters((f) => ({ ...f, nav, category: ALL, categoryId: null }));
     if (nav === "Home") window.scrollTo({ top: 0, behavior: "smooth" });
     else scrollShop();
   };
-  const setCategory = (category: string) => {
+  /** value: ALL, "id:<shop category id>", or a Square category name (flat fallback). */
+  const setCategory = (value: string) => {
     setWishOnly(false);
-    setFilters((f) => ({ ...f, category, nav: category === ALL ? "Home" : "Category" }));
+    const id = value.startsWith("id:") ? value.slice(3) : null;
+    setFilters((f) => ({ ...f, category: id ? ALL : value, categoryId: id, nav: value === ALL ? "Home" : "Category" }));
     setFiltersOpen(false);
     scrollShop();
   };
@@ -77,35 +79,25 @@ export default function Storefront() {
   const clearFilters = () => {
     setWishOnly(false);
     setDraftQuery("");
-    setFilters((f) => ({ ...f, nav: "Home", category: ALL, avail: DEFAULT_AVAIL, price: "Any", query: "" }));
+    setFilters((f) => ({ ...f, nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", query: "" }));
   };
 
-  const categories = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of products) if (p.category) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
-    return [...counts].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [products]);
+  // Category tree + counts come from the server (counts include subcategories).
+  const tree = useMemo(() => buildTree(home?.categories ?? []), [home?.categories]);
+  const hasTree = tree.flat.length > 0;
+  const categoryTotals = useMemo(() => new Map((facets?.shopCategories ?? []).map((c) => [c.id, c.total])), [facets]);
+  const categories = useMemo(() => (facets?.categories ?? []).map((c) => [c.name, c.count] as [string, number]), [facets]);
+  const availCounts: Record<string, number> = { "In stock": facets?.status.in ?? 0, "Pre-order": facets?.status.pre ?? 0, "Sold out": facets?.status.out ?? 0 };
 
-  const featuredIds = useMemo(() => (home.featuredItems.length ? home.featuredItems : products.filter((p) => p.isFeatured)).map((p) => p.id), [home.featuredItems, products]);
-  const results = useMemo(() => {
-    const list = applyFilters(products, filters, featuredIds);
-    return wishOnly ? list.filter((p) => wishlist.ids.has(p.id)) : list;
-  }, [products, filters, featuredIds, wishOnly, wishlist.ids]);
+  const isHome = filters.nav === "Home" && filters.category === ALL && !filters.categoryId && !filters.query.trim() && !wishOnly;
+  const hasFilters = filters.price !== "Any" || Object.values(filters.avail).some((v) => !v) || filters.category !== ALL || !!filters.categoryId;
 
-  const isHome = filters.nav === "Home" && filters.category === ALL && !filters.query.trim() && !wishOnly;
-  const hasFilters = filters.price !== "Any" || Object.values(filters.avail).some((v) => !v) || filters.category !== ALL;
-
-  const preorders = useMemo(() => (home.preorders.length ? home.preorders
-    : products.filter((p) => p.status === "pre").sort((a, b) => String(a.orderByDate).localeCompare(String(b.orderByDate)))).slice(0, 12), [home.preorders, products]);
-  const ranking = useMemo(() => (home.ranking.length ? home.ranking
-    : products.filter((p) => p.rank != null).sort((a, b) => a.rank! - b.rank!)).slice(0, 5), [home.ranking, products]);
-  const arrived = useMemo(() => (home.newInStock.length ? home.newInStock
-    : products.filter((p) => p.status === "in" || p.status === "low")).slice(0, 5), [home.newInStock, products]);
-  const closingSoon = useMemo(() => {
-    const limit = Date.now() + 30 * 86_400_000;
-    return products.filter((p) => p.status === "pre" && p.orderByDate && Date.parse(p.orderByDate) <= limit && Date.parse(p.orderByDate) >= Date.now() - 86_400_000).length;
-  }, [products]);
-  const maxOff = useMemo(() => products.reduce((m, p) => Math.max(m, discountPct(p)), 0), [products]);
+  const preorders = home?.preorders ?? [];
+  const ranking = home?.ranking ?? [];
+  const arrived = home?.newInStock ?? [];
+  const closingSoon = home?.promos?.closingSoon ?? 0;
+  const maxOff = home?.promos?.maxDiscountPct ?? 0;
+  const storeEmpty = facets !== null && facets.total === 0;
 
   const actions: CardActions = {
     currency,
@@ -120,7 +112,7 @@ export default function Storefront() {
     onWish: wishlist.toggle,
   };
 
-  const shopTitle = wishOnly ? "Your wishlist" : filters.category !== ALL ? filters.category
+  const shopTitle = wishOnly ? "Your wishlist" : filters.categoryId ? tree.path(filters.categoryId).join(" › ") : filters.category !== ALL ? filters.category
     : filters.query.trim() ? `Results for “${filters.query.trim()}”` : filters.nav === "Home" ? "All products" : filters.nav;
 
   return (
@@ -148,9 +140,11 @@ export default function Storefront() {
           </a>
           <form className="sf-search" role="search" onSubmit={submitSearch}>
             <label className="sh-visually-hidden" htmlFor="sf-cat">Category</label>
-            <select id="sf-cat" value={filters.category} onChange={(e) => setCategory(e.target.value)}>
+            <select id="sf-cat" value={filters.categoryId ? `id:${filters.categoryId}` : filters.category} onChange={(e) => setCategory(e.target.value)}>
               <option value={ALL}>{ALL}</option>
-              {categories.map(([c]) => <option key={c} value={c}>{c}</option>)}
+              {hasTree
+                ? tree.flat.filter((n) => categoryTotals.get(n.id)).map((n) => <option key={n.id} value={`id:${n.id}`}>{indentLabel(n)}</option>)
+                : categories.map(([c]) => <option key={c} value={c}>{c}</option>)}
             </select>
             <label className="sh-visually-hidden" htmlFor="sf-q">Search</label>
             <input id="sf-q" type="search" placeholder="Search by product, character, series or JAN code…" value={draftQuery}
@@ -182,14 +176,19 @@ export default function Storefront() {
             <strong>Filters</strong>
             <button type="button" className="sh-icon-btn" onClick={() => setFiltersOpen(false)} aria-label="Close filters">×</button>
           </div>
-          <div className="sf-panel sf-cats">
-            <div className="sh-eyebrow sf-cats__label">Categories</div>
-            {[[ALL, products.length] as [string, number], ...categories].map(([c, count]) => (
-              <button key={c} type="button" className={filters.category === c ? "is-active" : ""} onClick={() => setCategory(c)}>
-                <span>{c}</span><span className="sf-cats__count">{count || "—"}</span>
-              </button>
-            ))}
-          </div>
+          {hasTree ? (
+            <CategoryNav tree={tree} totals={categoryTotals} allCount={facets?.total ?? 0} selectedId={filters.categoryId}
+              onSelect={(id) => setCategory(id ? `id:${id}` : ALL)} />
+          ) : (
+            <div className="sf-panel sf-cats">
+              <div className="sh-eyebrow sf-cats__label">Categories</div>
+              {[[ALL, facets?.total ?? 0] as [string, number], ...categories].map(([c, count]) => (
+                <button key={c} type="button" className={filters.category === c ? "is-active" : ""} onClick={() => setCategory(c)}>
+                  <span>{c}</span><span className="sf-cats__count">{count || "—"}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="sf-panel sf-filters">
             <div className="sh-eyebrow">Availability</div>
             {AVAIL.map((a) => (
@@ -197,7 +196,7 @@ export default function Storefront() {
                 <input type="checkbox" checked={filters.avail[a.name]} onChange={() => setFilters((f) => ({ ...f, avail: { ...f.avail, [a.name]: !f.avail[a.name] } }))} />
                 <span className="sf-dot" style={{ background: a.color }} />
                 <span className="sf-check__name">{a.name}</span>
-                <span className="sf-muted sf-small">{products.filter((p) => (a.statuses as string[]).includes(normalizeStatus(p.status))).length}</span>
+                <span className="sf-muted sf-small">{availCounts[a.name]}</span>
               </label>
             ))}
             <div className="sh-eyebrow sf-filters__price">Price</div>
@@ -217,15 +216,15 @@ export default function Storefront() {
         </aside>
 
         <main className="sf-main">
-          {catalog.demo && (
-            <div className="sf-demo-note" role="note">
-              <b>Preview data</b> The live Square catalog is empty, so sample products are shown. This only happens in development or preview builds.
+          {store.error && (
+            <div className="sf-demo-note" role="alert">
+              <b>Can't reach the shop right now.</b> {store.error} <button type="button" className="sf-link" onClick={store.reload}>Try again</button>
             </div>
           )}
 
-          {isHome && (
+          {isHome && home && (
             <>
-              <HeroRow slides={home.slides.map((sl) => (sl.id.startsWith("default-") ? { ...sl, headline: sl.headline.replace("$75+", `${freeShippingLabel()}+`) } : sl))} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => setNav("Pre-Orders")} onSale={() => setNav("Sale")} />
+              <HeroRow slides={home.slides} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => setNav("Pre-Orders")} onSale={() => setNav("Sale")} />
 
               {preorders.length > 0 && (
                 <section aria-labelledby="pre-title">
@@ -258,7 +257,7 @@ export default function Storefront() {
 
           <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
             <div className="sf-shop__head">
-              <h2 id="shop-title" className="sh-display">{shopTitle} <span className="sf-count">{catalog.loading ? "" : `${results.length} items`}</span></h2>
+              <h2 id="shop-title" className="sh-display">{shopTitle} <span className="sf-count">{results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}</span></h2>
               <div className="sf-shop__tools">
                 <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>Filters{hasFilters ? " •" : ""}</button>
                 <label className="sf-muted sf-sort-label" htmlFor="sf-sort">Sort</label>
@@ -272,40 +271,40 @@ export default function Storefront() {
               </div>
             </div>
 
-            {catalog.loading ? (
+            {results.loading && !results.items.length ? (
               <div className="sf-grid" aria-busy="true" aria-label="Loading products">
                 {Array.from({ length: 10 }, (_, i) => (
                   <div key={i} className="sf-card sf-card--skeleton"><div className="sh-skeleton" style={{ aspectRatio: "1" }} /><div className="sh-skeleton" style={{ height: 14, margin: "12px 12px 6px" }} /><div className="sh-skeleton" style={{ height: 14, width: "50%", margin: "0 12px 14px" }} /></div>
                 ))}
               </div>
-            ) : catalog.error ? (
+            ) : results.error ? (
               <div className="sf-empty">
                 <strong>We couldn't load the shop right now</strong>
-                <span>{catalog.error}</span>
-                <button type="button" className="sh-btn" onClick={catalog.reload}>Try again</button>
+                <span>{results.error}</span>
+                <button type="button" className="sh-btn" onClick={results.retry}>Try again</button>
               </div>
-            ) : products.length === 0 ? (
+            ) : storeEmpty ? (
               <div className="sf-empty">
                 <img src={MASCOT} alt="" className="sf-empty__mascot" />
                 <strong>New stock is on its way</strong>
                 <span>Our catalog is syncing from the shop. Join Discord for restock alerts while you wait.</span>
                 <a className="sh-btn sh-btn--gold" href={DISCORD_URL} target="_blank" rel="noreferrer">Join the Discord</a>
               </div>
-            ) : results.length === 0 ? (
+            ) : results.items.length === 0 ? (
               <div className="sf-empty">
                 <strong>{wishOnly ? "Your wishlist is empty" : "Nothing matches these filters"}</strong>
                 <span>{wishOnly ? "Tap ♡ on any product to save it here." : "Try another category or clear filters. New stock is added weekly."}</span>
                 <button type="button" className="sh-btn sh-btn--ghost" onClick={clearFilters}>Clear filters</button>
               </div>
             ) : view === "grid" ? (
-              <div className="sf-grid">{results.slice(0, visible).map((p) => <ProductCard key={p.id} p={p} a={actions} />)}</div>
+              <div className={`sf-grid ${results.loading ? "is-refreshing" : ""}`}>{results.items.map((p) => <ProductCard key={p.id} p={p} a={actions} />)}</div>
             ) : (
-              <div className="sf-panel sf-list">{results.slice(0, visible).map((p) => <ProductRow key={p.id} p={p} a={actions} />)}</div>
+              <div className={`sf-panel sf-list ${results.loading ? "is-refreshing" : ""}`}>{results.items.map((p) => <ProductRow key={p.id} p={p} a={actions} />)}</div>
             )}
-            {!catalog.loading && results.length > visible && (
+            {!results.loading && results.cursor && (
               <div className="sf-more">
-                <span className="sf-muted">Showing {visible} of {results.length}</span>
-                <button type="button" className="sh-btn sh-btn--ghost" onClick={() => setVisible((v) => v + PAGE)}>Show more</button>
+                <span className="sf-muted">Showing {results.items.length} of {results.total}</span>
+                <button type="button" className="sh-btn sh-btn--ghost" onClick={results.loadMore} disabled={results.loadingMore}>{results.loadingMore ? "Loading…" : "Show more"}</button>
               </div>
             )}
           </section>
@@ -313,10 +312,10 @@ export default function Storefront() {
           <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
             <div className="sf-events__head">
               <h2 id="events-title" className="sh-display">Meet us at the con</h2>
-              <span className="sf-muted">{home.events.some((e) => e.start_date) ? "Alberta conventions" : "Alberta conventions · 2027 dates TBA"}</span>
+              <span className="sf-muted">{(home?.events ?? []).some((e) => e.start_date) ? "Alberta conventions" : "Alberta conventions · 2027 dates TBA"}</span>
             </div>
             <div className="sf-events__list">
-              {home.events.map((e, i) => (
+              {(home?.events ?? []).map((e, i) => (
                 <span key={e.id} className="sf-event">
                   <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
                   {e.name}

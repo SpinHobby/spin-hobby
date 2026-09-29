@@ -5,6 +5,7 @@ import { useEscape } from "../hooks";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import type { Product } from "../types";
 import { formatBytes, prepareImage, uploadPrepared } from "./image";
+import { CategorySelect } from "./Categories";
 import type { Ctx } from "./Screens";
 
 const PREVIEW: CardActions = { currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {} };
@@ -13,8 +14,8 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went
 // ---------------------------------------------------------------- photos
 
 /** Drop or pick photos; each is shrunk in the browser, then uploaded. First photo is the cover. */
-export function PhotoUploader({ urls, onChange, demo, folder = "products", max = 6, single = false }: {
-  urls: string[]; onChange: (urls: string[]) => void; demo: boolean; folder?: "products" | "slides"; max?: number; single?: boolean;
+export function PhotoUploader({ urls, onChange, folder = "products", max = 6, single = false }: {
+  urls: string[]; onChange: (urls: string[]) => void; folder?: "products" | "slides"; max?: number; single?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState("");
@@ -35,7 +36,7 @@ export function PhotoUploader({ urls, onChange, demo, folder = "products", max =
         setBusy(`Optimizing ${list.length > 1 ? `${i + 1}/${list.length}` : "photo"}…`);
         const prepared = await prepareImage(file, folder === "slides" ? 1600 : 1200);
         setBusy(`Uploading ${list.length > 1 ? `${i + 1}/${list.length}` : "photo"}…`);
-        added.push(await uploadPrepared(prepared, folder, demo));
+        added.push(await uploadPrepared(prepared, folder));
         before += prepared.originalBytes;
         after += prepared.blob.size;
       }
@@ -115,8 +116,9 @@ export function StockField({ value, onChange }: { value: number | null; onChange
 interface Draft {
   name: string; category: string; price: string; compareAt: string; stock: number | null; photos: string[];
   preorder: boolean; release: string; orderBy: string; series: string; jan: string; maxPer: string; featured: boolean; description: string;
+  categoryId: string | null;
 }
-const EMPTY: Draft = { name: "", category: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "" };
+const EMPTY: Draft = { name: "", category: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "", categoryId: null };
 
 const toCents = (v: string) => (v.trim() ? Math.round(Number(v) * 100) : null);
 
@@ -141,7 +143,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const show = (k: keyof Draft) => (touched ? errors[k] : undefined);
 
   const preview: Product = {
-    id: "preview", variationId: "preview-v", name: d.name || "Product name", series: d.series || null, character: null, category: d.category || null,
+    id: "preview", variationId: "preview-v", name: d.name || "Product name", series: d.series || null, character: null, category: (d.categoryId ? ctx.data.categories.find((c) => c.id === d.categoryId)?.name : d.category) || null,
     images: d.photos, priceCents: price && price > 0 ? price : 0, compareAtCents: compare && price && compare > price ? compare : null, currency: "CAD",
     status: d.preorder ? "pre" : d.stock === null ? "in" : d.stock <= 0 ? "out" : d.stock <= ctx.data.settings.low_stock_threshold ? "low" : "in",
     stockCount: d.stock, releaseMonth: d.release || null, orderByDate: d.orderBy || null, rank: null, maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
@@ -155,18 +157,13 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
       name: d.name.trim(), category: d.category.trim() || null, priceCents: price, compareAtCents: compare, stockCount: d.stock,
       imageUrls: d.photos, availability: d.preorder ? "preorder" : "auto", releaseMonth: d.release || null, orderByDate: d.orderBy || null,
       series: d.series.trim() || null, janCode: d.jan.trim() || null, maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
-      isFeatured: d.featured, description: d.description.trim() || null,
+      isFeatured: d.featured, description: d.description.trim() || null, categoryId: d.categoryId,
     };
     try {
-      if (ctx.demo) {
-        const id = `manual-demo-${Date.now()}`;
-        ctx.setData((x) => ({ ...x, products: [{ ...preview, id, variationId: `${id}-v`, source: "manual", isFeatured: d.featured, availability: d.preorder ? "preorder" : "auto", alertsWaiting: 0, janCode: body.janCode, description: body.description }, ...x.products] }));
-      } else {
-        await api("/admin/products", { method: "POST", body: JSON.stringify(body) });
-        ctx.reload();
-      }
+      await api("/admin/products", { method: "POST", body: JSON.stringify(body) });
+      ctx.reload();
       ctx.flash(`${body.name} added to the shop`);
-      if (addAnother) { setD({ ...EMPTY, category: d.category }); setTouched(false); }
+      if (addAnother) { setD({ ...EMPTY, category: d.category, categoryId: d.categoryId }); setTouched(false); }
       else onClose();
     } catch (e) {
       ctx.flash(errMsg(e));
@@ -184,7 +181,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
           <div className="ad-add__form">
             <section className="ad-add__section">
               <div className="ad-label">Photos</div>
-              <PhotoUploader urls={d.photos} onChange={(v) => set("photos", v)} demo={ctx.demo} />
+              <PhotoUploader urls={d.photos} onChange={(v) => set("photos", v)} />
             </section>
 
             <section className="ad-add__section">
@@ -193,10 +190,14 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
                 <input className="sh-input" autoFocus placeholder="e.g. Rem 1/7 Scale Figure" value={d.name} onChange={(e) => set("name", e.target.value)} maxLength={200} />
               </label>
               <div className="ad-grid2">
-                <label className="ad-field">Category
-                  <input className="sh-input" list="ad-categories" placeholder="e.g. Scale Figures" value={d.category} onChange={(e) => set("category", e.target.value)} maxLength={120} />
-                  <datalist id="ad-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
-                </label>
+                {ctx.data.categories.length ? (
+                  <CategorySelect ctx={ctx} value={d.categoryId} onChange={(id) => set("categoryId", id)} />
+                ) : (
+                  <label className="ad-field">Category
+                    <input className="sh-input" list="ad-categories" placeholder="e.g. Scale Figures" value={d.category} onChange={(e) => set("category", e.target.value)} maxLength={120} />
+                    <datalist id="ad-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
+                  </label>
+                )}
                 <label className="ad-field">Series
                   <input className="sh-input" placeholder="e.g. Re:Zero" value={d.series} onChange={(e) => set("series", e.target.value)} maxLength={120} />
                 </label>
@@ -279,7 +280,7 @@ export function InlineStock({ ctx, p }: { ctx: Ctx; p: Product }) {
     const previous = p.stockCount;
     update(next);
     try {
-      if (!ctx.demo) await api(`/admin/products/${encodeURIComponent(p.id)}/catalog`, { method: "PATCH", body: JSON.stringify({ stockCount: next }) });
+      await api(`/admin/products/${encodeURIComponent(p.id)}/catalog`, { method: "PATCH", body: JSON.stringify({ stockCount: next }) });
     } catch (e) {
       update(previous);
       ctx.flash(errMsg(e));

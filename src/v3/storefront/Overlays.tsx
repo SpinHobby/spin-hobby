@@ -83,9 +83,7 @@ export function NotifyDialog({ product, email, onClose, onDone }: {
     e.preventDefault();
     setBusy(true); setError("");
     try {
-      if (!product.id.startsWith("DEMO_")) {
-        await api("/alerts", { method: "POST", body: JSON.stringify({ email: value.trim(), variationId: product.variationId }) });
-      }
+      await api("/alerts", { method: "POST", body: JSON.stringify({ email: value.trim(), variationId: product.variationId }) });
       onDone(`We'll email ${value.trim()} when it's back`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the alert.");

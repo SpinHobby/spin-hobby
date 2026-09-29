@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { DEFAULT_EVENTS, DEFAULT_SLIDES, DEMO_ORDERS, DEMO_PRODUCTS, demoDashboard } from "../demo";
-import type { Dashboard, HeroSlide, Order, Product, ProductPage, Readiness, StoreEvent, StoreSettings } from "../types";
+import type { Dashboard, HeroSlide, Homepage, Order, Product, ProductPage, Readiness, ShopCategory, StoreEvent, StoreSettings } from "../types";
 
-export type Screen = "Dashboard" | "Products" | "Orders" | "Homepage" | "Settings";
-export const SCREENS: Screen[] = ["Dashboard", "Products", "Orders", "Homepage", "Settings"];
+export type Screen = "Dashboard" | "Products" | "Categories" | "Orders" | "Homepage" | "Settings";
+export const SCREENS: Screen[] = ["Dashboard", "Products", "Categories", "Orders", "Homepage", "Settings"];
 
 export const DEFAULT_SETTINGS: StoreSettings = {
   payment_provider: "paypal", shipping_standard_cents: 899, shipping_express_cents: 1999, free_shipping_threshold_cents: 7500,
@@ -19,6 +18,9 @@ export interface AdminData {
   events: StoreEvent[];
   settings: StoreSettings;
   readiness: Readiness | null;
+  categories: ShopCategory[];
+  /** What the storefront hero shows when no custom slides exist (from GET /homepage). */
+  previewSlides: HeroSlide[];
   loading: boolean;
   errors: string[];
 }
@@ -40,23 +42,14 @@ async function allAdminProducts() {
   return items;
 }
 
-export function useAdminData(enabled: boolean, demo: boolean) {
+export function useAdminData(enabled: boolean) {
   const [data, setData] = useState<AdminData>({
-    dashboard: null, products: [], orders: [], slides: [], events: [], settings: DEFAULT_SETTINGS, readiness: null, loading: true, errors: [],
+    dashboard: null, products: [], orders: [], slides: [], events: [], settings: DEFAULT_SETTINGS, readiness: null, categories: [], previewSlides: [], loading: true, errors: [],
   });
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     if (!enabled) return;
-    if (demo) {
-      setData({
-        dashboard: demoDashboard(DEMO_PRODUCTS, DEMO_ORDERS), products: DEMO_PRODUCTS.map((p) => ({ ...p })), orders: DEMO_ORDERS.map((o) => ({ ...o })),
-        slides: DEFAULT_SLIDES, events: DEFAULT_EVENTS, settings: DEFAULT_SETTINGS,
-        readiness: { appAndLocationConnected: true, catalogAndInventorySyncing: true, webhookKeySet: true, sandboxPaymentsConfigured: false, threeDSecureEnabled: false, applePayDomainVerified: false, activeProvider: "paypal", lastSyncAt: new Date(Date.now() - 3 * 60_000).toISOString() },
-        loading: false, errors: [],
-      });
-      return;
-    }
     let active = true;
     setData((d) => ({ ...d, loading: true }));
     const jobs = [
@@ -67,10 +60,12 @@ export function useAdminData(enabled: boolean, demo: boolean) {
       api<{ events: StoreEvent[] }>("/admin/events"),
       api<{ settings: StoreSettings }>("/admin/settings"),
       api<{ readiness: Readiness }>("/admin/square/readiness"),
+      api<{ categories: ShopCategory[] }>("/admin/categories"),
+      api<Homepage>("/homepage"),
     ] as const;
-    Promise.allSettled(jobs).then(([dash, products, orders, slides, events, settings, readiness]) => {
+    Promise.allSettled(jobs).then(([dash, products, orders, slides, events, settings, readiness, categories, home]) => {
       if (!active) return;
-      const errors = [dash, products, orders, slides, events, settings, readiness]
+      const errors = [dash, products, orders, slides, events, settings, readiness, categories, home]
         .filter((r): r is PromiseRejectedResult => r.status === "rejected")
         .map((r) => (r.reason as Error)?.message ?? "Request failed");
       const val = <T,>(r: PromiseSettledResult<T>) => (r.status === "fulfilled" ? r.value : null);
@@ -82,12 +77,14 @@ export function useAdminData(enabled: boolean, demo: boolean) {
         events: val(events)?.events ?? [],
         settings: val(settings)?.settings ?? DEFAULT_SETTINGS,
         readiness: val(readiness)?.readiness ?? null,
+        categories: val(categories)?.categories ?? [],
+        previewSlides: (val(home)?.slides ?? []) as HeroSlide[],
         loading: false,
         errors: Array.from(new Set(errors)),
       });
     });
     return () => { active = false; };
-  }, [enabled, demo, nonce]);
+  }, [enabled, nonce]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   return { data, setData, reload };
