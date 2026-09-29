@@ -38,6 +38,15 @@ export async function signIn(provider: OAuthProvider, returnPath = window.locati
   if (error) throw error;
 }
 
+/** Email and password sign-in for staff accounts that prefer a direct credential flow. */
+export async function signInWithPassword(email: string, password: string) {
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
+  if (error) throw error;
+}
+
 /** Passwordless sign-in: emails a one-time link (and code, if the email template includes it). */
 export async function sendEmailLink(email: string, returnPath = window.location.pathname) {
   const { error } = await supabase.auth.signInWithOtp({

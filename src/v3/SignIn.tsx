@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { authProviders, sendEmailLink, signIn, verifyEmailCode, type AuthProviders, type OAuthProvider } from "../lib/api";
+import { authProviders, sendEmailLink, signIn, signInWithPassword, verifyEmailCode, type AuthProviders, type OAuthProvider } from "../lib/api";
 
 const LABEL: Record<OAuthProvider, string> = { google: "Continue with Google", discord: "Continue with Discord" };
 
@@ -7,6 +7,8 @@ const LABEL: Record<OAuthProvider, string> = { google: "Continue with Google", d
 export function SignInPanel({ returnPath, compact = false }: { returnPath?: string; compact?: boolean }) {
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordMode, setPasswordMode] = useState(false);
   const [code, setCode] = useState("");
   const [sentTo, setSentTo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,6 +33,14 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
     catch (err) { setError(friendly(err)); setBusy(false); }
   };
 
+  const passwordLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError("");
+    try { await signInWithPassword(email, password); }
+    catch (err) { setError(friendly(err)); }
+    finally { setBusy(false); }
+  };
+
   if (!providers) return <div className="sh-skeleton" style={{ height: 44 }} />;
   const oauthOn = (["google", "discord"] as OAuthProvider[]).filter((p) => providers[p]);
 
@@ -44,7 +54,14 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
       {providers.email && (
         <>
           {oauthOn.length > 0 && <div className="sh-signin__or"><span>or</span></div>}
-          {sentTo ? (
+          {passwordMode ? (
+            <form className="sh-signin__form" onSubmit={passwordLogin}>
+              <input className="sh-input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+              <input className="sh-input" type="password" required autoComplete="current-password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
+              <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+              <button type="button" className="sh-signin__link" onClick={() => { setPasswordMode(false); setPassword(""); }}>Use an email sign-in link instead</button>
+            </form>
+          ) : sentTo ? (
             <form className="sh-signin__form" onSubmit={verify}>
               <div className="sh-signin__sent">Check <b>{sentTo}</b> for a sign-in link. Open it in this browser.</div>
               <input className="sh-input" inputMode="numeric" autoComplete="one-time-code" placeholder="Or enter the code from the email" value={code} onChange={(e) => setCode(e.target.value)} />
@@ -58,6 +75,7 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
             <form className="sh-signin__form" onSubmit={send}>
               <input className="sh-input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
               <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>{busy ? "Sending…" : "Email me a sign-in link"}</button>
+              <button type="button" className="sh-signin__link" onClick={() => setPasswordMode(true)}>Use email and password</button>
             </form>
           )}
         </>
