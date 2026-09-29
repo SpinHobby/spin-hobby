@@ -1,9 +1,11 @@
 // The browser talks to exactly one backend: the Spin Hobby API (NestJS).
-// Set VITE_API_URL at build time (Netlify); local development defaults to the dev server.
+// Set VITE_API_URL at build time to override; see DEFAULT_API below.
 
 import type { AppUser } from "../v3/types";
 
-export const API_URL: string = (import.meta.env.VITE_API_URL || "http://localhost:8080").replace(/\/$/, "");
+// Production builds default to the Render service; override with VITE_API_URL (e.g. a custom api.spinhobby.com).
+const DEFAULT_API = import.meta.env.PROD ? "https://spin-hobby-server.onrender.com" : "http://localhost:8080";
+export const API_URL: string = (import.meta.env.VITE_API_URL || DEFAULT_API).replace(/\/$/, "");
 
 export type ApiRequest = RequestInit & { body?: BodyInit | null };
 
