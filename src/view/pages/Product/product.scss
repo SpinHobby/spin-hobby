@@ -154,7 +154,8 @@
 
   .products-content {
     @include container;
-    padding: $spacing-6 0;
+    padding-top: $spacing-6;
+    padding-bottom: $spacing-6;
 
     .products-toolbar {
       background: $surface;
