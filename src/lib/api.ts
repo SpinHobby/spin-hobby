@@ -95,7 +95,7 @@ export async function api<T>(path: string, init: ApiRequest = {}): Promise<T> {
 // ---------------------------------------------------------------- sign-in
 
 export type OAuthProvider = "google" | "discord";
-export interface AuthProviders { password: boolean; google: boolean; discord: boolean; dev?: boolean }
+export interface AuthProviders { password: boolean; signup?: boolean; google: boolean; discord: boolean; dev?: boolean }
 
 let providersPromise: Promise<AuthProviders> | null = null;
 export function authProviders(): Promise<AuthProviders> {
@@ -105,6 +105,11 @@ export function authProviders(): Promise<AuthProviders> {
 
 export async function signInWithPassword(email: string, password: string) {
   setSession(await request<Session>("/auth/login", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, null));
+}
+
+/** Creates a customer account (no confirmation email) and signs straight in. */
+export async function signUpWithPassword(email: string, password: string, firstName?: string) {
+  setSession(await request<Session>("/auth/signup", { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() || undefined }) }, null));
 }
 
 /** Sends the browser to Google/Discord; it comes back to the same page (see completeOAuthRedirect). */

@@ -1,11 +1,13 @@
 import { FormEvent, useEffect, useState } from "react";
-import { authProviders, signIn, signInWithPassword, type AuthProviders, type OAuthProvider } from "../lib/api";
+import { authProviders, signIn, signInWithPassword, signUpWithPassword, type AuthProviders, type OAuthProvider } from "../lib/api";
 
 const LABEL: Record<OAuthProvider, string> = { google: "Continue with Google", discord: "Continue with Discord" };
 
 /** Sign-in options that adapt to whichever providers are enabled in Supabase Auth. */
-export function SignInPanel({ returnPath, compact = false }: { returnPath?: string; compact?: boolean }) {
+export function SignInPanel({ returnPath, compact = false, allowSignup = false }: { returnPath?: string; compact?: boolean; allowSignup?: boolean }) {
   const [providers, setProviders] = useState<AuthProviders | null>(null);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -15,17 +17,22 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
 
   const oauth = (p: OAuthProvider) => { setError(""); signIn(p, returnPath).catch((e: Error) => setError(e.message)); };
 
-  // Email + password only: no sign-in emails are sent (Supabase's built-in mailer is heavily rate-limited).
-  const passwordLogin = async (e: FormEvent) => {
+  // Email + password only: no emails are sent (Supabase's built-in mailer is heavily rate-limited).
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true); setError("");
-    try { await signInWithPassword(email, password); } // onAuthStateChange picks up the new session
-    catch (err) { setError(friendly(err)); }
+    try {
+      if (signingUp) await signUpWithPassword(email, password, firstName);
+      else await signInWithPassword(email, password); // useAuth picks up the new session
+    } catch (err) { setError(friendly(err)); }
     finally { setBusy(false); }
   };
+  const switchMode = () => { setMode((m) => (m === "signin" ? "signup" : "signin")); setError(""); };
 
   if (!providers) return <div className="sh-skeleton" style={{ height: 44 }} />;
   const oauthOn = (["google", "discord"] as OAuthProvider[]).filter((p) => providers[p]);
+  const canSignup = allowSignup && providers.password && Boolean(providers.signup);
+  const signingUp = canSignup && mode === "signup";
 
   return (
     <div className={`sh-signin ${compact ? "sh-signin--compact" : ""}`}>
@@ -37,11 +44,23 @@ export function SignInPanel({ returnPath, compact = false }: { returnPath?: stri
       {providers.password && (
         <>
           {oauthOn.length > 0 && <div className="sh-signin__or"><span>or</span></div>}
-          <form className="sh-signin__form" onSubmit={passwordLogin}>
+          <form className="sh-signin__form" onSubmit={submit}>
+            {signingUp && (
+              <input className="sh-input" type="text" autoComplete="given-name" placeholder="First name (optional)" maxLength={80} value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-label="First name" />
+            )}
             <input className="sh-input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
-            <input className="sh-input" type="password" required autoComplete="current-password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
-            <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+            <input className="sh-input" type="password" required minLength={signingUp ? 8 : undefined} autoComplete={signingUp ? "new-password" : "current-password"}
+              placeholder={signingUp ? "Password (8+ characters)" : "Password"} value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
+            <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>
+              {signingUp ? (busy ? "Creating account…" : "Create account") : (busy ? "Signing in…" : "Sign in")}
+            </button>
           </form>
+          {canSignup && (
+            <div className="sh-signin__switch">
+              {signingUp ? "Already have an account?" : "New to Spin Hobby?"}{" "}
+              <button type="button" onClick={switchMode}>{signingUp ? "Sign in" : "Create an account"}</button>
+            </div>
+          )}
         </>
       )}
       {!providers.password && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
@@ -55,7 +74,7 @@ function friendly(err: unknown) {
   const m = err instanceof Error ? err.message : String(err);
   if (/invalid login credentials/i.test(m)) return "Wrong email or password.";
   if (/email not confirmed/i.test(m)) return "This account isn't activated yet. Ask the store owner to confirm it.";
-  if (/rate limit|too many/i.test(m)) return "Too many attempts. Wait a few minutes and try again.";
+  if (/rate limit|too many/i.test(m) && !/sign-ups/i.test(m)) return "Too many attempts. Wait a few minutes and try again.";
   return m;
 }
 

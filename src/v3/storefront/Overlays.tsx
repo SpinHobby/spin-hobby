@@ -139,8 +139,8 @@ export function AccountMenu({ email, user, onSignOut }: {
             </>
           ) : (
             <>
-              <div className="sf-menu__label">Sign in to sync your wishlist and track orders</div>
-              <div className="sf-menu__signin"><SignInPanel compact /></div>
+              <div className="sf-menu__label">Sign in or create an account to sync your wishlist and track orders</div>
+              <div className="sf-menu__signin"><SignInPanel compact allowSignup /></div>
             </>
           )}
         </div>
