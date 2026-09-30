@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
-import { money, storeFormat, type Currency } from "../format";
+import { greetingName, money, storeFormat, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
 import type { CartLine } from "./data";
@@ -122,18 +122,26 @@ export function AccountMenu({ email, user, onSignOut }: {
   }, [open]);
   useEscape(open ? () => setOpen(false) : null);
 
+  // Close the menu once a sign-in from it succeeds; the storefront shows the welcome.
+  useEffect(() => { if (email) setOpen(false); }, [email]);
+
   const isStaff = user?.role === "staff" || user?.role === "owner";
+  const name = greetingName(user);
 
   return (
     <div className="sf-account" ref={ref}>
-      <button type="button" className="sf-head-link" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
-        {email ? email.split("@")[0] : "Sign in"}
+      <button type="button" className={`sf-head-link ${email ? "sf-account__btn" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu"
+        aria-label={email ? `Account: signed in as ${email}` : "Sign in"}>
+        {email ? <><span className="sf-avatar" aria-hidden>{name.charAt(0).toUpperCase()}</span><span className="sf-account__hi">Hi, {name}</span></> : "Sign in"}
       </button>
       {open && (
         <div className="sf-menu" role="menu">
           {email ? (
             <>
-              <div className="sf-menu__label">{email}</div>
+              <div className="sf-menu__who">
+                <span className="sf-avatar sf-avatar--lg" aria-hidden>{name.charAt(0).toUpperCase()}</span>
+                <div><b>{name}</b><span>{email}</span></div>
+              </div>
               {isStaff && <a role="menuitem" href="/admin">Store admin ↗</a>}
               <button role="menuitem" type="button" onClick={() => { setOpen(false); onSignOut(); }}>Sign out</button>
             </>
@@ -145,6 +153,28 @@ export function AccountMenu({ email, user, onSignOut }: {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Shown for a few seconds right after someone signs in or creates an account. */
+export function WelcomeCard({ user, isNew, onClose }: { user: AppUser; isNew: boolean; onClose: () => void }) {
+  useEffect(() => {
+    const t = window.setTimeout(onClose, 6000);
+    return () => window.clearTimeout(t);
+  }, [onClose]);
+  useEscape(onClose);
+  const name = greetingName(user);
+  const isStaff = user.role === "staff" || user.role === "owner";
+  return (
+    <div className="sf-welcome" role="status" aria-live="polite">
+      <span className="sf-avatar sf-avatar--lg" aria-hidden>{name.charAt(0).toUpperCase()}</span>
+      <div className="sf-welcome__body">
+        <b>{isNew ? `Welcome to Spin Hobby, ${name}!` : `Welcome back, ${name}!`}</b>
+        <span>{isNew ? "Your account is ready. Wishlist items and orders are now saved to it." : "You're signed in. Your wishlist and orders are synced."}</span>
+        {isStaff && <a href="/admin">Go to store admin →</a>}
+      </div>
+      <button type="button" className="sf-welcome__close" onClick={onClose} aria-label="Dismiss">×</button>
     </div>
   );
 }

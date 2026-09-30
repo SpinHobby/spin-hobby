@@ -9,7 +9,8 @@ import {
   ALL, AVAIL, DEFAULT_AVAIL, NAV, PRICES, SORTS, useCart, useProducts, useStorefront, useWishlist,
   type Filters, type NavKey, type ShopSort,
 } from "./data";
-import { AccountMenu, CartDrawer, NotifyDialog } from "./Overlays";
+import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
+import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SUPPORT_EMAIL } from "../links";
@@ -45,6 +46,17 @@ export default function Storefront() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [notify, setNotify] = useState<Product | null>(null);
   const shopRef = useRef<HTMLElement>(null);
+
+  // Greet people when they go from signed out to signed in (password, sign-up, or back from Google/Discord).
+  const [welcome, setWelcome] = useState<{ isNew: boolean } | null>(null);
+  const signedInId = auth.user?.id ?? null;
+  const prevSignedInId = useRef(signedInId);
+  useEffect(() => {
+    if (signedInId && !prevSignedInId.current) setWelcome({ isNew: consumeSignupFlag() });
+    if (!signedInId) setWelcome(null);
+    prevSignedInId.current = signedInId;
+  }, [signedInId]);
+  const closeWelcome = useCallback(() => setWelcome(null), []);
 
   const home = store.home;
   const facets = store.facets;
@@ -343,6 +355,7 @@ export default function Storefront() {
 
       {cartOpen && <CartDrawer lines={cart.lines} subtotal={cart.subtotal} currency={currency} onQty={cart.setQty} onClose={() => setCartOpen(false)} />}
       {notify && <NotifyDialog product={notify} email={auth.email} onClose={() => setNotify(null)} onDone={(m) => { setNotify(null); flash(m); }} />}
+      {welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />}
       {toast && <div className="sh-toast" role="status" aria-live="polite">{toast}</div>}
     </div>
   );

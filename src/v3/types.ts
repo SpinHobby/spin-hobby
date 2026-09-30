@@ -78,7 +78,7 @@ export interface Homepage {
 }
 
 export type Role = "customer" | "staff" | "owner";
-export interface AppUser { id: string; email: string; role: Role }
+export interface AppUser { id: string; email: string; role: Role; firstName?: string | null }
 
 export type OrderStatus = "pending" | "paid" | "preorder_reserved" | "fulfilled" | "shipped" | "cancelled" | "refunded";
 

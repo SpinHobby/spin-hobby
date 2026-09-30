@@ -108,7 +108,12 @@ export async function signInWithPassword(email: string, password: string) {
 }
 
 /** Creates a customer account (no confirmation email) and signs straight in. */
+// Set by a fresh sign-up so the welcome message can say "welcome" rather than "welcome back".
+let justSignedUp = false;
+export function consumeSignupFlag() { const v = justSignedUp; justSignedUp = false; return v; }
+
 export async function signUpWithPassword(email: string, password: string, firstName?: string) {
+  justSignedUp = true;
   setSession(await request<Session>("/auth/signup", { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() || undefined }) }, null));
 }
 

@@ -86,6 +86,14 @@ export function discountPct(p: Product) {
   return Math.round((1 - p.priceCents / p.compareAtCents) * 100);
 }
 
+/** What to call someone in greetings: their first name, else the start of their email. */
+export function greetingName(user: { firstName?: string | null; email: string } | null | undefined) {
+  if (!user) return "";
+  if (user.firstName) return user.firstName;
+  const local = user.email.split("@")[0].split(/[._+-]/)[0] || user.email.split("@")[0];
+  return local.charAt(0).toUpperCase() + local.slice(1);
+}
+
 export function initials(email: string | null | undefined) {
   if (!email) return "SH";
   const name = email.split("@")[0].replace(/[^a-zA-Z]/g, " ").trim().split(/\s+/);
