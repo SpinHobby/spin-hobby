@@ -95,7 +95,8 @@ export async function api<T>(path: string, init: ApiRequest = {}): Promise<T> {
 // ---------------------------------------------------------------- sign-in
 
 export type OAuthProvider = "google" | "discord";
-export interface AuthProviders { password: boolean; signup?: boolean; google: boolean; discord: boolean; dev?: boolean }
+/** `username`: the email box also accepts the staging admin username (staging site only). */
+export interface AuthProviders { password: boolean; signup?: boolean; google: boolean; discord: boolean; dev?: boolean; username?: boolean }
 
 let providersPromise: Promise<AuthProviders> | null = null;
 export function authProviders(): Promise<AuthProviders> {

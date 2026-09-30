@@ -33,6 +33,8 @@ export function SignInPanel({ returnPath, compact = false, allowSignup = false }
   const oauthOn = (["google", "discord"] as OAuthProvider[]).filter((p) => providers[p]);
   const canSignup = allowSignup && providers.password && Boolean(providers.signup);
   const signingUp = canSignup && mode === "signup";
+  // Staging: the admin username goes in the email box (sign-up still needs a real email).
+  const usernameOk = Boolean(providers.username) && !signingUp;
 
   return (
     <div className={`sh-signin ${compact ? "sh-signin--compact" : ""}`}>
@@ -48,7 +50,8 @@ export function SignInPanel({ returnPath, compact = false, allowSignup = false }
             {signingUp && (
               <input className="sh-input" type="text" autoComplete="given-name" placeholder="First name (optional)" maxLength={80} value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-label="First name" />
             )}
-            <input className="sh-input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+            <input className="sh-input" type={usernameOk ? "text" : "email"} required autoComplete={usernameOk ? "username" : "email"}
+              placeholder={usernameOk ? "Email or username" : "you@example.com"} value={email} onChange={(e) => setEmail(e.target.value)} aria-label={usernameOk ? "Email or username" : "Email"} />
             <input className="sh-input" type="password" required minLength={signingUp ? 8 : undefined} autoComplete={signingUp ? "new-password" : "current-password"}
               placeholder={signingUp ? "Password (8+ characters)" : "Password"} value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
             <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>
