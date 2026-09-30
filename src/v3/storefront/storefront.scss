@@ -195,8 +195,10 @@
   flex: 2 1 420px; min-width: 0; position: relative; border-radius: 20px; background: var(--block); color: #fff !important;
   overflow: hidden; min-height: 260px; display: flex; align-items: center;
 }
-.sf-hero__sun { position: absolute; right: 4%; top: 50%; transform: translateY(-50%); width: 240px; height: 240px; border-radius: 50%; background: var(--gold); }
-.sf-hero__mascot { position: absolute; right: 6%; bottom: -30px; width: 210px; height: auto; filter: drop-shadow(0 16px 20px rgba(0,0,0,.3)); }
+// Full-body mascot frames (see CursorMascot): her feet sit just below the banner edge, and the gold
+// circle shares her horizontal centre (both are 240px wide at the same right offset).
+.sf-hero__mascot { position: absolute; right: 5%; bottom: -22px; width: 240px; height: auto; filter: drop-shadow(0 16px 20px rgba(0,0,0,.3)); pointer-events: none; }
+.sf-hero__sun { position: absolute; right: 5%; top: 50%; transform: translateY(-50%); width: 240px; height: 240px; border-radius: 50%; background: var(--gold); }
 .sf-hero__photo {
   position: absolute; inset: 0 0 0 auto; width: 55%; height: 100%; object-fit: cover;
   mask-image: linear-gradient(90deg, transparent, #000 40%); -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%);
@@ -438,8 +440,8 @@
     button { padding: 0 14px; } }
   .sf-utility__links { gap: 12px; }
   .sf-hero__copy { max-width: 70%; padding: 22px 20px; }
-  .sf-hero__sun { width: 170px; height: 170px; right: -30px; }
-  .sf-hero__mascot { width: 150px; right: -10px; }
+  .sf-hero__mascot { width: 170px; right: -6px; bottom: -16px; }
+  .sf-hero__sun { width: 170px; height: 170px; right: -6px; }
   .sf-hero__banner { min-height: 220px; }
   .sf-promos { grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(110px, auto); }
   .sf-promo { padding: 14px 16px; border-radius: 16px; &__title { font-size: 17px; } &__eyebrow { font-size: 11px; } }
