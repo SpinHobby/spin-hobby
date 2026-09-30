@@ -17,7 +17,7 @@ export function Draggable() {
     setRefPoint(clientX);
   }
 
-  function endDragging(clientX: number) {
+  function endDragging(_clientX: number) {
     setIsDragging(false);
   }
 

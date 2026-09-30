@@ -308,7 +308,7 @@ interface BillingInputs extends CommonInputs {
   email: string;
 }
 
-interface ShippingInputs extends CommonInputs {}
+type ShippingInputs = CommonInputs;
 
 const initialCommonInputs = {
   name: {
@@ -467,13 +467,17 @@ export default function CheckOut() {
       if (applePayInstanceRef.current) {
         try {
           await applePayInstanceRef.current.destroy();
-        } catch {}
+        } catch {
+          // already torn down
+        }
         applePayInstanceRef.current = null;
       }
       if (googlePayInstanceRef.current) {
         try {
           await googlePayInstanceRef.current.destroy();
-        } catch {}
+        } catch {
+          // already torn down
+        }
         googlePayInstanceRef.current = null;
       }
 

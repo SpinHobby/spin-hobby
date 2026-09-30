@@ -10,7 +10,7 @@ export default function Cart() {
   const dispatch = useDispatch();
   const cart = useCartSelector();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     if (newQuantity < 0) newQuantity = 0;

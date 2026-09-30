@@ -13,6 +13,8 @@ export enum ECurrencies {
   KRW = "KRW",
 }
 
+// Several currencies share a symbol, so duplicate values are intentional here.
+/* eslint-disable @typescript-eslint/no-duplicate-enum-values */
 export enum ECurrencySymbols {
   CAD = "$",
   EUR = "€",
@@ -22,6 +24,7 @@ export enum ECurrencySymbols {
   HKD = "$",
   KRW = "₩",
 }
+/* eslint-enable @typescript-eslint/no-duplicate-enum-values */
 
 export enum ECurrencyCodes {
   CAD = "CAD",

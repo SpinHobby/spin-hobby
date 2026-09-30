@@ -20,7 +20,7 @@ export function SimpleBlocks({ merchs }: Props) {
         if (remainder === 2)
           rowTypes.two.push(merchs.length - 2, merchs.length - 1);
         else if (remainder === 1) {
-          for (let i = 0; i < 4; rowTypes.two.push(merchs.length - 4 + i++)) {}
+          for (let i = 0; i < 4; i++) rowTypes.two.push(merchs.length - 4 + i);
         }
       }
     }

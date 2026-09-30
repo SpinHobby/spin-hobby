@@ -8,8 +8,6 @@ import { addItem } from "../../../reducers";
 import { getCatalog } from "../../../api/square";
 import { useWishlist } from "../../../hooks/useWishlist";
 
-interface ProductsPageProps {}
-
 export default function Product() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

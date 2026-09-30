@@ -21,7 +21,7 @@ const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    login: (state, action: PayloadAction<ILogin>) => {
+    login: (state, _action: PayloadAction<ILogin>) => {
       // Standard email/password login
       state.awaitingLoginRes = false;
       // Additional login logic will be handled in saga

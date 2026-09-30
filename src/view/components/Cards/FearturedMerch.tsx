@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ECurrencySymbols, ECurrencyCodes, IMerchPreview } from "../../../ts";
+import { ECurrencySymbols, IMerchPreview } from "../../../ts";
 import { useCurrencySelector } from "../../../selectors";
 import { roundToDecimal } from "../../../utils/math";
 import classNames from "classnames";
@@ -18,7 +18,7 @@ interface Props extends IMerchPreview {
 export function FeaturedMerch(props: Props) {
   const currency = useCurrencySelector();
   const navigate = useNavigate();
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [, setImageLoaded] = useState(false);
 
   const {
     title,
@@ -28,7 +28,6 @@ export function FeaturedMerch(props: Props) {
     price,
     originalPrice,
     discountPercentage,
-    isFeatured,
     isNewArrival,
     isPreorder,
     stockCount,
