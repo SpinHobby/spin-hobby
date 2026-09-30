@@ -5,20 +5,27 @@ import { MASCOT_FRAMES } from "./mascotFrames.generated";
 const reach = () => Math.max(260, Math.min(window.innerWidth, window.innerHeight) * 0.45);
 /** Inside this radius (unit circle) she looks straight at the visitor. */
 const DEADZONE = 0.14;
-/** Scrub speed in path steps per second: quicker when far from the destination, easing in on approach. */
-const SPEED_MAX = 110;
-const SPEED_MIN = 30;
+/** She notices the cursor this long after it moved, like a person reacting a beat late. */
+const REACTION_MS = 150;
 /**
- * The point she looks at trails the cursor on a damped spring, so she follows with a short delay and a
- * little rubber-band overshoot instead of snapping. Stiffness sets how quickly she catches up; damping
- * below 2 * sqrt(stiffness) leaves some overshoot.
+ * The point she looks at trails the (delayed) cursor on a soft, lightly underdamped spring: a short
+ * lag, a gradual catch-up and a small overshoot. Damping under 2 * sqrt(stiffness) keeps the overshoot.
  */
-const SPRING_STIFFNESS = 60;
-const SPRING_DAMPING = 9;
+const LOOK_STIFFNESS = 34;
+const LOOK_DAMPING = 8.5;
+/** However fast the mouse moves, her attention travels at most this fast (units of reach per second). */
+const LOOK_MAX_SPEED = 1.8;
+/** Motion along the pose path is its own critically damped spring, capped in steps per second, so she
+ *  eases into and out of every move and passes through the neutral frame without stopping. */
+const PATH_STIFFNESS = 50;
+const PATH_DAMPING = 14;
+const PATH_MAX_SPEED = 80;
 /** A new destination must be this much closer (squared distance ratio) before she changes course. */
 const SWITCH_RATIO = 0.7;
-/** Crossfade between neighbouring steps. They are consecutive clip frames, so this only softens the stepping. */
-const FADE_MS = 70;
+/** Crossfade between neighbouring frames, so quick scrubbing reads as motion blur rather than steps. */
+const FADE_MS = 120;
+/** With no mouse movement for this long she looks back at the visitor. */
+const IDLE_MS = 5000;
 
 /** One drawn pose: a frame on the original (+1) or mirrored (-1) side of the path. */
 type Pose = { index: number; side: 1 | -1 };
@@ -26,10 +33,10 @@ type Pose = { index: number; side: 1 | -1 };
 /**
  * The hero mascot as a cursor-following character. public/mascot-frames (built by
  * scripts/mascot-frames.py) holds the clip's own frames in order, forming one path through the poses
- * with the neutral frame somewhere along it. Mirrored, the same path covers the other side. She scrubs
- * along the path toward whichever step looks closest to the cursor, so every move passes through the
- * clip's real in-between frames; to change sides she passes through the neutral frame, which is the
- * one frame both sides share. Touch devices and reduced-motion users get the neutral frame only.
+ * with the neutral frame somewhere along it. Mirrored, the same path covers the other side. She moves
+ * along the path toward whichever pose looks closest to where her attention is, so every move passes
+ * through the clip's real in-between frames, and changing sides goes through the neutral frame, which
+ * both sides share. Touch devices and reduced-motion users get the neutral frame only.
  */
 export function CursorMascot({ className }: { className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -101,53 +108,99 @@ export function CursorMascot({ className }: { className?: string }) {
     });
     if (isStatic) return () => { disposed = true; };
 
-    const cursor = { x: 0, y: 0 };                 // where the cursor is, on the unit circle around her face
-    const follow = { x: 0, y: 0 };                 // where she is looking: trails the cursor on the spring
-    const vel = { x: 0, y: 0 };
+    // Where the cursor has been (unit circle around her face), so she can react to it a beat late.
+    const history: { t: number; x: number; y: number }[] = [{ t: 0, x: 0, y: 0 }];
+    let lastMove = 0;
+    const delayedCursor = (now: number) => {
+      const cutoff = now - REACTION_MS;
+      let pick = history[0];
+      for (const h of history) { if (h.t <= cutoff) pick = h; else break; }
+      while (history.length > 1 && history[1].t <= cutoff) history.shift();
+      return pick;
+    };
+
+    const look = { x: 0, y: 0 };                   // her attention: trails the delayed cursor on the spring
+    const lookVel = { x: 0, y: 0 };
     let destination: Pose = { index: center, side: 1 };
-    let side: 1 | -1 = 1;                            // which side of the path she is on
-    let position: number = center;                   // fractional path index on that side
+    let side: 1 | -1 = 1;                          // which side of the path she is on
+    let position: number = center;                 // fractional path index on that side
+    let pathVel = 0;                               // steps per second along the path, toward the destination
+    let lastDir = 0;                               // direction moved last tick, to notice reversals
     let raf = 0;
     let lastTick = 0;
 
     const nearest = (): Pose => {
-      if (Math.hypot(follow.x, follow.y) < DEADZONE) return { index: center, side: 1 };
+      if (Math.hypot(look.x, look.y) < DEADZONE) return { index: center, side: 1 };
       let best: Pose = destination;
       let bestD = Infinity;
       for (const s of [1, -1] as const) {
         for (let i = 0; i < n; i++) {
           const g = gaze({ index: i, side: s });
-          const d = (g.x - follow.x) ** 2 + (g.y - follow.y) ** 2;
+          const d = (g.x - look.x) ** 2 + (g.y - look.y) ** 2;
           if (d < bestD) { bestD = d; best = { index: i, side: s }; }
         }
       }
       const cur = gaze(destination);
-      const curD = (cur.x - follow.x) ** 2 + (cur.y - follow.y) ** 2;
+      const curD = (cur.x - look.x) ** 2 + (cur.y - look.y) ** 2;
       return bestD > curD * SWITCH_RATIO ? destination : best;
+    };
+
+    /**
+     * Distance left along the path to the destination, and the direction to move in right now.
+     * A destination on the other side is reached through the neutral frame, in one continuous move.
+     */
+    const route = () => {
+      if (destination.side === side || position === center) {
+        const d = destination.index - position;
+        return { remaining: Math.abs(d), dir: Math.sign(d) };
+      }
+      const toCenter = center - position;
+      return { remaining: Math.abs(toCenter) + Math.abs(destination.index - center), dir: Math.sign(toCenter) };
     };
 
     const tick = (now: number) => {
       raf = 0;
       const dt = Math.min((now - (lastTick || now)) / 1000, 0.05);
       lastTick = now;
-      // Spring the followed point toward the cursor (semi-implicit Euler: stable at these rates).
-      vel.x += ((cursor.x - follow.x) * SPRING_STIFFNESS - vel.x * SPRING_DAMPING) * dt;
-      vel.y += ((cursor.y - follow.y) * SPRING_STIFFNESS - vel.y * SPRING_DAMPING) * dt;
-      follow.x += vel.x * dt;
-      follow.y += vel.y * dt;
-      const springing = Math.hypot(cursor.x - follow.x, cursor.y - follow.y) > 0.003 || Math.hypot(vel.x, vel.y) > 0.01;
-      if (!springing) { follow.x = cursor.x; follow.y = cursor.y; vel.x = 0; vel.y = 0; }
+
+      // 1. Attention follows the delayed cursor on a soft spring, no faster than LOOK_MAX_SPEED.
+      const c = now - lastMove > IDLE_MS ? { x: 0, y: 0 } : delayedCursor(now);
+      lookVel.x += ((c.x - look.x) * LOOK_STIFFNESS - lookVel.x * LOOK_DAMPING) * dt;
+      lookVel.y += ((c.y - look.y) * LOOK_STIFFNESS - lookVel.y * LOOK_DAMPING) * dt;
+      const lv = Math.hypot(lookVel.x, lookVel.y);
+      if (lv > LOOK_MAX_SPEED) { lookVel.x *= LOOK_MAX_SPEED / lv; lookVel.y *= LOOK_MAX_SPEED / lv; }
+      look.x += lookVel.x * dt;
+      look.y += lookVel.y * dt;
+      const looking = Math.hypot(c.x - look.x, c.y - look.y) > 0.003 || lv > 0.01;
+      if (!looking) { look.x = c.x; look.y = c.y; lookVel.x = 0; lookVel.y = 0; }
+
+      // 2. Head and body ease along the pose path toward the pose nearest her attention.
       destination = nearest();
-      // Changing sides means going to the neutral frame first, then out along the other side.
-      const goal = destination.side === side || destination.index === center ? destination.index : center;
-      const remaining = goal - position;
-      const speed = Math.max(SPEED_MIN, Math.min(SPEED_MAX, Math.abs(remaining) * 6));
-      position += Math.min(Math.abs(remaining), speed * dt) * Math.sign(remaining);
-      if (Math.abs(goal - position) < 0.01) position = goal;
-      if (position === center) side = destination.side;
+      if (position === center) side = destination.side; // at the neutral frame she can leave on either side
+      const { remaining, dir } = route();
+      // A genuine change of direction (not a pass through the neutral frame) bleeds off speed first.
+      if (dir !== 0 && lastDir !== 0 && dir !== lastDir) pathVel *= 0.25;
+      pathVel += (remaining * PATH_STIFFNESS - pathVel * PATH_DAMPING) * dt;
+      pathVel = Math.max(0, Math.min(PATH_MAX_SPEED, pathVel));
+      let move = Math.min(remaining, pathVel * dt);
+      let crossed = false;
+      if (dir !== 0 && move > 0 && destination.side !== side) {
+        // Through the neutral frame and out the other side within this same tick if the move is long enough.
+        const toCenter = Math.abs(center - position);
+        if (move >= toCenter) {
+          side = destination.side;
+          position = center + Math.sign(destination.index - center) * (move - toCenter);
+          move = 0;
+          crossed = true;
+        }
+      }
+      position += dir * move;
+      if (remaining - move < 0.01 && destination.side === side) { position = destination.index; pathVel = 0; }
+      lastDir = crossed ? Math.sign(destination.index - center) : dir;
       show({ index: Math.round(position), side }, now);
+
       const fading = render(now);
-      const arrived = !springing && position === destination.index && side === destination.side;
+      const arrived = !looking && position === destination.index && side === destination.side;
       if (!arrived || fading) raf = requestAnimationFrame(tick);
       else lastTick = 0;
     };
@@ -161,12 +214,21 @@ export function CursorMascot({ className }: { className?: string }) {
       let dy = (e.clientY - (r.top + r.height * face.y)) / range;
       const len = Math.hypot(dx, dy);
       if (len > 1) { dx /= len; dy /= len; }
-      cursor.x = dx;
-      cursor.y = dy;
+      const now = performance.now();
+      history.push({ t: now, x: dx, y: dy });
+      lastMove = now;
       wake();
     };
     // Cursor left the window: look back at the visitor.
-    const onOut = (e: MouseEvent) => { if (!e.relatedTarget) { cursor.x = 0; cursor.y = 0; wake(); } };
+    const onOut = (e: MouseEvent) => {
+      if (e.relatedTarget) return;
+      const now = performance.now();
+      history.push({ t: now, x: 0, y: 0 });
+      lastMove = now;
+      wake();
+    };
+    // Keep ticking while idle so the idle return still happens after the last movement.
+    const idleTimer = window.setInterval(() => { if (lastMove && performance.now() - lastMove > IDLE_MS) wake(); }, 1000);
 
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("mouseout", onOut);
@@ -174,6 +236,7 @@ export function CursorMascot({ className }: { className?: string }) {
       disposed = true;
       window.removeEventListener("pointermove", onMove);
       document.removeEventListener("mouseout", onOut);
+      window.clearInterval(idleTimer);
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);
