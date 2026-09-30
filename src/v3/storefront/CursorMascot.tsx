@@ -5,9 +5,16 @@ import { MASCOT_FRAMES } from "./mascotFrames.generated";
 const reach = () => Math.max(260, Math.min(window.innerWidth, window.innerHeight) * 0.45);
 /** Inside this radius (unit circle) she looks straight at the visitor. */
 const DEADZONE = 0.14;
-/** Scrub speed in path steps per second: fast when far from the destination, easing in on approach. */
-const SPEED_MAX = 150;
-const SPEED_MIN = 36;
+/** Scrub speed in path steps per second: quicker when far from the destination, easing in on approach. */
+const SPEED_MAX = 110;
+const SPEED_MIN = 30;
+/**
+ * The point she looks at trails the cursor on a damped spring, so she follows with a short delay and a
+ * little rubber-band overshoot instead of snapping. Stiffness sets how quickly she catches up; damping
+ * below 2 * sqrt(stiffness) leaves some overshoot.
+ */
+const SPRING_STIFFNESS = 60;
+const SPRING_DAMPING = 9;
 /** A new destination must be this much closer (squared distance ratio) before she changes course. */
 const SWITCH_RATIO = 0.7;
 /** Crossfade between neighbouring steps. They are consecutive clip frames, so this only softens the stepping. */
@@ -94,7 +101,9 @@ export function CursorMascot({ className }: { className?: string }) {
     });
     if (isStatic) return () => { disposed = true; };
 
-    const target = { x: 0, y: 0 };                 // the cursor, on the unit circle around her face
+    const cursor = { x: 0, y: 0 };                 // where the cursor is, on the unit circle around her face
+    const follow = { x: 0, y: 0 };                 // where she is looking: trails the cursor on the spring
+    const vel = { x: 0, y: 0 };
     let destination: Pose = { index: center, side: 1 };
     let side: 1 | -1 = 1;                            // which side of the path she is on
     let position: number = center;                   // fractional path index on that side
@@ -102,18 +111,18 @@ export function CursorMascot({ className }: { className?: string }) {
     let lastTick = 0;
 
     const nearest = (): Pose => {
-      if (Math.hypot(target.x, target.y) < DEADZONE) return { index: center, side: 1 };
+      if (Math.hypot(follow.x, follow.y) < DEADZONE) return { index: center, side: 1 };
       let best: Pose = destination;
       let bestD = Infinity;
       for (const s of [1, -1] as const) {
         for (let i = 0; i < n; i++) {
           const g = gaze({ index: i, side: s });
-          const d = (g.x - target.x) ** 2 + (g.y - target.y) ** 2;
+          const d = (g.x - follow.x) ** 2 + (g.y - follow.y) ** 2;
           if (d < bestD) { bestD = d; best = { index: i, side: s }; }
         }
       }
       const cur = gaze(destination);
-      const curD = (cur.x - target.x) ** 2 + (cur.y - target.y) ** 2;
+      const curD = (cur.x - follow.x) ** 2 + (cur.y - follow.y) ** 2;
       return bestD > curD * SWITCH_RATIO ? destination : best;
     };
 
@@ -121,6 +130,13 @@ export function CursorMascot({ className }: { className?: string }) {
       raf = 0;
       const dt = Math.min((now - (lastTick || now)) / 1000, 0.05);
       lastTick = now;
+      // Spring the followed point toward the cursor (semi-implicit Euler: stable at these rates).
+      vel.x += ((cursor.x - follow.x) * SPRING_STIFFNESS - vel.x * SPRING_DAMPING) * dt;
+      vel.y += ((cursor.y - follow.y) * SPRING_STIFFNESS - vel.y * SPRING_DAMPING) * dt;
+      follow.x += vel.x * dt;
+      follow.y += vel.y * dt;
+      const springing = Math.hypot(cursor.x - follow.x, cursor.y - follow.y) > 0.003 || Math.hypot(vel.x, vel.y) > 0.01;
+      if (!springing) { follow.x = cursor.x; follow.y = cursor.y; vel.x = 0; vel.y = 0; }
       destination = nearest();
       // Changing sides means going to the neutral frame first, then out along the other side.
       const goal = destination.side === side || destination.index === center ? destination.index : center;
@@ -131,7 +147,7 @@ export function CursorMascot({ className }: { className?: string }) {
       if (position === center) side = destination.side;
       show({ index: Math.round(position), side }, now);
       const fading = render(now);
-      const arrived = position === destination.index && side === destination.side;
+      const arrived = !springing && position === destination.index && side === destination.side;
       if (!arrived || fading) raf = requestAnimationFrame(tick);
       else lastTick = 0;
     };
@@ -145,12 +161,12 @@ export function CursorMascot({ className }: { className?: string }) {
       let dy = (e.clientY - (r.top + r.height * face.y)) / range;
       const len = Math.hypot(dx, dy);
       if (len > 1) { dx /= len; dy /= len; }
-      target.x = dx;
-      target.y = dy;
+      cursor.x = dx;
+      cursor.y = dy;
       wake();
     };
     // Cursor left the window: look back at the visitor.
-    const onOut = (e: MouseEvent) => { if (!e.relatedTarget) { target.x = 0; target.y = 0; wake(); } };
+    const onOut = (e: MouseEvent) => { if (!e.relatedTarget) { cursor.x = 0; cursor.y = 0; wake(); } };
 
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("mouseout", onOut);
