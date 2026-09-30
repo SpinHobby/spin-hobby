@@ -114,11 +114,11 @@ export function StockField({ value, onChange }: { value: number | null; onChange
 // ---------------------------------------------------------------- add product
 
 interface Draft {
-  name: string; category: string; price: string; compareAt: string; stock: number | null; photos: string[];
+  name: string; price: string; compareAt: string; stock: number | null; photos: string[];
   preorder: boolean; release: string; orderBy: string; series: string; jan: string; maxPer: string; featured: boolean; description: string;
   categoryId: string | null;
 }
-const EMPTY: Draft = { name: "", category: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "", categoryId: null };
+const EMPTY: Draft = { name: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "", categoryId: null };
 
 const toCents = (v: string) => (v.trim() ? Math.round(Number(v) * 100) : null);
 
@@ -129,7 +129,6 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const [showMore, setShowMore] = useState(false);
   const [touched, setTouched] = useState(false);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
-  const categories = [...new Set(ctx.data.products.map((p) => p.category).filter(Boolean) as string[])].sort();
 
   const price = toCents(d.price);
   const compare = toCents(d.compareAt);
@@ -143,7 +142,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const show = (k: keyof Draft) => (touched ? errors[k] : undefined);
 
   const preview: Product = {
-    id: "preview", variationId: "preview-v", name: d.name || "Product name", series: d.series || null, character: null, category: (d.categoryId ? ctx.data.categories.find((c) => c.id === d.categoryId)?.name : d.category) || null,
+    id: "preview", variationId: "preview-v", name: d.name || "Product name", series: d.series || null, character: null, category: ctx.data.categories.find((c) => c.id === d.categoryId)?.name ?? null,
     images: d.photos, priceCents: price && price > 0 ? price : 0, compareAtCents: compare && price && compare > price ? compare : null, currency: "CAD",
     status: d.preorder ? "pre" : d.stock === null ? "in" : d.stock <= 0 ? "out" : d.stock <= ctx.data.settings.low_stock_threshold ? "low" : "in",
     stockCount: d.stock, releaseMonth: d.release || null, orderByDate: d.orderBy || null, rank: null, maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
@@ -154,7 +153,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
     if (!valid) return;
     setSaving(true);
     const body = {
-      name: d.name.trim(), category: d.category.trim() || null, priceCents: price, compareAtCents: compare, stockCount: d.stock,
+      name: d.name.trim(), priceCents: price, compareAtCents: compare, stockCount: d.stock,
       imageUrls: d.photos, availability: d.preorder ? "preorder" : "auto", releaseMonth: d.release || null, orderByDate: d.orderBy || null,
       series: d.series.trim() || null, janCode: d.jan.trim() || null, maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
       isFeatured: d.featured, description: d.description.trim() || null, categoryId: d.categoryId,
@@ -163,7 +162,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
       await api("/admin/products", { method: "POST", body: JSON.stringify(body) });
       ctx.reload();
       ctx.flash(`${body.name} added to the shop`);
-      if (addAnother) { setD({ ...EMPTY, category: d.category, categoryId: d.categoryId }); setTouched(false); }
+      if (addAnother) { setD({ ...EMPTY, categoryId: d.categoryId }); setTouched(false); }
       else onClose();
     } catch (e) {
       ctx.flash(errMsg(e));
@@ -190,14 +189,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
                 <input className="sh-input" autoFocus placeholder="e.g. Rem 1/7 Scale Figure" value={d.name} onChange={(e) => set("name", e.target.value)} maxLength={200} />
               </label>
               <div className="ad-grid2">
-                {ctx.data.categories.length ? (
-                  <CategorySelect ctx={ctx} value={d.categoryId} onChange={(id) => set("categoryId", id)} />
-                ) : (
-                  <label className="ad-field">Category
-                    <input className="sh-input" list="ad-categories" placeholder="e.g. Scale Figures" value={d.category} onChange={(e) => set("category", e.target.value)} maxLength={120} />
-                    <datalist id="ad-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
-                  </label>
-                )}
+                <CategorySelect ctx={ctx} value={d.categoryId} onChange={(id) => set("categoryId", id)} />
                 <label className="ad-field">Series
                   <input className="sh-input" placeholder="e.g. Re:Zero" value={d.series} onChange={(e) => set("series", e.target.value)} maxLength={120} />
                 </label>

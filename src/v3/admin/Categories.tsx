@@ -195,7 +195,11 @@ export function CategorySelect({ ctx, value, onChange, label = "Category" }: { c
         <option value="">— No category —</option>
         {tree.flat.map((c) => <option key={c.id} value={c.id}>{indentLabel(c)}</option>)}
       </select>
-      {!tree.flat.length && <span className="ad-muted ad-sm" style={{ fontWeight: 500 }}>Create categories in the Categories screen first.</span>}
+      {!tree.flat.length && (
+        <span className="ad-muted ad-sm" style={{ fontWeight: 500 }}>
+          No categories yet. <button type="button" className="ad-link" onClick={() => ctx.go("Categories")}>Set them up in Categories</button>, then pick one here.
+        </span>
+      )}
     </label>
   );
 }

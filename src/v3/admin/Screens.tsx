@@ -280,7 +280,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     categoryId: p.categoryId ?? "",
   });
   const manual = p.source === "manual";
-  const [catalog, setCatalog] = useState({ name: p.name, category: p.category ?? "", price: (p.priceCents / 100).toFixed(2), stock: p.stockCount, photos: p.images });
+  const [catalog, setCatalog] = useState({ name: p.name, price: (p.priceCents / 100).toFixed(2), stock: p.stockCount, photos: p.images });
   const [busy, setBusy] = useState(false);
   const [notifying, setNotifying] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -299,10 +299,10 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
     try {
       if (manual) {
         await api(`/admin/products/${encodeURIComponent(p.id)}/catalog`, { method: "PATCH", body: JSON.stringify({
-          name: catalog.name.trim(), category: catalog.category.trim() || null, priceCents, stockCount: catalog.stock, imageUrls: catalog.photos,
+          name: catalog.name.trim(), priceCents, stockCount: catalog.stock, imageUrls: catalog.photos,
         }) });
       }
-      if (manual) onSaved({ name: catalog.name.trim(), category: catalog.category.trim() || null, priceCents, stockCount: catalog.stock, images: catalog.photos });
+      if (manual) onSaved({ name: catalog.name.trim(), priceCents, stockCount: catalog.stock, images: catalog.photos });
       await patchProduct(ctx, p.id, {
         availability: form.availability,
         release_month: form.release ? `${form.release}-01` : "",
@@ -354,10 +354,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
               <div className="ad-between"><span className="ad-label" style={{ margin: 0 }}>Product</span><span className="ad-tag-manual">Added manually</span></div>
               <PhotoUploader urls={catalog.photos} onChange={(photos) => setCatalog((c) => ({ ...c, photos }))} />
               <label className="ad-field">Name<input className="sh-input" value={catalog.name} onChange={(e) => setCatalog((c) => ({ ...c, name: e.target.value }))} maxLength={200} /></label>
-              <div className="ad-grid2">
-                <label className="ad-field">Category<input className="sh-input" value={catalog.category} onChange={(e) => setCatalog((c) => ({ ...c, category: e.target.value }))} maxLength={120} /></label>
-                <label className="ad-field">Price (CAD)<div className="ad-money"><span>$</span><input className="sh-input" inputMode="decimal" value={catalog.price} onChange={(e) => setCatalog((c) => ({ ...c, price: e.target.value.replace(/[^\d.]/g, "") }))} /></div></label>
-              </div>
+              <label className="ad-field">Price (CAD)<div className="ad-money"><span>$</span><input className="sh-input" inputMode="decimal" value={catalog.price} onChange={(e) => setCatalog((c) => ({ ...c, price: e.target.value.replace(/[^\d.]/g, "") }))} /></div></label>
               <div className="ad-field">Stock<StockField value={catalog.stock} onChange={(stock) => setCatalog((c) => ({ ...c, stock }))} /></div>
             </section>
           ) : (
@@ -375,7 +372,8 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
             const liveStock = manual ? catalog.stock : p.stockCount;
             const livePrice = manual ? Math.round(Number(catalog.price) * 100) || 0 : p.priceCents;
             const preview: Product = {
-              ...p, ...(manual ? { name: catalog.name || p.name, category: catalog.category || null, images: catalog.photos, priceCents: livePrice, stockCount: liveStock } : {}),
+              ...p, ...(manual ? { name: catalog.name || p.name, images: catalog.photos, priceCents: livePrice, stockCount: liveStock } : {}),
+              category: form.categoryId ? ctx.data.categories.find((c) => c.id === form.categoryId)?.name ?? null : p.categoryId ? null : p.category,
               series: form.series.trim() || null, janCode: form.jan.trim() || null,
               compareAtCents: compare && Number.isFinite(compare) ? compare : null,
               releaseMonth: form.release || null, orderByDate: form.orderBy || null,
