@@ -6,12 +6,11 @@ import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks"
 import type { Product, StoreEvent } from "../types";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import {
-  ALL, AVAIL, DEFAULT_AVAIL, NAV, PRICES, SORTS, useCart, useProducts, useStorefront, useWishlist,
+  ALL, AVAIL, DEFAULT_AVAIL, NAV, PRICES, SORTS, productIdFromPath, productPath, useCart, useProducts, useStorefront, useWishlist,
   type Filters, type NavKey, type ShopSort,
 } from "./data";
 import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
-import { ProductDialog } from "./ProductDetail";
-import { api } from "../../lib/api";
+import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
 import { buildTree, indentLabel } from "../categoryTree";
@@ -60,37 +59,38 @@ export default function Storefront() {
   }, [signedInId]);
   const closeWelcome = useCallback(() => setWelcome(null), []);
 
-  // Product popup. Its URL (?product=<id>) can be shared, and Back closes it.
-  const [detail, setDetail] = useState<Product | null>(null);
-  const openProduct = useCallback((p: Product) => {
-    setDetail(p);
-    const url = new URL(window.location.href);
-    if (url.searchParams.get("product") === p.id) return;
-    url.searchParams.set("product", p.id);
-    window.history.pushState({ product: p.id }, "", url);
-  }, []);
-  const closeProduct = useCallback(() => {
-    setDetail(null);
-    if ((window.history.state as { product?: string } | null)?.product) { window.history.back(); return; }
-    const url = new URL(window.location.href);
-    if (url.searchParams.has("product")) { url.searchParams.delete("product"); window.history.replaceState(null, "", url); }
-  }, []);
+  // Product pages live at /product/<id> and share the header, cart and footer with the shop.
+  // Back returns to the same scroll position in the shop.
+  const [route, setRoute] = useState<{ productId: string | null; initial: Product | null }>(
+    () => ({ productId: productIdFromPath(window.location.pathname), initial: null }));
   useEffect(() => {
-    const sync = () => {
-      const id = new URLSearchParams(window.location.search).get("product");
-      if (!id) { setDetail(null); return; }
-      api<{ item: Product }>(`/square/catalog/${encodeURIComponent(id)}`)
-        .then((res) => {
-          // Ignore the answer if the shopper has moved on (closed it or opened something else).
-          if (new URLSearchParams(window.location.search).get("product") !== id) return;
-          setDetail((current) => (current?.id === id ? current : res.item));
-        })
-        .catch(() => undefined);
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    const legacy = new URLSearchParams(window.location.search).get("product"); // old ?product= popup links
+    if (legacy && !productIdFromPath(window.location.pathname)) {
+      window.history.replaceState(null, "", `/product/${encodeURIComponent(legacy)}`);
+      setRoute({ productId: legacy, initial: null });
+    }
+    const onPop = () => {
+      const productId = productIdFromPath(window.location.pathname);
+      setRoute({ productId, initial: null });
+      const y = productId ? 0 : (window.history.state as { scrollY?: number } | null)?.scrollY ?? 0;
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
     };
-    sync(); // opened from a shared link
-    window.addEventListener("popstate", sync);
-    return () => window.removeEventListener("popstate", sync);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
+  const openProduct = useCallback((p: Product) => {
+    window.history.replaceState({ ...(window.history.state ?? {}), scrollY: window.scrollY }, "");
+    window.history.pushState({ product: p.id }, "", productPath(p));
+    setRoute({ productId: p.id, initial: p });
+    window.scrollTo(0, 0);
+  }, []);
+  /** Header and footer controls act on the shop, so leave the product page first. */
+  const leaveProduct = () => {
+    if (!route.productId) return;
+    window.history.pushState(null, "", "/");
+    setRoute({ productId: null, initial: null });
+  };
 
   const home = store.home;
   const facets = store.facets;
@@ -104,6 +104,7 @@ export default function Storefront() {
   }, []);
 
   const setNav = (nav: NavKey) => {
+    leaveProduct();
     setWishOnly(false);
     setFilters((f) => ({ ...f, nav, category: ALL, categoryId: null }));
     if (nav === "Home") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -111,6 +112,7 @@ export default function Storefront() {
   };
   /** value: ALL, "id:<shop category id>", or a Square category name (flat fallback). */
   const setCategory = (value: string) => {
+    leaveProduct();
     setWishOnly(false);
     const id = value.startsWith("id:") ? value.slice(3) : null;
     setFilters((f) => ({ ...f, category: id ? ALL : value, categoryId: id, nav: value === ALL ? "Home" : "Category" }));
@@ -119,10 +121,12 @@ export default function Storefront() {
   };
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
+    leaveProduct();
     setFilters((f) => ({ ...f, query: draftQuery }));
     if (draftQuery.trim()) scrollShop();
   };
   const clearFilters = () => {
+    leaveProduct();
     setWishOnly(false);
     setDraftQuery("");
     setFilters((f) => ({ ...f, nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", query: "" }));
@@ -214,7 +218,7 @@ export default function Storefront() {
             <button type="button" className="sh-icon-btn" onClick={toggleTheme} title="Toggle theme" aria-label="Toggle dark mode">{theme === "dark" ? "☀" : "☾"}</button>
             <AccountMenu email={auth.email} user={auth.user} onSignOut={auth.signOut} />
             <button type="button" className={`sf-head-link sf-wish ${wishOnly ? "is-on" : ""}`} aria-pressed={wishOnly}
-              onClick={() => { setWishOnly((w) => !w); scrollShop(); }} aria-label={`Wishlist, ${wishlist.count} items`}>
+              onClick={() => { leaveProduct(); setWishOnly((w) => !w); scrollShop(); }} aria-label={`Wishlist, ${wishlist.count} items`}>
               <span className="sf-red">♥</span>{wishlist.count}
             </button>
             <button type="button" className="sf-cart-btn" onClick={() => setCartOpen(true)} aria-label={`Cart, ${cart.count} items`}>Cart · {cart.count}</button>
@@ -222,11 +226,20 @@ export default function Storefront() {
         </div>
         <nav className="sf-wrap sf-nav" aria-label="Shop sections">
           {NAV.map((n) => (
-            <button key={n} type="button" className={filters.nav === n && !wishOnly ? "is-active" : ""} aria-current={filters.nav === n ? "page" : undefined} onClick={() => setNav(n)}>{n}</button>
+            <button key={n} type="button" className={filters.nav === n && !wishOnly && !route.productId ? "is-active" : ""} aria-current={filters.nav === n && !route.productId ? "page" : undefined} onClick={() => setNav(n)}>{n}</button>
           ))}
         </nav>
       </header>
 
+      {route.productId ? (
+        <div className="sf-wrap">
+          <ProductPage id={route.productId} initial={route.initial} a={actions} tree={tree}
+            cartQty={cart.qtyOf} onAddQty={(p, qty) => cart.add(p, qty)}
+            onViewCart={() => setCartOpen(true)} onToast={flash}
+            onCategory={(id) => setCategory(`id:${id}`)}
+            onHome={() => { clearFilters(); window.scrollTo({ top: 0 }); }} />
+        </div>
+      ) : (
       <div className="sf-wrap sf-body">
         {/* Sidebar (becomes a slide-over sheet on small screens) */}
         {filtersOpen && <div className="sh-overlay sf-sidebar-overlay" onClick={() => setFiltersOpen(false)} />}
@@ -385,16 +398,11 @@ export default function Storefront() {
           </section>
         </main>
       </div>
+      )}
 
       <Footer currency={currency} onCurrency={setCurrency} onNav={setNav} onToast={flash} />
 
       {cartOpen && <CartDrawer lines={cart.lines} subtotal={cart.subtotal} currency={currency} onQty={cart.setQty} onClose={() => setCartOpen(false)} />}
-      {detail && (
-        <ProductDialog product={detail} inCartQty={cart.qtyOf(detail.variationId)} onClose={closeProduct}
-          a={{ ...actions, onNotify: (p) => { closeProduct(); setNotify(p); } }}
-          onAddQty={(p, qty) => cart.add(p, qty)}
-          onViewCart={() => { closeProduct(); setCartOpen(true); }} />
-      )}
       {notify && <NotifyDialog product={notify} email={auth.email} onClose={() => setNotify(null)} onDone={(m) => { setNotify(null); flash(m); }} />}
       {welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />}
       {toast && <div className="sh-toast" role="status" aria-live="polite">{toast}</div>}

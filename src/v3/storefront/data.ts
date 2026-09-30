@@ -145,6 +145,17 @@ export interface CartLine {
   maxPerCustomer: number | null;
 }
 
+// ---------------------------------------------------------------- product pages
+/** /product/<id>/<name-slug>. Only the id matters; the slug is for people reading the link. */
+export function productPath(p: Pick<Product, "id" | "name">) {
+  const slug = p.name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  return `/product/${encodeURIComponent(p.id)}${slug ? `/${slug}` : ""}`;
+}
+export function productIdFromPath(pathname: string): string | null {
+  const m = /^\/product\/([^/]+)/.exec(pathname);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 /** Most you can put in the cart in one go: the per-customer limit, else stock (in-stock items), else 99. */
 export function purchaseCap(p: Product) {
   const stockCap = p.stockCount && normalizeStatus(p.status) !== "pre" ? p.stockCount : 99;
