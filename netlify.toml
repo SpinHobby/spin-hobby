@@ -14,10 +14,10 @@
 # (enable it under Site configuration > Build & deploy > Branches and deploy contexts >
 # Branch deploys: "staging"). It talks to the staging API, never production.
 [context.staging.environment]
-  VITE_API_URL = "https://spin-hobby-api-staging.onrender.com"
+  VITE_API_URL = "https://spin-hobby-server-staging.onrender.com"
   VITE_APP_ENV = "staging"
 
 # Pull-request previews also use the staging API, so testing a PR can't touch live data.
 [context.deploy-preview.environment]
-  VITE_API_URL = "https://spin-hobby-api-staging.onrender.com"
+  VITE_API_URL = "https://spin-hobby-server-staging.onrender.com"
   VITE_APP_ENV = "staging"
