@@ -8,6 +8,7 @@ export interface CardActions {
   onAdd: (p: Product) => void;
   onNotify: (p: Product) => void;
   onWish: (p: Product) => void;
+  onOpen: (p: Product) => void;
 }
 
 export function ProductImage({ p, className = "", label = true }: { p: Product; className?: string; label?: boolean }) {
@@ -44,7 +45,7 @@ export function ProductCard({ p, a }: { p: Product; a: CardActions }) {
   return (
     <article className={`sf-card ${s === "out" ? "is-dim" : ""}`}>
       <div className="sf-card__media">
-        <ProductImage p={p} />
+        <button type="button" className="sf-open sf-card__open" onClick={() => a.onOpen(p)} aria-label={`View ${p.name}`}><ProductImage p={p} /></button>
         <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>{meta.badge}</span>
         {off > 0 && <span className="sf-card__off">-{off}%</span>}
         <button type="button" className={`sf-card__wish ${wished ? "is-on" : ""}`} onClick={() => a.onWish(p)}
@@ -54,7 +55,7 @@ export function ProductCard({ p, a }: { p: Product; a: CardActions }) {
       </div>
       <div className="sf-card__body">
         <span className="sf-card__series">{p.series ?? p.category ?? "Spin Hobby"}</span>
-        <h3 className="sf-card__name" title={p.name}>{p.name}</h3>
+        <h3 className="sf-card__name" title={p.name}><button type="button" className="sf-open" onClick={() => a.onOpen(p)}>{p.name}</button></h3>
         <div className="sf-card__price">
           <strong>{money(p.priceCents, a.currency)}</strong>
           {off > 0 && <s>{money(p.compareAtCents, a.currency)}</s>}
@@ -75,10 +76,10 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
   const btn = buttonState(p, a);
   return (
     <div className={`sf-row ${s === "out" ? "is-dim" : ""}`}>
-      <Thumb p={p} size={72} />
+      <button type="button" className="sf-open" onClick={() => a.onOpen(p)} aria-label={`View ${p.name}`}><Thumb p={p} size={72} /></button>
       <div className="sf-row__main">
         <div className="sf-row__meta">{[p.series, p.category].filter(Boolean).join(" · ")}</div>
-        <div className="sf-row__name">{p.name}</div>
+        <div className="sf-row__name"><button type="button" className="sf-open" onClick={() => a.onOpen(p)}>{p.name}</button></div>
         <div className="sf-row__status" style={{ color: meta.color }}>{meta.badge} · {statusLabel(p)}</div>
       </div>
       <div className="sf-row__price">
@@ -95,12 +96,12 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
 export function PreorderCard({ p, a }: { p: Product; a: CardActions }) {
   return (
     <article className="sf-pre">
-      <button type="button" className="sf-pre__media" onClick={() => a.onAdd(p)} aria-label={`Pre-order ${p.name}`}>
+      <button type="button" className="sf-pre__media" onClick={() => a.onOpen(p)} aria-label={`View ${p.name}`}>
         <ProductImage p={p} />
         <span className="sh-badge sf-card__badge" style={{ background: "var(--blue)" }}>PRE-ORDER</span>
       </button>
       <div className="sf-pre__body">
-        <span className="sf-pre__name" title={p.name}>{p.name}</span>
+        <button type="button" className="sf-open sf-pre__name" title={p.name} onClick={() => a.onOpen(p)}>{p.name}</button>
         <strong>{money(p.priceCents, a.currency)}</strong>
         <span className="sf-muted">Release {monthLabel(p.releaseMonth)}</span>
         {p.orderByDate && <span className="sf-pre__by">Order by {dayLabel(p.orderByDate)}</span>}
@@ -116,9 +117,9 @@ export function MiniRow({ p, a, rank, quickAdd }: { p: Product; a: CardActions; 
   return (
     <div className="sf-mini">
       {rank !== undefined && <span className="sf-mini__rank" style={{ color: rankColor }}>{rank}</span>}
-      <Thumb p={p} size={48} />
+      <button type="button" className="sf-open" onClick={() => a.onOpen(p)} aria-label={`View ${p.name}`}><Thumb p={p} size={48} /></button>
       <div className="sf-mini__main">
-        <div className="sf-mini__name" title={p.name}>{p.name}</div>
+        <button type="button" className="sf-open sf-mini__name" title={p.name} onClick={() => a.onOpen(p)}>{p.name}</button>
         <div className="sf-mini__status" style={{ color: STATUS_META[s].color }}>{statusShort(p)}</div>
       </div>
       {quickAdd && s !== "out" ? (

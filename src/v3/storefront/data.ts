@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
+import { normalizeStatus } from "../format";
 import { useLocalState } from "../hooks";
 import type { Homepage, Product, ProductPage, ProductStatus, ShopCategory, SortKey } from "../types";
 
@@ -144,18 +145,24 @@ export interface CartLine {
   maxPerCustomer: number | null;
 }
 
+/** Most you can put in the cart in one go: the per-customer limit, else stock (in-stock items), else 99. */
+export function purchaseCap(p: Product) {
+  const stockCap = p.stockCount && normalizeStatus(p.status) !== "pre" ? p.stockCount : 99;
+  return Math.max(1, Math.min(p.maxPerCustomer ?? 99, stockCap));
+}
+
 export function useCart() {
   const [lines, setLines] = useLocalState<CartLine[]>("spinhobby-cart-v3", []);
-  const add = useCallback((p: Product) => {
+  const add = useCallback((p: Product, qty = 1) => {
     setLines((current) => {
       const existing = current.find((l) => l.variationId === p.variationId);
-      const cap = p.maxPerCustomer ?? (p.stockCount && p.status !== "pre" ? p.stockCount : 99);
+      const cap = purchaseCap(p);
       if (existing) {
-        return current.map((l) => (l.variationId === p.variationId ? { ...l, quantity: Math.min(l.quantity + 1, cap) } : l));
+        return current.map((l) => (l.variationId === p.variationId ? { ...l, quantity: Math.min(l.quantity + qty, cap) } : l));
       }
       return [...current, {
         variationId: p.variationId, itemId: p.id, name: p.name, imageUrl: p.images[0] ?? null,
-        unitPriceCents: p.priceCents, quantity: 1, isPreorder: p.status === "pre", maxPerCustomer: p.maxPerCustomer,
+        unitPriceCents: p.priceCents, quantity: Math.min(qty, cap), isPreorder: p.status === "pre", maxPerCustomer: p.maxPerCustomer,
       }];
     });
   }, [setLines]);
@@ -167,7 +174,8 @@ export function useCart() {
   const count = useMemo(() => lines.reduce((s, l) => s + l.quantity, 0), [lines]);
   const subtotal = useMemo(() => lines.reduce((s, l) => s + l.quantity * l.unitPriceCents, 0), [lines]);
   const has = useCallback((variationId: string) => lines.some((l) => l.variationId === variationId), [lines]);
-  return { lines, add, setQty, count, subtotal, has };
+  const qtyOf = useCallback((variationId: string) => lines.find((l) => l.variationId === variationId)?.quantity ?? 0, [lines]);
+  return { lines, add, setQty, count, subtotal, has, qtyOf };
 }
 
 // ---------------------------------------------------------------- wishlist

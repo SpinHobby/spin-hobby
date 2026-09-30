@@ -52,7 +52,7 @@ function Thumb({ src, size = 44 }: { src?: string | null; size?: number }) {
 }
 
 const PREVIEW_ACTIONS: CardActions = {
-  currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {},
+  currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {}, onOpen: () => {},
 };
 
 /** Mirrors the server's product_status() so previews match what shoppers will see after saving. */

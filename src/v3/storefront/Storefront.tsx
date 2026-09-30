@@ -10,6 +10,8 @@ import {
   type Filters, type NavKey, type ShopSort,
 } from "./data";
 import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
+import { ProductDialog } from "./ProductDetail";
+import { api } from "../../lib/api";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
 import { buildTree, indentLabel } from "../categoryTree";
@@ -57,6 +59,38 @@ export default function Storefront() {
     prevSignedInId.current = signedInId;
   }, [signedInId]);
   const closeWelcome = useCallback(() => setWelcome(null), []);
+
+  // Product popup. Its URL (?product=<id>) can be shared, and Back closes it.
+  const [detail, setDetail] = useState<Product | null>(null);
+  const openProduct = useCallback((p: Product) => {
+    setDetail(p);
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("product") === p.id) return;
+    url.searchParams.set("product", p.id);
+    window.history.pushState({ product: p.id }, "", url);
+  }, []);
+  const closeProduct = useCallback(() => {
+    setDetail(null);
+    if ((window.history.state as { product?: string } | null)?.product) { window.history.back(); return; }
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("product")) { url.searchParams.delete("product"); window.history.replaceState(null, "", url); }
+  }, []);
+  useEffect(() => {
+    const sync = () => {
+      const id = new URLSearchParams(window.location.search).get("product");
+      if (!id) { setDetail(null); return; }
+      api<{ item: Product }>(`/square/catalog/${encodeURIComponent(id)}`)
+        .then((res) => {
+          // Ignore the answer if the shopper has moved on (closed it or opened something else).
+          if (new URLSearchParams(window.location.search).get("product") !== id) return;
+          setDetail((current) => (current?.id === id ? current : res.item));
+        })
+        .catch(() => undefined);
+    };
+    sync(); // opened from a shared link
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
 
   const home = store.home;
   const facets = store.facets;
@@ -122,6 +156,7 @@ export default function Storefront() {
     },
     onNotify: setNotify,
     onWish: wishlist.toggle,
+    onOpen: openProduct,
   };
 
   const shopTitle = wishOnly ? "Your wishlist" : filters.categoryId ? tree.path(filters.categoryId).join(" › ") : filters.category !== ALL ? filters.category
@@ -354,6 +389,12 @@ export default function Storefront() {
       <Footer currency={currency} onCurrency={setCurrency} onNav={setNav} onToast={flash} />
 
       {cartOpen && <CartDrawer lines={cart.lines} subtotal={cart.subtotal} currency={currency} onQty={cart.setQty} onClose={() => setCartOpen(false)} />}
+      {detail && (
+        <ProductDialog product={detail} inCartQty={cart.qtyOf(detail.variationId)} onClose={closeProduct}
+          a={{ ...actions, onNotify: (p) => { closeProduct(); setNotify(p); } }}
+          onAddQty={(p, qty) => cart.add(p, qty)}
+          onViewCart={() => { closeProduct(); setCartOpen(true); }} />
+      )}
       {notify && <NotifyDialog product={notify} email={auth.email} onClose={() => setNotify(null)} onDone={(m) => { setNotify(null); flash(m); }} />}
       {welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />}
       {toast && <div className="sh-toast" role="status" aria-live="polite">{toast}</div>}

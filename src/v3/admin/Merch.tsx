@@ -8,7 +8,7 @@ import { formatBytes, prepareImage, uploadPrepared } from "./image";
 import { CategorySelect } from "./Categories";
 import type { Ctx } from "./Screens";
 
-const PREVIEW: CardActions = { currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {} };
+const PREVIEW: CardActions = { currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {}, onOpen: () => {} };
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 // ---------------------------------------------------------------- photos
