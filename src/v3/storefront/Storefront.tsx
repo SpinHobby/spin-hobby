@@ -440,6 +440,8 @@ function Footer({ currency, onCurrency, onNav, onToast }: {
           <a href={`mailto:${SUPPORT_EMAIL}?subject=Shipping`}>Shipping &amp; duties</a>
           <a href={`mailto:${SUPPORT_EMAIL}?subject=Order%20status`}>Order status</a>
           <a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a>
+          <a href="/legal/terms">Terms of Service</a>
+          <a href="/legal/privacy">Privacy Policy</a>
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Stay in the loop</span>

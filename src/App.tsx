@@ -6,22 +6,28 @@ import { loadStoreConfig, type StoreConfig } from "./v3/storeConfig";
 // The admin bundle is only downloaded by staff visiting /admin.
 const Admin = lazy(() => import("./v3/admin/Admin"));
 const Checkout = lazy(() => import("./v3/checkout/Checkout"));
+const Legal = lazy(() => import("./v3/legal/Legal"));
 
 export default function App() {
-  const isAdmin = window.location.pathname.startsWith("/admin");
+  const path = window.location.pathname;
+  const isAdmin = path.startsWith("/admin");
+  const isLegal = path.startsWith("/legal") || path.startsWith("/terms") || path.startsWith("/privacy");
   // undefined = still checking; null = config fetch failed, fail open rather
   // than blocking the whole storefront on a flag we couldn't read.
   const [config, setConfig] = useState<StoreConfig | null | undefined>(undefined);
 
   useEffect(() => {
-    if (isAdmin) return; // staff must always reach /admin to flip the flag back off
+    if (isAdmin || isLegal) return; // staff must always reach /admin; legal pages stay up too
     loadStoreConfig().then(setConfig);
-  }, [isAdmin]);
+  }, [isAdmin, isLegal]);
 
-  // Admin always renders immediately, regardless of maintenance mode or the
-  // config fetch above.
+  // Admin and the legal pages always render immediately, regardless of
+  // maintenance mode or the config fetch above.
   if (isAdmin) {
     return <Suspense fallback={null}><Admin /></Suspense>;
+  }
+  if (isLegal) {
+    return <Suspense fallback={null}><Legal /></Suspense>;
   }
   if (config === undefined) {
     return null;
