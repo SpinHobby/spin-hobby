@@ -22,8 +22,6 @@ const PATH_DAMPING = 14;
 const PATH_MAX_SPEED = 80;
 /** A new destination must be this much closer (squared distance ratio) before she changes course. */
 const SWITCH_RATIO = 0.7;
-/** Crossfade between neighbouring frames, so quick scrubbing reads as motion blur rather than steps. */
-const FADE_MS = 120;
 /** With no mouse movement for this long she looks back at the visitor. */
 const IDLE_MS = 5000;
 
@@ -62,9 +60,6 @@ export function CursorMascot({ className }: { className?: string }) {
         img.src = `${dir}/${frames[i].file}`;
       });
 
-    let shown: Pose | null = null;
-    let fadeFrom: Pose | null = null;
-    let fadeStart = 0;
     const paint = (p: Pose, alpha: number) => {
       const img = images[p.index];
       if (!img) return;
@@ -79,31 +74,32 @@ export function CursorMascot({ className }: { className?: string }) {
         ctx.drawImage(img, 0, 0);
       }
     };
-    /** Draws the current pose, crossfading from the previous one; true while still fading. */
-    const render = (now: number) => {
-      if (!shown) return false;
-      const t = fadeFrom ? Math.min(1, (now - fadeStart) / FADE_MS) : 1;
+    let side: 1 | -1 = 1;                          // which side of the path she is on
+    let position: number = center;                 // fractional path index on that side
+    let drawn = "";
+    /**
+     * Draws her at the fractional path position: the lower frame fully opaque, the next frame layered
+     * on top in proportion to the fraction. Neighbouring frames are consecutive clip frames, so this
+     * gives sub-frame smoothness, and because the base frame is always opaque nothing turns see-through.
+     */
+    const render = () => {
+      const lo = Math.floor(position);
+      const hi = Math.ceil(position);
+      const frac = position - lo;
+      const key = `${side}:${lo}:${hi}:${frac.toFixed(3)}`;
+      if (key === drawn || !images[lo]) return;
       ctx.clearRect(0, 0, width, height);
-      if (fadeFrom && t < 1) paint(fadeFrom, 1 - t);
-      paint(shown, fadeFrom ? t : 1);
+      paint({ index: lo, side }, 1);
+      if (hi !== lo && frac > 0.002 && images[hi]) paint({ index: hi, side }, frac);
       ctx.globalAlpha = 1;
-      if (t >= 1) fadeFrom = null;
-      return t < 1;
-    };
-    const show = (p: Pose, now: number) => {
-      if (shown && shown.index === p.index && flipped(shown) === flipped(p)) return;
-      if (!images[p.index]) return; // not loaded yet: keep what is on screen
-      fadeFrom = shown;
-      shown = p;
-      fadeStart = now;
+      drawn = key;
     };
 
     const isStatic = window.matchMedia("(hover: none)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let disposed = false;
     load(center).then(() => {
       if (disposed) return;
-      show({ index: center, side: 1 }, performance.now());
-      render(performance.now());
+      render();
       if (!isStatic) for (let i = 0; i < n; i++) if (i !== center) load(i);
     });
     if (isStatic) return () => { disposed = true; };
@@ -122,8 +118,6 @@ export function CursorMascot({ className }: { className?: string }) {
     const look = { x: 0, y: 0 };                   // her attention: trails the delayed cursor on the spring
     const lookVel = { x: 0, y: 0 };
     let destination: Pose = { index: center, side: 1 };
-    let side: 1 | -1 = 1;                          // which side of the path she is on
-    let position: number = center;                 // fractional path index on that side
     let pathVel = 0;                               // steps per second along the path, toward the destination
     let lastDir = 0;                               // direction moved last tick, to notice reversals
     let raf = 0;
@@ -197,11 +191,9 @@ export function CursorMascot({ className }: { className?: string }) {
       position += dir * move;
       if (remaining - move < 0.01 && destination.side === side) { position = destination.index; pathVel = 0; }
       lastDir = crossed ? Math.sign(destination.index - center) : dir;
-      show({ index: Math.round(position), side }, now);
-
-      const fading = render(now);
+      render();
       const arrived = !looking && position === destination.index && side === destination.side;
-      if (!arrived || fading) raf = requestAnimationFrame(tick);
+      if (!arrived) raf = requestAnimationFrame(tick);
       else lastTick = 0;
     };
     const wake = () => { if (!raf) raf = requestAnimationFrame(tick); };

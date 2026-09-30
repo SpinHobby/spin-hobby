@@ -25,14 +25,14 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 FRAMES_DIR = ROOT / "public" / "mascot-frames"
 DATA_FILE = ROOT / "src" / "v3" / "storefront" / "mascotFrames.generated.ts"
-OUT_WIDTH = 440          # ~2x the CSS width the hero uses
-MIN_STEP = 0.02          # gaze change (unit circle) needed to keep the next clip frame; drops static holds
-MAX_FRAMES = 80
+OUT_WIDTH = 420          # ~2x the CSS width the hero uses
+MIN_STEP = 0.02          # gaze change (unit circle) that keeps the next clip frame
+PIX_STEP = 1.6           # or this much mean picture change (0-255, on a 160px thumbnail): arm movement during a hold
+MAX_FRAMES = 90
 EYES_OPEN = 0.33         # iris area vs the first frame (looking down hides part of the iris; a blink hides all)
 MOUTH_SAME = 0.5         # mouth-interior pixels vs the first frame
 CURSOR_MATCH = 0.8       # masked template-match score that counts as the cursor
 CURSOR_PRESENT = 0.52    # weaker score: the arrow while it fades in or out (translucent)
-CURSOR_FADE_IN = 6       # frames before the cursor's first appearance, while it is too faint to match at all
 
 
 def read_frames(path):
@@ -134,16 +134,23 @@ def cursor_templates(frames, info):
 
 
 def clean(bgr, d, hit, bg):
-    """Paints the cursor and stray islands with the background. Returns (image, cursor overlapped the character)."""
+    """
+    Removes the cursor and stray islands. Away from the character the arrow's box is painted with the
+    background; on top of her it is inpainted from its surroundings (a few pixels at the size the hero
+    shows her). Returns (image, cursor was inpainted over the character).
+    """
     out = bgr.copy()
     H = out.shape[0]
     overlapped = False
     near = cv2.dilate(d["char"].astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
     if hit is not None:
-        score, x, y, tpl = hit
+        score, x, y, tpl, tmask = hit
         th, tw = tpl.shape[:2]
         if near[y:y + th, x:x + tw].any():
             overlapped = True
+            mask = np.zeros(out.shape[:2], np.uint8)
+            mask[y:y + th, x:x + tw] = cv2.dilate(tmask, np.ones((5, 5), np.uint8))
+            out = cv2.inpaint(out, mask, 4, cv2.INPAINT_TELEA)
         else:
             out[y:y + th, x:x + tw] = bg
     # Stray islands: click ripples and cursor remnants go; small bits low in the frame are lace and feet.
@@ -185,13 +192,8 @@ def main(clip):
         for tpl, mask in templates:
             score, x, y = find_cursor(f, tpl, mask)
             if score >= CURSOR_PRESENT and (hits[i] is None or score > hits[i][0]):
-                hits[i] = (score, x, y, tpl)
+                hits[i] = (score, x, y, tpl, mask)
     cleaned = [clean(f, d, h, bg) for f, d, h in zip(frames, info, hits)]
-    # The arrow fades in over a few frames before it is solid enough to match at all: skip those too.
-    fading = set()
-    for i, h in enumerate(hits):
-        if h and i > 0 and not hits[i - 1]:
-            fading.update(range(max(i - CURSOR_FADE_IN, 1), i))
 
     def gaze(i):
         d = info[i]
@@ -199,40 +201,55 @@ def main(clip):
         rest_cx = (rest["box"][0] + rest["box"][2]) / 2
         return ((d["mid"][0] - head_cx) - (rest["mid"][0] - rest_cx), d["mid"][1] - rest["mid"][1])
 
-    reasons = {"blink": [], "mouth": [], "cursor": []}
+    reasons = {"blink": [], "mouth": []}
     usable = []
     for i, d in enumerate(info):
         if d["mid"] is None or d["area"] < EYES_OPEN * rest["area"]:
             reasons["blink"].append(i)
         elif d["mouth"] is None or d["mouth"] < MOUTH_SAME * rest["mouth"]:
             reasons["mouth"].append(i)
-        elif cleaned[i][1] or i in fading:
-            reasons["cursor"].append(i)
         else:
             usable.append(i)
-    print(f"{len(frames)} frames {W}x{H}: {len(usable)} usable; skipped {len(reasons['blink'])} blinking, {len(reasons['mouth'])} mouth changed, {len(reasons['cursor'])} cursor on/near character")
-    print(f"  cursor seen in {sum(1 for h in hits if h)} frames; skipped for cursor: {reasons['cursor']}")
+    inpainted = [i for i, c in enumerate(cleaned) if c[1]]
+    print(f"{len(frames)} frames {W}x{H}: {len(usable)} usable; skipped {len(reasons['blink'])} blinking, {len(reasons['mouth'])} mouth changed")
+    print(f"  cursor seen in {sum(1 for h in hits if h)} frames, inpainted over the character in {len(inpainted)}: {inpainted[:8]}{'...' if len(inpainted) > 8 else ''}")
     print(f"  mouth changed: {reasons['mouth'][:6]}{'...' if len(reasons['mouth']) > 6 else ''}")
 
     vectors = {i: gaze(i) for i in usable}
     scale = max(np.hypot(*v) for v in vectors.values())
     unit = {i: (v[0] / scale, v[1] / scale) for i, v in vectors.items()}
+    # Small greyscale thumbnails to measure how much the picture changes between frames: the head can
+    # hold still while an arm moves, and that movement must be kept too or it pops between frames.
+    thumb = [cv2.cvtColor(cv2.resize(c[0], (160, 90), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY).astype(np.float32) for c in cleaned]
+    change = lambda a, b: float(np.abs(thumb[a] - thumb[b]).mean())
     # Frames stay in clip order so the browser can scrub through real in-betweens. Only frames that
-    # barely differ from the previous kept one (holds) are dropped; a gap in the clip (a blink, the
-    # cursor over her) is bridged by the frames either side of it, which are still close in time.
+    # barely differ from the previous kept one (holds) are dropped; a gap in the clip (a blink) is
+    # bridged by the frames either side of it, which are still close in time.
     kept = []
     for i in usable[1:]:
         if len(kept) >= MAX_FRAMES - 1:
             break
-        if not kept or np.hypot(unit[i][0] - unit[kept[-1]][0], unit[i][1] - unit[kept[-1]][1]) >= MIN_STEP:
+        prev = kept[-1] if kept else 0  # until something is kept, compare against the neutral frame itself
+        if np.hypot(unit[i][0] - unit[prev][0], unit[i][1] - unit[prev][1]) >= MIN_STEP or change(i, prev) >= PIX_STEP:
             kept.append(i)
-    # The neutral frame goes wherever it breaks the path least (a clip rarely returns to neutral in the
-    # middle), so the browser can join the mirrored half of the path to the original half through it.
-    dist = lambda a, b: float(np.hypot(unit[a][0] - unit[b][0], unit[a][1] - unit[b][1]))
-    costs = [dist(kept[0], 0)] + [dist(kept[j], 0) + dist(0, kept[j + 1]) - dist(kept[j], kept[j + 1]) for j in range(len(kept) - 1)] + [dist(kept[-1], 0)]
-    centre = int(np.argmin(costs))
-    kept.insert(centre, 0)
+    # The neutral frame goes where the clip comes back closest to neutral. The frames before that point
+    # and after it then form two branches leaving the neutral pose in different directions, instead of
+    # one long detour through every pose. A clip that never returns gets the neutral frame at the start.
+    mag = [float(np.hypot(*unit[i])) for i in kept]
+    passes = [j for j in range(1, len(kept) - 1) if mag[j] <= mag[j - 1] and mag[j] <= mag[j + 1] and mag[j] < 0.6]
+    split = min(passes, key=lambda j: mag[j]) if passes else 0
+    # Each branch is turned so that its end nearest the neutral pose is the one next to the neutral frame.
+    before, after = kept[:split], kept[split:]
+    if before and mag[0] < mag[split - 1]:
+        before = before[::-1]
+    if after and mag[-1] < mag[split]:
+        after = after[::-1]
+    kept = before + [0] + after
+    centre = len(before)
     print(f"keeping {len(kept)} frames in clip order, neutral at path index {centre}: {kept}")
+    steps = [(change(kept[j], kept[j + 1]), j) for j in range(len(kept) - 1)]
+    worst = sorted(steps, reverse=True)[:4]
+    print("  biggest picture changes between neighbouring path steps (mean 0-255): " + ", ".join(f"{c:.1f} at {j}->{j + 1} (frames {kept[j]}->{kept[j + 1]})" for c, j in worst))
 
     # One crop for every frame so nothing shifts between poses: union of the character bounds, full height.
     x0 = max(min(info[i]["box"][0] for i in kept) - 24, 0)
