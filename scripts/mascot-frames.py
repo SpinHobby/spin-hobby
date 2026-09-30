@@ -2,7 +2,7 @@
 Builds the cursor-tracking mascot frames for the storefront hero from a generated clip in which
 the mascot turns to follow an imaginary cursor against a flat red background.
 
-    python3 -m venv .venv && .venv/bin/pip install numpy opencv-python-headless
+    python3 -m venv .venv && .venv/bin/pip install numpy opencv-python-headless Pillow
     .venv/bin/python scripts/mascot-frames.py ~/Downloads/character.mp4
 
 Writes public/mascot-frames/*.webp (red keyed out, cropped to the character) and
@@ -21,11 +21,15 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 FRAMES_DIR = ROOT / "public" / "mascot-frames"
 DATA_FILE = ROOT / "src" / "v3" / "storefront" / "mascotFrames.generated.ts"
-OUT_WIDTH = 420          # ~2x the CSS width the hero uses
+OUT_WIDTH = 340          # ~1.4x the CSS width the hero uses
+WEBP_QUALITY = 72
+WEBP_ALPHA_QUALITY = 50  # the alpha channel compresses lossily too; edges stay clean at this size
+INBETWEENS = 2           # synthesized frames between each pair of kept frames (optical-flow warps)
 MIN_STEP = 0.02          # gaze change (unit circle) that keeps the next clip frame
 PIX_STEP = 1.6           # or this much mean picture change (0-255, on a 160px thumbnail): arm movement during a hold
 MAX_FRAMES = 90
@@ -150,7 +154,23 @@ def clean(bgr, d, hit, bg):
             overlapped = True
             mask = np.zeros(out.shape[:2], np.uint8)
             mask[y:y + th, x:x + tw] = cv2.dilate(tmask, np.ones((5, 5), np.uint8))
-            out = cv2.inpaint(out, mask, 4, cv2.INPAINT_TELEA)
+            # First decide which of the hidden pixels are her and which are background, by inpainting the
+            # silhouette itself; then fill colour only from character pixels (red near the arrow is replaced
+            # by the local character colour first), so no red bleeds into her; background pixels go back to red.
+            red, _, _, _, _ = masks(out)
+            silhouette = cv2.inpaint((~red).astype(np.uint8) * 255, mask, 6, cv2.INPAINT_TELEA) > 127
+            ring = (cv2.dilate(mask, np.ones((31, 31), np.uint8)) > 0) & (mask == 0)
+            char_ring = ring & ~red
+            if char_ring.any():
+                local = out[char_ring].mean(axis=0)
+                src = out.copy()
+                src[ring & red] = local
+                filled = cv2.inpaint(src, mask, 4, cv2.INPAINT_TELEA)
+                hidden = mask > 0
+                out[hidden & silhouette] = filled[hidden & silhouette]
+                out[hidden & ~silhouette] = bg
+            else:
+                out[mask > 0] = bg
         else:
             out[y:y + th, x:x + tw] = bg
     # Stray islands: click ripples and cursor remnants go; small bits low in the frame are lace and feet.
@@ -175,6 +195,43 @@ def key_out(bgr, bg):
     a = alpha[..., None]
     fg = np.where(a > 0, (bgr.astype(np.float32) - (1 - a) * bg.astype(np.float32)) / np.maximum(a, 1e-3), 0)
     return np.dstack([np.clip(fg, 0, 255), alpha * 255]).astype(np.uint8)
+
+
+_dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+
+
+def _premult(rgba):
+    a = rgba[..., 3:4].astype(np.float32) / 255
+    return np.dstack([rgba[..., :3].astype(np.float32) * a, a * 255])
+
+
+def _flow_gray(rgba):
+    """Luminance over a mid-grey backdrop, so edges against transparency are real edges for the flow."""
+    p = _premult(rgba)
+    a = p[..., 3:4] / 255
+    return cv2.cvtColor((p[..., :3] + (1 - a) * 128).astype(np.uint8), cv2.COLOR_BGR2GRAY)
+
+
+def flows(a, b):
+    """Dense optical flow both ways between two keyed frames."""
+    ga, gb = _flow_gray(a), _flow_gray(b)
+    return _dis.calc(ga, gb, None), _dis.calc(gb, ga, None)
+
+
+def inbetween(a, b, fab, fba, t):
+    """
+    The frame a fraction t of the way from a to b: each frame is warped toward that moment along its
+    flow and the two are blended (premultiplied, so transparent areas never bleed colour).
+    """
+    h, w = a.shape[:2]
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    pa, pb = _premult(a), _premult(b)
+    wa = cv2.remap(pa, xs - t * fab[..., 0], ys - t * fab[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    wb = cv2.remap(pb, xs + (1 - t) * fba[..., 0], ys + (1 - t) * fba[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+    out = (1 - t) * wa + t * wb
+    alpha = out[..., 3:4] / 255
+    rgb = np.where(alpha > 0, out[..., :3] / np.maximum(alpha, 1e-3), 0)
+    return np.dstack([np.clip(rgb, 0, 255), out[..., 3]]).astype(np.uint8)
 
 
 def main(clip):
@@ -257,24 +314,38 @@ def main(clip):
     out_h = round(OUT_WIDTH * H / (x1 - x0))
     face = ((rest["mid"][0] - x0) / (x1 - x0), rest["mid"][1] / H)
 
+    keyed = [cv2.resize(key_out(cleaned[i][0][:, x0:x1], bg), (OUT_WIDTH, out_h), interpolation=cv2.INTER_AREA) for i in kept]
+
+    # Synthesize in-betweens along the path so the browser has ~(INBETWEENS + 1)x the clip's frame rate to
+    # scrub through; their gaze directions are interpolated. The neutral frame's index moves accordingly.
+    sequence = []  # (image, gaze)
+    for j, img in enumerate(keyed):
+        sequence.append((img, unit[kept[j]]))
+        if j + 1 < len(keyed):
+            fab, fba = flows(img, keyed[j + 1])
+            for s in range(1, INBETWEENS + 1):
+                t = s / (INBETWEENS + 1)
+                g = tuple((1 - t) * unit[kept[j]][k] + t * unit[kept[j + 1]][k] for k in (0, 1))
+                sequence.append((inbetween(img, keyed[j + 1], fab, fba, t), g))
+    centre_out = centre * (INBETWEENS + 1)
+
     FRAMES_DIR.mkdir(parents=True, exist_ok=True)
     for old in FRAMES_DIR.glob("*.webp"):
         old.unlink()
     entries = []
-    for n, i in enumerate(kept):
-        rgba = key_out(cleaned[i][0][:, x0:x1], bg)
-        small = cv2.resize(rgba, (OUT_WIDTH, out_h), interpolation=cv2.INTER_AREA)
-        name = f"f{n:02d}.webp"
-        cv2.imwrite(str(FRAMES_DIR / name), small, [cv2.IMWRITE_WEBP_QUALITY, 82])
-        entries.append({"file": name, "x": round(unit[i][0], 3), "y": round(unit[i][1], 3)})
+    for n, (img, g) in enumerate(sequence):
+        name = f"f{n:03d}.webp"
+        Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)).save(FRAMES_DIR / name, "WEBP", quality=WEBP_QUALITY, alpha_quality=WEBP_ALPHA_QUALITY, method=5)
+        entries.append({"file": name, "x": round(float(g[0]), 3), "y": round(float(g[1]), 3)})
     total = sum(p.stat().st_size for p in FRAMES_DIR.glob("*.webp"))
-    print(f"wrote {len(entries)} frames to {FRAMES_DIR} ({total // 1024} kB total, {OUT_WIDTH}x{out_h}), background {bg.astype(int).tolist()} (BGR)")
+    print(f"wrote {len(entries)} frames ({len(kept)} from the clip + {INBETWEENS} in-betweens per pair) to {FRAMES_DIR} ({total // 1024} kB total, {OUT_WIDTH}x{out_h}), background {bg.astype(int).tolist()} (BGR)")
 
-    data = {"dir": "/mascot-frames", "width": OUT_WIDTH, "height": out_h, "face": {"x": round(face[0], 3), "y": round(face[1], 3)}, "center": centre, "frames": entries}
+    data = {"dir": "/mascot-frames", "width": OUT_WIDTH, "height": out_h, "face": {"x": round(face[0], 3), "y": round(face[1], 3)}, "center": centre_out, "substeps": INBETWEENS + 1, "frames": entries}
     DATA_FILE.write_text(
         "// Generated by scripts/mascot-frames.py - do not edit by hand.\n"
-        "// Frames in clip order, each with its gaze direction on a unit circle (x right, y down);\n"
-        "// `center` is the index of the neutral frame, where the mirrored path joins the original.\n"
+        "// Frames along the pose path (clip frames plus synthesized in-betweens), each with its gaze direction\n"
+        "// on a unit circle (x right, y down). `center` is the neutral frame, where the mirrored path joins the\n"
+        "// original; `substeps` is how many path steps make up one clip frame.\n"
         f"export const MASCOT_FRAMES = {json.dumps(data, indent=2)} as const;\n"
     )
     print(f"wrote {DATA_FILE.relative_to(ROOT)}")

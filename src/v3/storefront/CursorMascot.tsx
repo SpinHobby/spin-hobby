@@ -15,8 +15,8 @@ const LOOK_STIFFNESS = 34;
 const LOOK_DAMPING = 8.5;
 /** However fast the mouse moves, her attention travels at most this fast (units of reach per second). */
 const LOOK_MAX_SPEED = 1.8;
-/** Motion along the pose path is its own critically damped spring, capped in steps per second, so she
- *  eases into and out of every move and passes through the neutral frame without stopping. */
+/** Motion along the pose path is its own critically damped spring, capped in clip frames per second, so
+ *  she eases into and out of every move and passes through the neutral frame without stopping. */
 const PATH_STIFFNESS = 50;
 const PATH_DAMPING = 14;
 const PATH_MAX_SPEED = 80;
@@ -43,10 +43,11 @@ export function CursorMascot({ className }: { className?: string }) {
     const canvas = ref.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    const { dir, width, height, face, center, frames } = MASCOT_FRAMES;
+    const { dir, width, height, face, center, substeps, frames } = MASCOT_FRAMES;
     canvas.width = width;
     canvas.height = height;
     const n = frames.length;
+    const maxPathSpeed = PATH_MAX_SPEED * substeps; // path steps per second
     const gaze = (p: Pose) => ({ x: frames[p.index].x * p.side, y: frames[p.index].y });
     const flipped = (p: Pose) => p.side < 0 && p.index !== center;
 
@@ -83,14 +84,21 @@ export function CursorMascot({ className }: { className?: string }) {
      * gives sub-frame smoothness, and because the base frame is always opaque nothing turns see-through.
      */
     const render = () => {
-      const lo = Math.floor(position);
-      const hi = Math.ceil(position);
-      const frac = position - lo;
+      // The nearest loaded frames on either side of the position: while frames are still arriving she
+      // animates through whatever has loaded, and the gaps close as the rest land.
+      let lo = Math.floor(position);
+      while (lo >= 0 && !images[lo]) lo--;
+      let hi = Math.ceil(position);
+      while (hi < n && !images[hi]) hi++;
+      if (lo < 0 && hi >= n) return;
+      if (lo < 0) lo = hi;
+      else if (hi >= n) hi = lo;
+      const frac = hi === lo ? 0 : (position - lo) / (hi - lo);
       const key = `${side}:${lo}:${hi}:${frac.toFixed(3)}`;
-      if (key === drawn || !images[lo]) return;
+      if (key === drawn) return;
       ctx.clearRect(0, 0, width, height);
       paint({ index: lo, side }, 1);
-      if (hi !== lo && frac > 0.002 && images[hi]) paint({ index: hi, side }, frac);
+      if (hi !== lo && frac > 0.002) paint({ index: hi, side }, frac);
       ctx.globalAlpha = 1;
       drawn = key;
     };
@@ -100,7 +108,15 @@ export function CursorMascot({ className }: { className?: string }) {
     load(center).then(() => {
       if (disposed) return;
       render();
-      if (!isStatic) for (let i = 0; i < n; i++) if (i !== center) load(i);
+      if (isStatic) return;
+      // The clip's own frames first (every `substeps`-th), nearest the neutral pose first, so she can
+      // animate coarsely within moments; the synthesized in-betweens fill in behind them.
+      const order = [...Array(n).keys()].filter((i) => i !== center).sort((a, b) => {
+        const realA = a % substeps === 0 ? 0 : 1;
+        const realB = b % substeps === 0 ? 0 : 1;
+        return realA - realB || Math.abs(a - center) - Math.abs(b - center);
+      });
+      for (const i of order) load(i);
     });
     if (isStatic) return () => { disposed = true; };
 
@@ -175,7 +191,7 @@ export function CursorMascot({ className }: { className?: string }) {
       // A genuine change of direction (not a pass through the neutral frame) bleeds off speed first.
       if (dir !== 0 && lastDir !== 0 && dir !== lastDir) pathVel *= 0.25;
       pathVel += (remaining * PATH_STIFFNESS - pathVel * PATH_DAMPING) * dt;
-      pathVel = Math.max(0, Math.min(PATH_MAX_SPEED, pathVel));
+      pathVel = Math.max(0, Math.min(maxPathSpeed, pathVel));
       let move = Math.min(remaining, pathVel * dt);
       let crossed = false;
       if (dir !== 0 && move > 0 && destination.side !== side) {
