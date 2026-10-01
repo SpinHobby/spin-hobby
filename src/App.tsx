@@ -8,6 +8,7 @@ import { loadStoreConfig, type StoreConfig } from "./v3/storeConfig";
 const Admin = lazy(() => import("./v3/admin/Admin"));
 const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
+const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
       <Routes>
         <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
         <Route path="/legal/*" element={<Suspense fallback={null}><Legal /></Suspense>} />
+        <Route path="/reset-password" element={<Suspense fallback={null}><ResetPassword /></Suspense>} />
         <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
         <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
         <Route path="/*" element={<GatedApp />} />

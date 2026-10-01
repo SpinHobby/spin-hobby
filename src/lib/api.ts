@@ -124,15 +124,35 @@ export async function signIn(provider: OAuthProvider, returnPath = window.locati
   window.location.assign(url);
 }
 
-/** After Google/Discord, Supabase returns tokens in the URL hash. Turn them into a session. */
-export async function completeOAuthRedirect() {
+export interface AuthRedirectResult { type: string | null; error: string | null }
+
+/**
+ * After Google/Discord, or after a password-recovery email link, Supabase returns tokens (or an
+ * error) in the URL hash. Turns a success into a session; always reports what happened so callers
+ * that care (the reset-password page) can react — e.g. an expired recovery link.
+ */
+export async function completeOAuthRedirect(): Promise<AuthRedirectResult | null> {
   const hash = new URLSearchParams(window.location.hash.slice(1));
   const access = hash.get("access_token");
   const refresh = hash.get("refresh_token");
-  if (!access || !refresh) return;
+  const type = hash.get("type");
+  const error = hash.get("error_description") ?? hash.get("error_code") ?? hash.get("error");
+  if (!access || !refresh) return error ? { type, error } : null;
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
   const me = await request<{ user: AppUser }>("/auth/me", {}, access).catch(() => null);
-  if (me) setSession({ accessToken: access, refreshToken: refresh, expiresAt: Number(hash.get("expires_at") ?? Math.floor(Date.now() / 1000) + 3600), user: me.user });
+  if (!me) return { type, error: "Your session could not be loaded." };
+  setSession({ accessToken: access, refreshToken: refresh, expiresAt: Number(hash.get("expires_at") ?? Math.floor(Date.now() / 1000) + 3600), user: me.user });
+  return { type, error: null };
+}
+
+/** Requests a password-reset email; always resolves, even for an unknown address. */
+export async function requestPasswordReset(email: string, redirectTo: string) {
+  await request("/auth/reset", { method: "POST", body: JSON.stringify({ email: email.trim(), redirectTo }) }, null);
+}
+
+/** Sets a new password for the signed-in caller (a normal session or a temporary recovery one). */
+export async function updatePassword(password: string) {
+  await api("/auth/password", { method: "POST", body: JSON.stringify({ password }) });
 }
 
 export async function signOut() {

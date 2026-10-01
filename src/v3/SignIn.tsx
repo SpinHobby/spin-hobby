@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { authProviders, signIn, signInWithPassword, signUpWithPassword, type AuthProviders, type OAuthProvider } from "../lib/api";
+import { authProviders, requestPasswordReset, signIn, signInWithPassword, signUpWithPassword, type AuthProviders, type OAuthProvider } from "../lib/api";
 
 const LABEL: Record<OAuthProvider, string> = { google: "Continue with Google", discord: "Continue with Discord" };
 
@@ -12,10 +12,22 @@ export function SignInPanel({ returnPath, compact = false, allowSignup = false }
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [forgot, setForgot] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => { authProviders().then(setProviders); }, []);
 
   const oauth = (p: OAuthProvider) => { setError(""); signIn(p, returnPath).catch((e: Error) => setError(e.message)); };
+
+  const submitForgot = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError("");
+    try {
+      await requestPasswordReset(email, `${window.location.origin}/reset-password`);
+      setForgotSent(true);
+    } catch (err) { setError(friendly(err)); }
+    finally { setBusy(false); }
+  };
 
   // Email + password only: no emails are sent (Supabase's built-in mailer is heavily rate-limited).
   const submit = async (e: FormEvent) => {
@@ -35,6 +47,26 @@ export function SignInPanel({ returnPath, compact = false, allowSignup = false }
   const signingUp = canSignup && mode === "signup";
   // Staging: the admin username goes in the email box (sign-up still needs a real email).
   const usernameOk = Boolean(providers.username) && !signingUp;
+
+  if (forgot) {
+    return (
+      <div className={`sh-signin ${compact ? "sh-signin--compact" : ""}`}>
+        {forgotSent ? (
+          <div className="sh-signin__sent">Check your email for a reset link.</div>
+        ) : (
+          <form className="sh-signin__form" onSubmit={submitForgot}>
+            <input className="sh-input" type="email" required autoComplete="email"
+              placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+            <button className="sh-btn" disabled={busy}>{busy ? "Sending…" : "Send reset link"}</button>
+          </form>
+        )}
+        <div className="sh-signin__switch">
+          <button type="button" onClick={() => { setForgot(false); setForgotSent(false); setError(""); }}>← Back to sign in</button>
+        </div>
+        {error && <div className="sh-signin__error" role="alert">{error}</div>}
+      </div>
+    );
+  }
 
   return (
     <div className={`sh-signin ${compact ? "sh-signin--compact" : ""}`}>
@@ -58,6 +90,11 @@ export function SignInPanel({ returnPath, compact = false, allowSignup = false }
               {signingUp ? (busy ? "Creating account…" : "Create account") : (busy ? "Signing in…" : "Sign in")}
             </button>
           </form>
+          {!signingUp && (
+            <div className="sh-signin__switch">
+              <button type="button" onClick={() => { setForgot(true); setError(""); }}>Forgot password?</button>
+            </div>
+          )}
           {canSignup && (
             <div className="sh-signin__switch">
               {signingUp ? "Already have an account?" : "New to Spin Hobby?"}{" "}
