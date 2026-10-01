@@ -285,6 +285,21 @@
 
 .sf-grid.is-refreshing, .sf-list.is-refreshing { opacity: .55; transition: opacity .15s; }
 .sf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+// Compact layout: the same cards at about two thirds the size, so roughly twice as many fit on screen.
+.sf-grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px;
+  .sf-card { border-radius: 10px; }
+  .sf-card__badge { font-size: 9px; padding: 2px 6px; left: 6px; top: 6px; }
+  .sf-card__off { font-size: 10px; padding: 2px 6px; left: 6px; bottom: 6px; }
+  .sf-card__wish { width: 26px; height: 26px; font-size: 12px; top: 4px; right: 4px; }
+  .sf-card__body { padding: 6px 8px 0; gap: 1px; }
+  .sf-card__series { display: none; }
+  .sf-card__name { font-size: 12px; min-height: 31px; }
+  .sf-card__price { margin-top: 2px; strong { font-size: 14px; } s { font-size: 11px; } }
+  .sf-card__status { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sf-card__foot { padding: 6px 8px 8px; }
+  .sf-buy { padding: 6px 0; font-size: 12px; border-radius: 8px; }
+}
 
 .sf-img {
   position: relative; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; background-color: var(--surface2);
@@ -444,6 +459,7 @@
   .sf-promos { grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(110px, auto); }
   .sf-promo { padding: 14px 16px; border-radius: 16px; &__title { font-size: 17px; } &__eyebrow { font-size: 11px; } }
   .sf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sf-grid--compact { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .sf-sort-label { display: none; }
   .sf-row__price { min-width: 0; text-align: left; }
 }

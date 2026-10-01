@@ -41,7 +41,8 @@ export default function Storefront() {
 
   const [filters, setFilters] = useState<Filters>({ nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", sort: "featured", query: "" });
   const [draftQuery, setDraftQuery] = useState("");
-  const [view, setView] = useLocalState<"grid" | "list">("spinhobby-view", "grid");
+  // How the shop lists products: cards, smaller cards (more per screen), or rows.
+  const [view, setView] = useLocalState<"grid" | "compact" | "list">("spinhobby-view", "grid");
   const [wishOnly, setWishOnly] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -338,13 +339,14 @@ export default function Storefront() {
                 </select>
                 <div className="sf-seg" role="group" aria-label="Layout">
                   <button type="button" className={view === "grid" ? "is-active" : ""} aria-pressed={view === "grid"} onClick={() => setView("grid")}>Grid</button>
+                  <button type="button" className={view === "compact" ? "is-active" : ""} aria-pressed={view === "compact"} onClick={() => setView("compact")} title="Smaller cards, more products per screen">Compact</button>
                   <button type="button" className={view === "list" ? "is-active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}>List</button>
                 </div>
               </div>
             </div>
 
             {results.loading && !results.items.length ? (
-              <div className="sf-grid" aria-busy="true" aria-label="Loading products">
+              <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""}`} aria-busy="true" aria-label="Loading products">
                 {Array.from({ length: 10 }, (_, i) => (
                   <div key={i} className="sf-card sf-card--skeleton"><div className="sh-skeleton" style={{ aspectRatio: "1" }} /><div className="sh-skeleton" style={{ height: 14, margin: "12px 12px 6px" }} /><div className="sh-skeleton" style={{ height: 14, width: "50%", margin: "0 12px 14px" }} /></div>
                 ))}
@@ -368,8 +370,8 @@ export default function Storefront() {
                 <span>{wishOnly ? "Tap ♡ on any product to save it here." : "Try another category or clear filters. New stock is added weekly."}</span>
                 <button type="button" className="sh-btn sh-btn--ghost" onClick={clearFilters}>Clear filters</button>
               </div>
-            ) : view === "grid" ? (
-              <div className={`sf-grid ${results.loading ? "is-refreshing" : ""}`}>{results.items.map((p) => <ProductCard key={p.id} p={p} a={actions} />)}</div>
+            ) : view !== "list" ? (
+              <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""} ${results.loading ? "is-refreshing" : ""}`}>{results.items.map((p) => <ProductCard key={p.id} p={p} a={actions} />)}</div>
             ) : (
               <div className={`sf-panel sf-list ${results.loading ? "is-refreshing" : ""}`}>{results.items.map((p) => <ProductRow key={p.id} p={p} a={actions} />)}</div>
             )}
