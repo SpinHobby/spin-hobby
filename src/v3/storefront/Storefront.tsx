@@ -13,7 +13,6 @@ import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
 import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
-import { CursorMascot } from "./CursorMascot";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SUPPORT_EMAIL } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
@@ -440,7 +439,7 @@ export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
         ) : (
           <>
             <div className="sf-hero__sun" />
-            <CursorMascot className="sf-hero__mascot" />
+            <img className="sf-hero__mascot" src={MASCOT} alt="Spin Hobby mascot" />
           </>
         )}
         <div className="sf-hero__copy" aria-live="polite">
