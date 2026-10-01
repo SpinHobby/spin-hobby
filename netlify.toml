@@ -10,9 +10,9 @@
   to = "/index.html"
   status = 200
 
-# Staging: pushes to the `staging` branch deploy to https://staging--spinhobby.netlify.app
-# (enable it under Site configuration > Build & deploy > Branches and deploy contexts >
-# Branch deploys: "staging"). It talks to the staging API, never production.
+# Staging: the `staging` branch is deployed as its own Netlify site, https://spin-hobby-staging.netlify.app
+# (a branch deploy of the main site would be https://staging--spinhobby.netlify.app). Either way it talks
+# to the staging API, never production.
 [context.staging.environment]
   VITE_API_URL = "https://spin-hobby-server-staging.onrender.com"
   VITE_APP_ENV = "staging"

@@ -174,7 +174,7 @@ export default function Checkout() {
       <header className="co-head">
         <div className="co-wrap co-head__row">
           <a href="/" className="co-logo"><img src={LOGO} alt="Spin Hobby" /></a>
-          <span className="co-head__secure">🔒 Secure checkout</span>
+          <h1 className="co-head__secure">🔒 Secure checkout</h1>
           <a href="/" className="co-head__back">← Continue shopping</a>
         </div>
       </header>
@@ -182,29 +182,32 @@ export default function Checkout() {
       {cart.lines.length === 0 ? (
         <div className="co-wrap co-empty">
           <img src={MASCOT} alt="" />
-          <h1 className="sh-display">Your cart is empty</h1>
+          <h2 className="sh-display">Your cart is empty</h2>
           <p>Add something from the shop and come back here to check out.</p>
           <a href="/" className="sh-btn">Back to the shop</a>
         </div>
       ) : (
         <div className="co-wrap co-grid">
-          <main className="co-form">
-            <h1 className="sh-display co-title">Checkout</h1>
-
-            <section className="co-card">
+          {/* One panel, four short sections: the whole form fits a laptop screen without scrolling. */}
+          <main className="co-form co-card">
+            <section className="co-section">
               <h2>Contact</h2>
-              <Field label="Email" error={(touched || blurred.has("email")) && !emailOk ? "Enter a valid email" : undefined}>
-                <input className="sh-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => leave("email")} placeholder="you@example.com" />
-              </Field>
-              <p className="co-note">Your receipt and shipping updates go here.{!auth.email && " Sign in from the shop to save orders to your account."}</p>
+              <div className="co-contact">
+                <Field label="Email" error={(touched || blurred.has("email")) && !emailOk ? "Enter a valid email" : undefined}>
+                  <input className="sh-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => leave("email")} placeholder="you@example.com" />
+                </Field>
+                <Field label="Phone (optional)">
+                  <input className="sh-input" type="tel" autoComplete="tel" value={ship.phone} onChange={(e) => setShip({ ...ship, phone: e.target.value })} />
+                </Field>
+              </div>
             </section>
 
-            <section className="co-card">
+            <section className="co-section">
               <h2>Shipping address</h2>
               <AddressForm value={ship} onChange={setShip} errors={(k) => show(shipErrors, "shipping", k)} onBlur={(k) => leave(`shipping.${k}`)} regions={regions} prefix="shipping" />
             </section>
 
-            <section className="co-card">
+            <section className="co-section">
               <h2>Shipping method</h2>
               <div className="co-methods">
                 {(["standard", "express"] as const).map((m) => {
@@ -222,20 +225,16 @@ export default function Checkout() {
                 })}
               </div>
               {method === "standard" && freeLeft > 0 && <p className="co-note">Add {money(freeLeft)} more for free standard shipping.</p>}
-            </section>
-
-            <section className="co-card">
-              <h2>Billing address</h2>
-              <label className="co-check"><input type="checkbox" checked={billingSame} onChange={(e) => setBillingSame(e.target.checked)} />Same as shipping address</label>
+              <label className="co-check"><input type="checkbox" checked={billingSame} onChange={(e) => setBillingSame(e.target.checked)} />Billing address is the same as the shipping address</label>
               {!billingSame && <AddressForm value={bill} onChange={setBill} errors={(k) => show(billErrors, "billing", k)} onBlur={(k) => leave(`billing.${k}`)} regions={bill.country === "CA" ? PROVINCES : STATES} prefix="billing" />}
             </section>
 
-            <section className="co-card">
+            <section className="co-section">
               <h2>Payment</h2>
               {configError ? (
                 <div className="co-alert">{configError} Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> and we'll send you an invoice.</div>
               ) : !config ? (
-                <div className="sh-skeleton" style={{ height: 48 }} />
+                <div className="sh-skeleton" style={{ height: 44 }} />
               ) : (
                 <>
                   {!formValid && touched && <div className="co-alert">Check the highlighted fields above.</div>}
@@ -263,12 +262,11 @@ export default function Checkout() {
                 const unit = quote?.lines.find((q) => q.variationId === l.variationId)?.unitPriceCents ?? l.unitPriceCents;
                 return (
                   <div key={l.variationId} className="co-line">
-                    <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 56, height: 56 }}>
+                    <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 48, height: 48 }}>
                       {l.imageUrl && <img src={l.imageUrl} alt="" />}
                     </div>
                     <div className="co-line__main">
-                      <span>{l.name}</span>
-                      {l.isPreorder && <span className="co-pre">Pre-order</span>}
+                      <span>{l.name}{l.isPreorder && <span className="co-pre">Pre-order</span>}</span>
                       <div className="co-qty" aria-label={`Quantity for ${l.name}`}>
                         <button type="button" onClick={() => cart.setQty(l.variationId, l.quantity - 1)} aria-label="Decrease">−</button>
                         <span>{l.quantity}</span>
@@ -329,7 +327,7 @@ function AddressForm({ value, onChange, errors, onBlur, regions, prefix }: {
   const left = (k: keyof Address) => () => onBlur(k);
   return (
     <div className="co-address">
-      <Field label="Country" className="co-span2">
+      <Field label="Country">
         <select className="sh-input" value={value.country} onChange={set("country")} autoComplete={ac("country")}>
           <option value="CA">Canada</option><option value="US">United States</option>
         </select>
@@ -337,7 +335,7 @@ function AddressForm({ value, onChange, errors, onBlur, regions, prefix }: {
       <Field label="First name" error={errors("firstName")}><input className="sh-input" value={value.firstName} onChange={set("firstName")} onBlur={left("firstName")} autoComplete={ac("given-name")} /></Field>
       <Field label="Last name" error={errors("lastName")}><input className="sh-input" value={value.lastName} onChange={set("lastName")} onBlur={left("lastName")} autoComplete={ac("family-name")} /></Field>
       <Field label="Address" error={errors("address1")} className="co-span2"><input className="sh-input" value={value.address1} onChange={set("address1")} onBlur={left("address1")} autoComplete={ac("address-line1")} /></Field>
-      <Field label="Apartment, suite (optional)" className="co-span2"><input className="sh-input" value={value.address2} onChange={set("address2")} autoComplete={ac("address-line2")} /></Field>
+      <Field label="Apt, suite (optional)"><input className="sh-input" value={value.address2} onChange={set("address2")} autoComplete={ac("address-line2")} /></Field>
       <Field label="City" error={errors("city")}><input className="sh-input" value={value.city} onChange={set("city")} onBlur={left("city")} autoComplete={ac("address-level2")} /></Field>
       <Field label={value.country === "CA" ? "Province" : "State"}>
         <select className="sh-input" value={value.province} onChange={set("province")} autoComplete={ac("address-level1")}>
@@ -345,7 +343,6 @@ function AddressForm({ value, onChange, errors, onBlur, regions, prefix }: {
         </select>
       </Field>
       <Field label={value.country === "CA" ? "Postal code" : "ZIP code"} error={errors("postalCode")}><input className="sh-input" value={value.postalCode} onChange={set("postalCode")} onBlur={left("postalCode")} autoComplete={ac("postal-code")} /></Field>
-      <Field label="Phone (optional)"><input className="sh-input" type="tel" value={value.phone} onChange={set("phone")} autoComplete={ac("tel")} /></Field>
     </div>
   );
 }
