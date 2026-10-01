@@ -155,6 +155,11 @@ export async function updatePassword(password: string) {
   await api("/auth/password", { method: "POST", body: JSON.stringify({ password }) });
 }
 
+/** True when this page was opened from a password-reset email (its tokens are still in the URL). */
+export function isRecoveryLink() {
+  return new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
+}
+
 export async function signOut() {
   const token = session?.accessToken;
   setSession(null);

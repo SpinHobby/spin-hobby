@@ -3,12 +3,19 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Storefront from "./v3/storefront/Storefront";
 import MaintenancePage from "./v3/MaintenancePage";
 import { loadStoreConfig, type StoreConfig } from "./v3/storeConfig";
+import { isRecoveryLink } from "./lib/api";
 
 // The admin bundle is only downloaded by staff visiting /admin.
 const Admin = lazy(() => import("./v3/admin/Admin"));
 const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
+
+// A password-reset email can only point at one address (Supabase's Site URL unless the redirect is
+// allow-listed), so wherever its link lands, finish on the reset page before anything else runs.
+if (isRecoveryLink() && !window.location.pathname.startsWith("/reset-password")) {
+  window.history.replaceState(null, "", `/reset-password${window.location.hash}`);
+}
 
 export default function App() {
   return (
