@@ -14,6 +14,7 @@ function syncAgo(iso: string | null | undefined) {
   return `${relativeAge(iso)} ago`;
 }
 import { useAuth, useTheme, useToast } from "../hooks";
+import { useDocumentHead } from "../seo";
 import { SCREENS, useAdminData, type Screen } from "./data";
 import { CategoriesScreen } from "./Categories";
 import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, SettingsScreen, type Ctx } from "./Screens";
@@ -21,6 +22,7 @@ import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, Settings
 const LOGO = "/logo/logo%20cropped.png";
 
 export default function Admin() {
+  useDocumentHead({ title: "Admin | Spin Hobby", description: "Admin", path: "/admin", noindex: true });
   const auth = useAuth();
   const { theme, toggle } = useTheme();
   const { toast, flash } = useToast();

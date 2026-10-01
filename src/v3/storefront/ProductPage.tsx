@@ -1,13 +1,36 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import type { CategoryTree } from "../categoryTree";
 import { dayLabel, discountPct, handlingLabel, money, monthLabel, normalizeStatus, STATUS_META, statusLabel, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
+import { SITE_URL, useDocumentHead } from "../seo";
 import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions } from "./ProductViews";
+
+function productJsonLd(p: Product) {
+  const availability = normalizeStatus(p.status) === "out" ? "https://schema.org/OutOfStock"
+    : normalizeStatus(p.status) === "pre" ? "https://schema.org/PreOrder"
+    : "https://schema.org/InStock";
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: p.name,
+    image: p.images,
+    ...(p.description ? { description: p.description } : {}),
+    ...(p.janCode ? { sku: p.janCode } : {}),
+    offers: {
+      "@type": "Offer",
+      priceCurrency: p.currency,
+      price: (p.priceCents / 100).toFixed(2),
+      availability,
+      url: `${SITE_URL}${productPath(p)}`,
+    },
+  };
+}
 
 const RELATED = 8;
 
@@ -62,15 +85,23 @@ export function ProductPage({ id, initial, a, tree, cartQty, onAddQty, onViewCar
     return () => { live = false; };
   }, [id, hasProduct, categoryId, series]);
 
-  // Tab title and a canonical-looking URL once the name is known.
+  // A canonical-looking URL (with the name slug) once the name is known.
+  const navigate = useNavigate();
+  const location = useLocation();
   useEffect(() => {
     if (!p) return;
-    const prev = document.title;
-    document.title = `${p.name} | Spin Hobby`;
     const path = productPath(p);
-    if (window.location.pathname !== path) window.history.replaceState(window.history.state, "", path + window.location.search);
-    return () => { document.title = prev; };
-  }, [p]);
+    if (location.pathname !== path) navigate(path + location.search, { replace: true, state: location.state });
+  }, [p, location.pathname, location.search, location.state, navigate]);
+
+  useDocumentHead({
+    title: p ? `${p.name} | Spin Hobby` : "Spin Hobby",
+    description: (p?.description && p.description.slice(0, 160))
+      || (p ? `${p.name} — official anime figures, plushies and goods from Spin Hobby.` : "Official anime figures, plushies and goods, shipped across Canada and the US."),
+    path: p ? productPath(p) : location.pathname,
+    image: p?.images[0] ?? null,
+    jsonLd: p ? productJsonLd(p) : null,
+  });
 
   if (missing && !p) {
     return (

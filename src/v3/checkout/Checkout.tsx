@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import "../tokens.scss";
 import "./checkout.scss";
 import { api } from "../../lib/api";
 import { money } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
+import { useDocumentHead } from "../seo";
 import { loadStoreConfig } from "../storeConfig";
 import { useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
@@ -41,6 +43,8 @@ function addressErrors(a: Address) {
 
 export default function Checkout() {
   useTheme();
+  const location = useLocation();
+  useDocumentHead({ title: "Checkout | Spin Hobby", description: "Checkout", path: location.pathname, noindex: true });
   const auth = useAuth();
   const cart = useCart();
   const [email, setEmail] = useLocalState("spinhobby-checkout-email", "");
@@ -163,7 +167,7 @@ export default function Checkout() {
   };
 
   if (done) return <Success orderId={done.orderId} preorder={done.status === "preorder_reserved"} email={email} />;
-  const returning = window.location.pathname.startsWith("/checkout/success") ? Number(new URLSearchParams(window.location.search).get("order")) : 0;
+  const returning = location.pathname.startsWith("/checkout/success") ? Number(new URLSearchParams(window.location.search).get("order")) : 0;
   if (returning) return <Success orderId={returning} preorder={false} email={email} />;
 
   const regions = ship.country === "CA" ? PROVINCES : STATES;

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Storefront from "./v3/storefront/Storefront";
 import MaintenancePage from "./v3/MaintenancePage";
 import { loadStoreConfig, type StoreConfig } from "./v3/storeConfig";
@@ -9,34 +10,39 @@ const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
 
 export default function App() {
-  const path = window.location.pathname;
-  const isAdmin = path.startsWith("/admin");
-  const isLegal = path.startsWith("/legal") || path.startsWith("/terms") || path.startsWith("/privacy");
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
+        <Route path="/legal/*" element={<Suspense fallback={null}><Legal /></Suspense>} />
+        <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
+        <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
+        <Route path="/*" element={<GatedApp />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+/** Everything other than admin/legal: gated by maintenance mode. */
+function GatedApp() {
   // undefined = still checking; null = config fetch failed, fail open rather
   // than blocking the whole storefront on a flag we couldn't read.
   const [config, setConfig] = useState<StoreConfig | null | undefined>(undefined);
 
   useEffect(() => {
-    if (isAdmin || isLegal) return; // staff must always reach /admin; legal pages stay up too
     loadStoreConfig().then(setConfig);
-  }, [isAdmin, isLegal]);
+  }, []);
 
-  // Admin and the legal pages always render immediately, regardless of
-  // maintenance mode or the config fetch above.
-  if (isAdmin) {
-    return <Suspense fallback={null}><Admin /></Suspense>;
-  }
-  if (isLegal) {
-    return <Suspense fallback={null}><Legal /></Suspense>;
-  }
   if (config === undefined) {
     return null;
   }
   if (config?.maintenanceMode) {
     return <MaintenancePage message={config.maintenanceMessage} />;
   }
-  if (window.location.pathname.startsWith("/checkout")) {
-    return <Suspense fallback={null}><Checkout /></Suspense>;
-  }
-  return <Storefront />;
+  return (
+    <Routes>
+      <Route path="/checkout/*" element={<Suspense fallback={null}><Checkout /></Suspense>} />
+      <Route path="/*" element={<Storefront />} />
+    </Routes>
+  );
 }

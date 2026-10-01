@@ -1,8 +1,10 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../tokens.scss";
 import "./storefront.scss";
 import { dayLabel, normalizeStatus, type Currency } from "../format";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
+import { useDocumentHead } from "../seo";
 import type { Product, StoreEvent } from "../types";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import {
@@ -62,36 +64,42 @@ export default function Storefront() {
 
   // Product pages live at /product/<id> and share the header, cart and footer with the shop.
   // Back returns to the same scroll position in the shop.
-  const [route, setRoute] = useState<{ productId: string | null; initial: Product | null }>(
-    () => ({ productId: productIdFromPath(window.location.pathname), initial: null }));
+  const location = useLocation();
+  const navigate = useNavigate();
+  const productId = productIdFromPath(location.pathname);
+  const initialProduct = (location.state as { product?: Product } | null)?.product ?? null;
+  const scrollMemory = useRef(new Map<string, number>()).current;
+
   useEffect(() => {
     if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
     const legacy = new URLSearchParams(window.location.search).get("product"); // old ?product= popup links
     if (legacy && !productIdFromPath(window.location.pathname)) {
-      window.history.replaceState(null, "", `/product/${encodeURIComponent(legacy)}`);
-      setRoute({ productId: legacy, initial: null });
+      navigate(`/product/${encodeURIComponent(legacy)}`, { replace: true });
     }
-    const onPop = () => {
-      const productId = productIdFromPath(window.location.pathname);
-      setRoute({ productId, initial: null });
-      const y = productId ? 0 : (window.history.state as { scrollY?: number } | null)?.scrollY ?? 0;
-      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (productId) { window.scrollTo(0, 0); return; }
+    const y = scrollMemory.get(location.key) ?? 0;
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+  }, [location.key, productId, scrollMemory]);
+
   const openProduct = useCallback((p: Product) => {
-    window.history.replaceState({ ...(window.history.state ?? {}), scrollY: window.scrollY }, "");
-    window.history.pushState({ product: p.id }, "", productPath(p));
-    setRoute({ productId: p.id, initial: p });
-    window.scrollTo(0, 0);
-  }, []);
+    scrollMemory.set(location.key, window.scrollY);
+    navigate(productPath(p), { state: { product: p } });
+  }, [navigate, location.key, scrollMemory]);
   /** Header and footer controls act on the shop, so leave the product page first. */
   const leaveProduct = () => {
-    if (!route.productId) return;
-    window.history.pushState(null, "", "/");
-    setRoute({ productId: null, initial: null });
+    if (!productId) return;
+    navigate("/");
   };
+
+  useDocumentHead({
+    enabled: !productId,
+    title: "Spin Hobby | Anime Figures, Plushies & Goods",
+    description: "Official anime figures, plushies, trading cards and goods, shipped across Canada and the US. Pre-orders, weekly new arrivals and restock alerts.",
+    path: "/",
+  });
 
   const home = store.home;
   const facets = store.facets;
@@ -227,14 +235,14 @@ export default function Storefront() {
         </div>
         <nav className="sf-wrap sf-nav" aria-label="Shop sections">
           {NAV.map((n) => (
-            <button key={n} type="button" className={filters.nav === n && !wishOnly && !route.productId ? "is-active" : ""} aria-current={filters.nav === n && !route.productId ? "page" : undefined} onClick={() => setNav(n)}>{n}</button>
+            <button key={n} type="button" className={filters.nav === n && !wishOnly && !productId ? "is-active" : ""} aria-current={filters.nav === n && !productId ? "page" : undefined} onClick={() => setNav(n)}>{n}</button>
           ))}
         </nav>
       </header>
 
-      {route.productId ? (
+      {productId ? (
         <div className="sf-wrap">
-          <ProductPage id={route.productId} initial={route.initial} a={actions} tree={tree}
+          <ProductPage id={productId} initial={initialProduct} a={actions} tree={tree}
             cartQty={cart.qtyOf} onAddQty={(p, qty) => cart.add(p, qty)}
             onViewCart={() => setCartOpen(true)} onToast={flash}
             onCategory={(id) => setCategory(`id:${id}`)}
