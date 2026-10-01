@@ -59,6 +59,7 @@ export default function Checkout() {
   const [payError, setPayError] = useState("");
   const [done, setDone] = useState<{ orderId: number; status: string } | null>(null);
   const orderIdRef = useRef<number | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false); // phones: the order summary folds away above the form
 
   useEffect(() => { if (!email && auth.email) setEmail(auth.email); }, [auth.email, email, setEmail]);
 
@@ -169,49 +170,65 @@ export default function Checkout() {
   const show = (errs: Partial<Record<keyof Address, string>>, prefix: string, k: keyof Address) => (touched || blurred.has(`${prefix}.${k}`) ? errs[k] : undefined);
   const freeLeft = config ? Math.max(config.freeShippingThresholdCents - (quote?.subtotalCents ?? cart.subtotal), 0) : 0;
 
-  return (
-    <div className="sh co">
-      <header className="co-head">
-        <div className="co-wrap co-head__row">
-          <a href="/" className="co-logo"><img src={LOGO} alt="Spin Hobby" /></a>
-          <h1 className="co-head__secure">🔒 Secure checkout</h1>
-          <a href="/" className="co-head__back">← Continue shopping</a>
-        </div>
-      </header>
+  const shipOk = Object.keys(shipErrors).length === 0;
+  const itemCount = cart.lines.reduce((n, l) => n + l.quantity, 0);
+  const threshold = config?.freeShippingThresholdCents ?? 7500;
+  const subtotal = quote?.subtotalCents ?? cart.subtotal;
+  const totalLabel = quote ? money(quote.totalCents) : "—";
 
-      {cart.lines.length === 0 ? (
-        <div className="co-wrap co-empty">
+  if (cart.lines.length === 0) {
+    return (
+      <div className="sh co">
+        <header className="co-bar"><div className="co-bar__row"><a href="/" className="co-logo"><img src={LOGO} alt="Spin Hobby" /></a></div></header>
+        <div className="co-empty">
           <img src={MASCOT} alt="" />
-          <h2 className="sh-display">Your cart is empty</h2>
+          <h1 className="sh-display">Your cart is empty</h1>
           <p>Add something from the shop and come back here to check out.</p>
           <a href="/" className="sh-btn">Back to the shop</a>
         </div>
-      ) : (
-        <div className="co-wrap co-grid">
-          {/* One panel, four short sections: the whole form fits a laptop screen without scrolling. */}
-          <main className="co-form co-card">
-            <section className="co-section">
-              <h2>Contact</h2>
-              <div className="co-contact">
-                <Field label="Email" error={(touched || blurred.has("email")) && !emailOk ? "Enter a valid email" : undefined}>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sh co">
+      <div className="co-split">
+        <main className="co-main">
+          <div className="co-main__inner">
+            <header className="co-top">
+              <a href="/" className="co-logo"><img src={LOGO} alt="Spin Hobby" /></a>
+              <a href="/" className="co-back">← Continue shopping</a>
+            </header>
+
+            <div className="co-heading">
+              <h1 className="sh-display co-title">Checkout</h1>
+              <ol className="co-steps" aria-label="Progress">
+                <li className={emailOk ? "is-done" : ""}><span>{emailOk ? "✓" : "1"}</span>Contact</li>
+                <li className={shipOk ? "is-done" : ""}><span>{shipOk ? "✓" : "2"}</span>Shipping</li>
+                <li className={canPay ? "is-done" : ""}><span>{canPay ? "✓" : "3"}</span>Payment</li>
+              </ol>
+            </div>
+
+            <section className="co-section" aria-labelledby="co-h-contact">
+              <h2 id="co-h-contact"><i>1</i>Contact</h2>
+              <div className="co-fields">
+                <Field label="Email" className="co-c4" error={(touched || blurred.has("email")) && !emailOk ? "Enter a valid email" : undefined}>
                   <input className="sh-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => leave("email")} placeholder="you@example.com" />
                 </Field>
-                <Field label="Phone (optional)">
+                <Field label="Phone (optional)" className="co-c2">
                   <input className="sh-input" type="tel" autoComplete="tel" value={ship.phone} onChange={(e) => setShip({ ...ship, phone: e.target.value })} />
                 </Field>
               </div>
+              <p className="co-note">Your receipt and shipping updates go here.{!auth.email && " Sign in from the shop to save orders to your account."}</p>
             </section>
 
-            <section className="co-section">
-              <h2>Shipping address</h2>
-              <AddressForm value={ship} onChange={setShip} errors={(k) => show(shipErrors, "shipping", k)} onBlur={(k) => leave(`shipping.${k}`)} regions={regions} prefix="shipping" />
-            </section>
-
-            <section className="co-section">
-              <h2>Shipping method</h2>
+            <section className="co-section" aria-labelledby="co-h-ship">
+              <h2 id="co-h-ship"><i>2</i>Shipping</h2>
+              <AddressForm value={ship} onChange={setShip} errors={(k) => show(shipErrors, "shipping", k)} onBlur={(k) => leave(`shipping.${k}`)} regions={regions} prefix="shipping" phone={false} />
+              <h3>Delivery</h3>
               <div className="co-methods">
                 {(["standard", "express"] as const).map((m) => {
-                  const price = m === "express" ? config?.shippingExpressCents : (quote?.subtotalCents ?? cart.subtotal) >= (config?.freeShippingThresholdCents ?? 7500) ? 0 : config?.shippingStandardCents;
+                  const price = m === "express" ? config?.shippingExpressCents : subtotal >= threshold ? 0 : config?.shippingStandardCents;
                   return (
                     <label key={m} className={`co-method ${method === m ? "is-active" : ""}`}>
                       <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} />
@@ -219,66 +236,89 @@ export default function Checkout() {
                         <b>{m === "express" ? "Express" : "Standard"}</b>
                         <span>{m === "express" ? "2–3 business days, tracked" : "5–7 business days, tracked"}</span>
                       </span>
-                      <b>{price === undefined ? "—" : price === 0 ? "Free" : money(price)}</b>
+                      <b className="co-method__price">{price === undefined ? "—" : price === 0 ? "Free" : money(price)}</b>
                     </label>
                   );
                 })}
               </div>
               {method === "standard" && freeLeft > 0 && <p className="co-note">Add {money(freeLeft)} more for free standard shipping.</p>}
-              <label className="co-check"><input type="checkbox" checked={billingSame} onChange={(e) => setBillingSame(e.target.checked)} />Billing address is the same as the shipping address</label>
-              {!billingSame && <AddressForm value={bill} onChange={setBill} errors={(k) => show(billErrors, "billing", k)} onBlur={(k) => leave(`billing.${k}`)} regions={bill.country === "CA" ? PROVINCES : STATES} prefix="billing" />}
             </section>
 
-            <section className="co-section">
-              <h2>Payment</h2>
+            <section className="co-section" aria-labelledby="co-h-pay">
+              <h2 id="co-h-pay"><i>3</i>Payment</h2>
+              <div className="co-accepted" aria-label="Accepted payment methods">
+                {(config?.provider === "square" ? ["Visa", "Mastercard", "Amex", "Debit"] : ["PayPal", "Visa", "Mastercard", "Amex"]).map((m) => <span key={m}>{m}</span>)}
+                <span className="co-accepted__note">All transactions are encrypted.</span>
+              </div>
               {configError ? (
                 <div className="co-alert">{configError} Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> and we'll send you an invoice.</div>
               ) : !config ? (
-                <div className="sh-skeleton" style={{ height: 44 }} />
+                <div className="sh-skeleton" style={{ height: 48 }} />
               ) : (
-                <>
+                <div className="co-paybox">
                   {!formValid && touched && <div className="co-alert">Check the highlighted fields above.</div>}
                   {config.provider === "paypal" && config.paypalClientId ? (
                     <PayPalPay clientId={config.paypalClientId} disabled={!canPay} createOrder={onPayPalCreate} onApprove={onPayPalApprove} onError={setPayError} />
                   ) : config.provider === "square" ? (
-                    <SquarePay config={config} disabled={!quoteOk || quoting} amountLabel={quote ? money(quote.totalCents) : "—"} pay={onSquarePay} onError={setPayError}
+                    <SquarePay config={config} disabled={!quoteOk || quoting} amountLabel={totalLabel} pay={onSquarePay} onError={setPayError}
                       billing={{ givenName: ship.firstName, familyName: ship.lastName, email, countryCode: ship.country, city: ship.city, postalCode: ship.postalCode, addressLines: [ship.address1, ship.address2].filter(Boolean) }} />
                   ) : (
                     <div className="co-alert">Online payment isn't available right now. Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</div>
                   )}
                   {!canPay && hint && ((config.provider === "paypal" && config.paypalClientId) || config.provider === "square") && <p className="co-note co-hint" aria-live="polite">{hint}</p>}
                   {payError && <div className="co-alert co-alert--error" role="alert">{payError}</div>}
-                </>
+                </div>
               )}
+              <h3>Billing address</h3>
+              <label className="co-check"><input type="checkbox" checked={billingSame} onChange={(e) => setBillingSame(e.target.checked)} />Same as the shipping address</label>
+              {!billingSame && <AddressForm value={bill} onChange={setBill} errors={(k) => show(billErrors, "billing", k)} onBlur={(k) => leave(`billing.${k}`)} regions={bill.country === "CA" ? PROVINCES : STATES} prefix="billing" phone={false} />}
               <p className="co-note">Charged in CAD. Pre-order items are charged now and ship on release.</p>
             </section>
-          </main>
 
-          <aside className="co-summary">
-            <div className="co-card co-card--sticky">
-              <h2>Order summary</h2>
-              {cart.lines.map((l) => {
-                // Quantities come straight from the cart so the steppers respond at once; prices from the server's quote once it lands.
-                const unit = quote?.lines.find((q) => q.variationId === l.variationId)?.unitPriceCents ?? l.unitPriceCents;
-                return (
-                  <div key={l.variationId} className="co-line">
-                    <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 48, height: 48 }}>
-                      {l.imageUrl && <img src={l.imageUrl} alt="" />}
-                    </div>
-                    <div className="co-line__main">
-                      <span>{l.name}{l.isPreorder && <span className="co-pre">Pre-order</span>}</span>
-                      <div className="co-qty" aria-label={`Quantity for ${l.name}`}>
-                        <button type="button" onClick={() => cart.setQty(l.variationId, l.quantity - 1)} aria-label="Decrease">−</button>
-                        <span>{l.quantity}</span>
-                        <button type="button" onClick={() => cart.setQty(l.variationId, l.quantity + 1)} aria-label="Increase"
-                          disabled={l.maxPerCustomer != null && l.quantity >= l.maxPerCustomer}>+</button>
-                        <button type="button" className="co-qty__remove" onClick={() => cart.setQty(l.variationId, 0)}>Remove</button>
+            <footer className="co-foot">
+              <a href="/terms">Terms of service</a>
+              <a href="/privacy">Privacy policy</a>
+              <a href={`mailto:${SUPPORT_EMAIL}`}>Need help? {SUPPORT_EMAIL}</a>
+            </footer>
+          </div>
+        </main>
+
+        <aside className="co-aside" aria-label="Order summary">
+          <div className="co-aside__inner">
+            <button type="button" className="co-aside__toggle" onClick={() => setSummaryOpen((o) => !o)} aria-expanded={summaryOpen}>
+              <span>{summaryOpen ? "Hide" : "Show"} order summary <i>{summaryOpen ? "▴" : "▾"}</i></span>
+              <b>{totalLabel}</b>
+            </button>
+            <div className={`co-aside__body ${summaryOpen ? "is-open" : ""}`}>
+              <div className="co-summary-head">
+                <h2>Order summary</h2>
+                <span className="co-note">{itemCount} item{itemCount === 1 ? "" : "s"}</span>
+              </div>
+              <div className="co-lines">
+                {cart.lines.map((l) => {
+                  // Quantities come straight from the cart so the steppers respond at once; prices from the server's quote once it lands.
+                  const unit = quote?.lines.find((q) => q.variationId === l.variationId)?.unitPriceCents ?? l.unitPriceCents;
+                  return (
+                    <div key={l.variationId} className="co-line">
+                      <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 68, height: 68 }}>
+                        {l.imageUrl && <img src={l.imageUrl} alt="" />}
                       </div>
+                      <div className="co-line__main">
+                        <span className="co-line__name">{l.name}</span>
+                        {l.isPreorder && <span className="co-pre">Pre-order</span>}
+                        <div className="co-qty" aria-label={`Quantity for ${l.name}`}>
+                          <button type="button" onClick={() => cart.setQty(l.variationId, l.quantity - 1)} aria-label="Decrease">−</button>
+                          <span>{l.quantity}</span>
+                          <button type="button" onClick={() => cart.setQty(l.variationId, l.quantity + 1)} aria-label="Increase"
+                            disabled={l.maxPerCustomer != null && l.quantity >= l.maxPerCustomer}>+</button>
+                          <button type="button" className="co-qty__remove" onClick={() => cart.setQty(l.variationId, 0)}>Remove</button>
+                        </div>
+                      </div>
+                      <b className="co-line__price">{money(unit * l.quantity)}</b>
                     </div>
-                    <b>{money(unit * l.quantity)}</b>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
               {quote && quote.warnings.length > 0 && (
                 <div className="co-alert co-alert--warn">
                   <b>Your cart changed</b>
@@ -287,17 +327,26 @@ export default function Checkout() {
                 </div>
               )}
               {quoteError && <div className="co-alert co-alert--error">{quoteError}</div>}
+              <div className="co-meter">
+                <span>{subtotal >= threshold ? <b>You've unlocked free standard shipping 🎉</b> : <>Add <b>{money(threshold - subtotal)}</b> more for free standard shipping</>}</span>
+                <div className="co-meter__bar"><i style={{ width: `${Math.min(subtotal / threshold, 1) * 100}%` }} /></div>
+              </div>
               <div className="co-totals">
-                <Row label="Subtotal" value={quote ? money(quote.subtotalCents) : money(cart.subtotal)} />
+                <Row label="Subtotal" value={money(subtotal)} />
                 <Row label={`Shipping (${method === "express" ? "Express" : "Standard"})`} value={quote ? (quote.shippingCents ? money(quote.shippingCents) : "Free") : "—"} />
                 <Row label="Tax" value={quote ? money(quote.taxCents) : "—"} />
-                <Row label="Total" value={quote ? money(quote.totalCents) : "—"} strong />
+                <Row label="Total" value={totalLabel} strong />
+                {quoting && <p className="co-note">Updating totals…</p>}
               </div>
-              {quoting && <p className="co-note">Updating totals…</p>}
+              <ul className="co-trust">
+                <li><span>🔒</span>Encrypted, secure checkout</li>
+                <li><span>📦</span>Tracked shipping across Canada and the US</li>
+                <li><span>🎁</span>Pre-orders are reserved now and ship on release</li>
+              </ul>
             </div>
-          </aside>
-        </div>
-      )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -315,8 +364,8 @@ function Field({ label, error, children, className = "" }: { label: string; erro
   );
 }
 
-function AddressForm({ value, onChange, errors, onBlur, regions, prefix }: {
-  value: Address; onChange: (a: Address) => void; errors: (k: keyof Address) => string | undefined; onBlur: (k: keyof Address) => void; regions: [string, string][]; prefix: string;
+function AddressForm({ value, onChange, errors, onBlur, regions, prefix, phone = true }: {
+  value: Address; onChange: (a: Address) => void; errors: (k: keyof Address) => string | undefined; onBlur: (k: keyof Address) => void; regions: [string, string][]; prefix: string; phone?: boolean;
 }) {
   const set = (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const next = { ...value, [k]: e.target.value } as Address;
@@ -326,23 +375,24 @@ function AddressForm({ value, onChange, errors, onBlur, regions, prefix }: {
   const ac = (s: string) => `${prefix} ${s}`;
   const left = (k: keyof Address) => () => onBlur(k);
   return (
-    <div className="co-address">
-      <Field label="Country">
+    <div className="co-fields">
+      <Field label="Country" className="co-c6">
         <select className="sh-input" value={value.country} onChange={set("country")} autoComplete={ac("country")}>
           <option value="CA">Canada</option><option value="US">United States</option>
         </select>
       </Field>
-      <Field label="First name" error={errors("firstName")}><input className="sh-input" value={value.firstName} onChange={set("firstName")} onBlur={left("firstName")} autoComplete={ac("given-name")} /></Field>
-      <Field label="Last name" error={errors("lastName")}><input className="sh-input" value={value.lastName} onChange={set("lastName")} onBlur={left("lastName")} autoComplete={ac("family-name")} /></Field>
-      <Field label="Address" error={errors("address1")} className="co-span2"><input className="sh-input" value={value.address1} onChange={set("address1")} onBlur={left("address1")} autoComplete={ac("address-line1")} /></Field>
-      <Field label="Apt, suite (optional)"><input className="sh-input" value={value.address2} onChange={set("address2")} autoComplete={ac("address-line2")} /></Field>
-      <Field label="City" error={errors("city")}><input className="sh-input" value={value.city} onChange={set("city")} onBlur={left("city")} autoComplete={ac("address-level2")} /></Field>
-      <Field label={value.country === "CA" ? "Province" : "State"}>
+      <Field label="First name" className="co-c3" error={errors("firstName")}><input className="sh-input" value={value.firstName} onChange={set("firstName")} onBlur={left("firstName")} autoComplete={ac("given-name")} /></Field>
+      <Field label="Last name" className="co-c3" error={errors("lastName")}><input className="sh-input" value={value.lastName} onChange={set("lastName")} onBlur={left("lastName")} autoComplete={ac("family-name")} /></Field>
+      <Field label="Address" className="co-c6" error={errors("address1")}><input className="sh-input" value={value.address1} onChange={set("address1")} onBlur={left("address1")} autoComplete={ac("address-line1")} placeholder="Street and number" /></Field>
+      <Field label="Apartment, suite, etc. (optional)" className="co-c6"><input className="sh-input" value={value.address2} onChange={set("address2")} autoComplete={ac("address-line2")} /></Field>
+      <Field label="City" className="co-c2" error={errors("city")}><input className="sh-input" value={value.city} onChange={set("city")} onBlur={left("city")} autoComplete={ac("address-level2")} /></Field>
+      <Field label={value.country === "CA" ? "Province" : "State"} className="co-c2">
         <select className="sh-input" value={value.province} onChange={set("province")} autoComplete={ac("address-level1")}>
           {regions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
         </select>
       </Field>
-      <Field label={value.country === "CA" ? "Postal code" : "ZIP code"} error={errors("postalCode")}><input className="sh-input" value={value.postalCode} onChange={set("postalCode")} onBlur={left("postalCode")} autoComplete={ac("postal-code")} /></Field>
+      <Field label={value.country === "CA" ? "Postal code" : "ZIP code"} className="co-c2" error={errors("postalCode")}><input className="sh-input" value={value.postalCode} onChange={set("postalCode")} onBlur={left("postalCode")} autoComplete={ac("postal-code")} /></Field>
+      {phone && <Field label="Phone (optional)" className="co-c6"><input className="sh-input" type="tel" value={value.phone} onChange={set("phone")} autoComplete={ac("tel")} /></Field>}
     </div>
   );
 }
@@ -350,8 +400,8 @@ function AddressForm({ value, onChange, errors, onBlur, regions, prefix }: {
 function Success({ orderId, preorder, email }: { orderId: number; preorder: boolean; email: string }) {
   return (
     <div className="sh co">
-      <header className="co-head"><div className="co-wrap co-head__row"><a href="/" className="co-logo"><img src={LOGO} alt="Spin Hobby" /></a></div></header>
-      <div className="co-wrap co-empty co-success">
+      <header className="co-bar"><div className="co-bar__row"><a href="/" className="co-logo"><img src={LOGO} alt="Spin Hobby" /></a></div></header>
+      <div className="co-empty co-success">
         <img src={MASCOT} alt="" />
         <span className="sh-eyebrow" style={{ color: "var(--teal)" }}>Order confirmed</span>
         <h1 className="sh-display">Thank you! Order #{orderId}</h1>
