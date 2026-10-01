@@ -23,16 +23,7 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "view/*": ["./src/view/*"],
-      "ts/*": ["./src/ts/*"],
-      "utils/*": ["./src/utils/*"],
-      "reducers/*": ["./src/reducers/*"],
-      "selectors/*": ["./src/selectors/*"],
-      "saga/*": ["./src/saga/*"],
-      "api/*": ["./src/api/*"],
-      "customHooks/*": ["./src/customHooks/*"],
-      "dummy/*": ["./src/dummy/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],

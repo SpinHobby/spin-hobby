@@ -1,4 +1,0 @@
-export enum EModal {
-  SETTINGS = "SETTINGS",
-  ANNOUNCEMENT = "ANNOUNCEMENT",
-}

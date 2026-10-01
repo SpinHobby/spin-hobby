@@ -16,15 +16,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
-      view: resolve(__dirname, "./src/view"),
-      ts: resolve(__dirname, "./src/ts"),
-      utils: resolve(__dirname, "./src/utils"),
-      reducers: resolve(__dirname, "./src/reducers"),
-      selectors: resolve(__dirname, "./src/selectors"),
-      saga: resolve(__dirname, "./src/saga"),
-      api: resolve(__dirname, "./src/api"),
-      customHooks: resolve(__dirname, "./src/customHooks"),
-      dummy: resolve(__dirname, "./src/dummy"),
     },
   },
   css: {
@@ -42,7 +33,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ["react", "react-dom"],
-          redux: ["@reduxjs/toolkit", "react-redux", "redux-saga"],
           router: ["react-router-dom"],
           paypal: ["@paypal/react-paypal-js"],
         },
