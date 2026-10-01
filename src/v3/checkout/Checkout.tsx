@@ -6,7 +6,7 @@ import { money } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { loadStoreConfig } from "../storeConfig";
-import { useCart, type CartLine } from "../storefront/data";
+import { useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 
@@ -48,7 +48,9 @@ export default function Checkout() {
   const [method, setMethod] = useState<"standard" | "express">("standard");
   const [billingSame, setBillingSame] = useState(true);
   const [bill, setBill] = useState<Address>(EMPTY_ADDRESS);
-  const [touched, setTouched] = useState(false);
+  const [touched, setTouched] = useState(false);          // a payment attempt: show every problem
+  const [blurred, setBlurred] = useState<Set<string>>(new Set()); // fields the shopper has left: show their problems
+  const leave = (field: string) => setBlurred((b) => (b.has(field) ? b : new Set(b).add(field)));
   const [config, setConfig] = useState<CheckoutConfig | null>(null);
   const [configError, setConfigError] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -95,6 +97,12 @@ export default function Checkout() {
   const formValid = emailOk && !Object.keys(shipErrors).length && !Object.keys(billErrors).length;
   const quoteOk = !!quote && quote.lines.length > 0 && quote.warnings.length === 0;
   const canPay = formValid && quoteOk && !quoting;
+  // Payment is on the page from the start; this says what still stands between the shopper and it.
+  const missing = [!emailOk && "your email", Object.keys(shipErrors).length > 0 && "your shipping address", Object.keys(billErrors).length > 0 && "your billing address"].filter((m): m is string => Boolean(m));
+  const hint = quoting ? "Updating totals…"
+    : missing.length ? `Fill in ${missing.length > 1 ? `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}` : missing[0]} above to pay.`
+    : quote?.warnings.length ? "Update your cart to continue."
+    : !quote && !quoteError ? "Working out your totals…" : "";
 
   const applyQuote = () => {
     if (!quote) return;
@@ -158,7 +166,7 @@ export default function Checkout() {
   if (returning) return <Success orderId={returning} preorder={false} email={email} />;
 
   const regions = ship.country === "CA" ? PROVINCES : STATES;
-  const show = (errs: Partial<Record<keyof Address, string>>, k: keyof Address) => (touched ? errs[k] : undefined);
+  const show = (errs: Partial<Record<keyof Address, string>>, prefix: string, k: keyof Address) => (touched || blurred.has(`${prefix}.${k}`) ? errs[k] : undefined);
   const freeLeft = config ? Math.max(config.freeShippingThresholdCents - (quote?.subtotalCents ?? cart.subtotal), 0) : 0;
 
   return (
@@ -185,15 +193,15 @@ export default function Checkout() {
 
             <section className="co-card">
               <h2>Contact</h2>
-              <Field label="Email" error={touched && !emailOk ? "Enter a valid email" : undefined}>
-                <input className="sh-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+              <Field label="Email" error={(touched || blurred.has("email")) && !emailOk ? "Enter a valid email" : undefined}>
+                <input className="sh-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => leave("email")} placeholder="you@example.com" />
               </Field>
               <p className="co-note">Your receipt and shipping updates go here.{!auth.email && " Sign in from the shop to save orders to your account."}</p>
             </section>
 
             <section className="co-card">
               <h2>Shipping address</h2>
-              <AddressForm value={ship} onChange={setShip} errors={(k) => show(shipErrors, k)} regions={regions} prefix="shipping" />
+              <AddressForm value={ship} onChange={setShip} errors={(k) => show(shipErrors, "shipping", k)} onBlur={(k) => leave(`shipping.${k}`)} regions={regions} prefix="shipping" />
             </section>
 
             <section className="co-card">
@@ -219,7 +227,7 @@ export default function Checkout() {
             <section className="co-card">
               <h2>Billing address</h2>
               <label className="co-check"><input type="checkbox" checked={billingSame} onChange={(e) => setBillingSame(e.target.checked)} />Same as shipping address</label>
-              {!billingSame && <AddressForm value={bill} onChange={setBill} errors={(k) => show(billErrors, k)} regions={bill.country === "CA" ? PROVINCES : STATES} prefix="billing" />}
+              {!billingSame && <AddressForm value={bill} onChange={setBill} errors={(k) => show(billErrors, "billing", k)} onBlur={(k) => leave(`billing.${k}`)} regions={bill.country === "CA" ? PROVINCES : STATES} prefix="billing" />}
             </section>
 
             <section className="co-card">
@@ -232,20 +240,14 @@ export default function Checkout() {
                 <>
                   {!formValid && touched && <div className="co-alert">Check the highlighted fields above.</div>}
                   {config.provider === "paypal" && config.paypalClientId ? (
-                    canPay ? (
-                      <PayPalPay clientId={config.paypalClientId} disabled={false} createOrder={onPayPalCreate} onApprove={onPayPalApprove} onError={setPayError} />
-                    ) : (
-                      <button type="button" className="sh-btn co-pay-btn" disabled={quoting} onClick={() => setTouched(true)}>
-                        {quoting ? "Updating totals…" : "Continue to payment"}
-                      </button>
-                    )
+                    <PayPalPay clientId={config.paypalClientId} disabled={!canPay} createOrder={onPayPalCreate} onApprove={onPayPalApprove} onError={setPayError} />
                   ) : config.provider === "square" ? (
                     <SquarePay config={config} disabled={!quoteOk || quoting} amountLabel={quote ? money(quote.totalCents) : "—"} pay={onSquarePay} onError={setPayError}
                       billing={{ givenName: ship.firstName, familyName: ship.lastName, email, countryCode: ship.country, city: ship.city, postalCode: ship.postalCode, addressLines: [ship.address1, ship.address2].filter(Boolean) }} />
                   ) : (
                     <div className="co-alert">Online payment isn't available right now. Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</div>
                   )}
-                  {!canPay && !touched && <p className="co-note">Fill in your details to enable payment.</p>}
+                  {!canPay && hint && ((config.provider === "paypal" && config.paypalClientId) || config.provider === "square") && <p className="co-note co-hint" aria-live="polite">{hint}</p>}
                   {payError && <div className="co-alert co-alert--error" role="alert">{payError}</div>}
                 </>
               )}
@@ -256,16 +258,29 @@ export default function Checkout() {
           <aside className="co-summary">
             <div className="co-card co-card--sticky">
               <h2>Order summary</h2>
-              {(quote?.lines.length ? quote.lines : cart.lines.map(asQuoteLine)).map((l) => (
-                <div key={l.variationId} className="co-line">
-                  <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 56, height: 56 }}>
-                    {l.imageUrl && <img src={l.imageUrl} alt="" />}
-                    <span className="co-line__qty">{l.quantity}</span>
+              {cart.lines.map((l) => {
+                // Quantities come straight from the cart so the steppers respond at once; prices from the server's quote once it lands.
+                const unit = quote?.lines.find((q) => q.variationId === l.variationId)?.unitPriceCents ?? l.unitPriceCents;
+                return (
+                  <div key={l.variationId} className="co-line">
+                    <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 56, height: 56 }}>
+                      {l.imageUrl && <img src={l.imageUrl} alt="" />}
+                    </div>
+                    <div className="co-line__main">
+                      <span>{l.name}</span>
+                      {l.isPreorder && <span className="co-pre">Pre-order</span>}
+                      <div className="co-qty" aria-label={`Quantity for ${l.name}`}>
+                        <button type="button" onClick={() => cart.setQty(l.variationId, l.quantity - 1)} aria-label="Decrease">−</button>
+                        <span>{l.quantity}</span>
+                        <button type="button" onClick={() => cart.setQty(l.variationId, l.quantity + 1)} aria-label="Increase"
+                          disabled={l.maxPerCustomer != null && l.quantity >= l.maxPerCustomer}>+</button>
+                        <button type="button" className="co-qty__remove" onClick={() => cart.setQty(l.variationId, 0)}>Remove</button>
+                      </div>
+                    </div>
+                    <b>{money(unit * l.quantity)}</b>
                   </div>
-                  <div className="co-line__main"><span>{l.name}</span>{l.isPreorder && <span className="co-pre">Pre-order</span>}</div>
-                  <b>{money(l.unitPriceCents * l.quantity)}</b>
-                </div>
-              ))}
+                );
+              })}
               {quote && quote.warnings.length > 0 && (
                 <div className="co-alert co-alert--warn">
                   <b>Your cart changed</b>
@@ -289,10 +304,6 @@ export default function Checkout() {
   );
 }
 
-function asQuoteLine(l: CartLine): QuoteLine {
-  return { ...l, lineCents: l.unitPriceCents * l.quantity };
-}
-
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return <div className={`co-row ${strong ? "co-row--total" : ""}`}><span>{label}</span><span>{value}</span></div>;
 }
@@ -306,8 +317,8 @@ function Field({ label, error, children, className = "" }: { label: string; erro
   );
 }
 
-function AddressForm({ value, onChange, errors, regions, prefix }: {
-  value: Address; onChange: (a: Address) => void; errors: (k: keyof Address) => string | undefined; regions: [string, string][]; prefix: string;
+function AddressForm({ value, onChange, errors, onBlur, regions, prefix }: {
+  value: Address; onChange: (a: Address) => void; errors: (k: keyof Address) => string | undefined; onBlur: (k: keyof Address) => void; regions: [string, string][]; prefix: string;
 }) {
   const set = (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const next = { ...value, [k]: e.target.value } as Address;
@@ -315,6 +326,7 @@ function AddressForm({ value, onChange, errors, regions, prefix }: {
     onChange(next);
   };
   const ac = (s: string) => `${prefix} ${s}`;
+  const left = (k: keyof Address) => () => onBlur(k);
   return (
     <div className="co-address">
       <Field label="Country" className="co-span2">
@@ -322,17 +334,17 @@ function AddressForm({ value, onChange, errors, regions, prefix }: {
           <option value="CA">Canada</option><option value="US">United States</option>
         </select>
       </Field>
-      <Field label="First name" error={errors("firstName")}><input className="sh-input" value={value.firstName} onChange={set("firstName")} autoComplete={ac("given-name")} /></Field>
-      <Field label="Last name" error={errors("lastName")}><input className="sh-input" value={value.lastName} onChange={set("lastName")} autoComplete={ac("family-name")} /></Field>
-      <Field label="Address" error={errors("address1")} className="co-span2"><input className="sh-input" value={value.address1} onChange={set("address1")} autoComplete={ac("address-line1")} /></Field>
+      <Field label="First name" error={errors("firstName")}><input className="sh-input" value={value.firstName} onChange={set("firstName")} onBlur={left("firstName")} autoComplete={ac("given-name")} /></Field>
+      <Field label="Last name" error={errors("lastName")}><input className="sh-input" value={value.lastName} onChange={set("lastName")} onBlur={left("lastName")} autoComplete={ac("family-name")} /></Field>
+      <Field label="Address" error={errors("address1")} className="co-span2"><input className="sh-input" value={value.address1} onChange={set("address1")} onBlur={left("address1")} autoComplete={ac("address-line1")} /></Field>
       <Field label="Apartment, suite (optional)" className="co-span2"><input className="sh-input" value={value.address2} onChange={set("address2")} autoComplete={ac("address-line2")} /></Field>
-      <Field label="City" error={errors("city")}><input className="sh-input" value={value.city} onChange={set("city")} autoComplete={ac("address-level2")} /></Field>
+      <Field label="City" error={errors("city")}><input className="sh-input" value={value.city} onChange={set("city")} onBlur={left("city")} autoComplete={ac("address-level2")} /></Field>
       <Field label={value.country === "CA" ? "Province" : "State"}>
         <select className="sh-input" value={value.province} onChange={set("province")} autoComplete={ac("address-level1")}>
           {regions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
         </select>
       </Field>
-      <Field label={value.country === "CA" ? "Postal code" : "ZIP code"} error={errors("postalCode")}><input className="sh-input" value={value.postalCode} onChange={set("postalCode")} autoComplete={ac("postal-code")} /></Field>
+      <Field label={value.country === "CA" ? "Postal code" : "ZIP code"} error={errors("postalCode")}><input className="sh-input" value={value.postalCode} onChange={set("postalCode")} onBlur={left("postalCode")} autoComplete={ac("postal-code")} /></Field>
       <Field label="Phone (optional)"><input className="sh-input" type="tel" value={value.phone} onChange={set("phone")} autoComplete={ac("tel")} /></Field>
     </div>
   );

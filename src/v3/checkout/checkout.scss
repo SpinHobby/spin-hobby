@@ -39,9 +39,16 @@
 .co-line { display: flex; align-items: center; gap: 12px; font-size: 13.5px;
   .sh-thumb { position: relative; overflow: visible; }
   .sh-thumb img { border-radius: 10px; }
-  &__qty { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--muted); color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 5px; }
   &__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
 }
+// Quantities are changed right here, so the cart never has to be reopened.
+.co-qty { display: inline-flex; align-items: center; gap: 2px; margin-top: 2px;
+  button { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; line-height: 1; padding: 0; cursor: pointer;
+    &:hover { background: var(--surface2); } &:disabled { opacity: .4; cursor: default; } }
+  > span { min-width: 26px; text-align: center; font-size: 13px; font-weight: 700; }
+  .co-qty__remove { width: auto; padding: 0 8px; margin-left: 6px; border-color: transparent; font-size: 12px; font-weight: 600; color: var(--muted); &:hover { color: var(--red); background: transparent; } }
+}
+.co-hint { font-weight: 600; color: var(--text2); }
 .co-pre { align-self: flex-start; font-size: 10.5px; font-weight: 800; color: #fff; background: var(--blue); padding: 2px 7px; border-radius: 6px; }
 .co-totals { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .co-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--text2);
