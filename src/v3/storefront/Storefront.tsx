@@ -96,8 +96,8 @@ export default function Storefront() {
 
   useDocumentHead({
     enabled: !productId,
-    title: "Spin Hobby | Anime Figures, Plushies & Goods",
-    description: "Official anime figures, plushies, trading cards and goods, shipped across Canada and the US. Pre-orders, weekly new arrivals and restock alerts.",
+    title: "Spin Hobby | Official Anime Merchandise – Canada & US",
+    description: "Authentic, officially licensed anime figures, plushies, trading cards and goods, shipped across Canada and the US. Pre-orders, weekly new arrivals and restock alerts.",
     path: "/",
   });
 

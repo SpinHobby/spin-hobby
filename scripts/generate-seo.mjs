@@ -93,6 +93,7 @@ async function main() {
       image: p.images,
       ...(p.description ? { description: p.description } : {}),
       ...(p.janCode ? { sku: p.janCode } : {}),
+      ...(p.series ? { brand: { "@type": "Brand", name: p.series } } : {}),
       offers: {
         "@type": "Offer",
         priceCurrency: p.currency,
