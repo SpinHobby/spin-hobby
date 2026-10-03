@@ -370,11 +370,13 @@
   &__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px;
     h2 { font-size: 20px; margin: 0; } }
   &__all { font-weight: 700; color: var(--blue); }
+  &__note { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
   &__list { display: flex; gap: 8px; flex-wrap: wrap; }
 }
 .sf-event {
   display: flex; align-items: center; gap: 8px; background: var(--surface2); padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
   &__date { font-size: 12.5px; font-weight: 600; }
+  &.is-past { opacity: .75; }
 }
 
 // ------------------------------------------------------------ footer

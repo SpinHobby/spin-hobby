@@ -96,7 +96,12 @@ export default function Storefront() {
   });
 
   const home = store.home;
-  const upcomingEvents = useMemo(() => EVENTS.filter((e) => !isPastEvent(e)).slice(0, 8), []);
+  // Same split as the Events page. With nothing upcoming, show the latest events (newest first) so the strip isn't empty.
+  const { stripEvents, stripIsPast } = useMemo(() => {
+    const upcoming = EVENTS.filter((e) => !isPastEvent(e));
+    if (upcoming.length) return { stripEvents: upcoming.slice(0, 8), stripIsPast: false };
+    return { stripEvents: EVENTS.filter((e) => isPastEvent(e)).reverse().slice(0, 6), stripIsPast: true };
+  }, []);
   const facets = store.facets;
   const results = useProducts(filters, wishOnly ? wishlist.list : null);
 
@@ -402,15 +407,15 @@ export default function Storefront() {
               <h2 id="events-title" className="sh-display">Meet us at the con</h2>
               <Link to="/events" className="sf-events__all">See all events →</Link>
             </div>
+            {stripIsPast && <p className="sf-events__note">No upcoming events right now. New dates are announced on Discord and Instagram. Recent events:</p>}
             <div className="sf-events__list">
-              {upcomingEvents.map((e, i) => (
-                <span key={e.name + e.start} className="sf-event">
+              {stripEvents.map((e, i) => (
+                <span key={e.name + e.start} className={`sf-event ${stripIsPast ? "is-past" : ""}`}>
                   <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
                   {e.name}
                   <span className="sf-muted sf-event__date">{eventDateShort(e.start, e.end)} · {e.city}</span>
                 </span>
               ))}
-              {!upcomingEvents.length && <span className="sf-muted">No upcoming events right now. New dates are announced on Discord and Instagram.</span>}
             </div>
           </section>
         </main>
