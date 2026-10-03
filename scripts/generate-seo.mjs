@@ -113,6 +113,7 @@ async function main() {
   }
 
   const staticPages = [
+    { path: "/events", title: "Events | Spin Hobby", description: "Find Spin Hobby at anime conventions and community events across Canada: dates, venues and links." },
     { path: "/support", title: "Help & Support | Spin Hobby", description: "Contact Spin Hobby and find answers on shipping, pre-orders, order status, returns and restock alerts." },
     { path: "/legal/terms", title: "Terms of Service | Spin Hobby", description: "Spin Hobby's terms of service — shipping, pre-orders, payments and more." },
     { path: "/legal/privacy", title: "Privacy Policy | Spin Hobby", description: "Spin Hobby's privacy policy — what we collect and how we use it." },

@@ -65,7 +65,7 @@ export default function Support() {
             <li><a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a><span>Drop alerts and chat with the community</span></li>
             <li><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a><span>New arrivals and convention updates</span></li>
             <li><a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a><span>Our listings on eBay Canada</span></li>
-            <li><a href="/#events">Events</a><span>Conventions where you can meet us in person</span></li>
+            <li><Link to="/events">Events</Link><span>Conventions where you can meet us in person</span></li>
           </ul>
         </section>
 

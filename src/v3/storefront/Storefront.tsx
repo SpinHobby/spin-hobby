@@ -2,10 +2,12 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../tokens.scss";
 import "./storefront.scss";
-import { dayLabel, normalizeStatus, type Currency } from "../format";
+import { normalizeStatus, type Currency } from "../format";
+import { EVENTS } from "../events/data";
+import { eventDateShort, isPastEvent } from "../events/dates";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
 import { useDocumentHead } from "../seo";
-import type { Product, StoreEvent } from "../types";
+import type { Product } from "../types";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import {
   ALL, AVAIL, DEFAULT_AVAIL, NAV, PRICES, SORTS, productIdFromPath, productPath, useCart, useProducts, useStorefront, useWishlist,
@@ -22,14 +24,6 @@ import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
 const EVENT_COLORS = ["var(--red)", "var(--blue)", "var(--gold)", "var(--teal)"];
-
-function eventDates(e: StoreEvent) {
-  if (!e.start_date) return null;
-  const start = dayLabel(e.start_date);
-  if (!e.end_date || e.end_date === e.start_date) return start;
-  const end = dayLabel(e.end_date);
-  return start.split(" ")[0] === end.split(" ")[0] ? `${start}–${end.split(" ")[1]}` : `${start} – ${end}`;
-}
 
 export default function Storefront() {
   const { theme, toggle: toggleTheme } = useTheme();
@@ -102,6 +96,7 @@ export default function Storefront() {
   });
 
   const home = store.home;
+  const upcomingEvents = useMemo(() => EVENTS.filter((e) => !isPastEvent(e)).slice(0, 8), []);
   const facets = store.facets;
   const results = useProducts(filters, wishOnly ? wishlist.list : null);
 
@@ -197,7 +192,7 @@ export default function Storefront() {
           <div className="sf-utility__links">
             <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a>
             <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>
-            <a href="#events">Events</a>
+            <Link to="/events">Events</Link>
             <Link to="/support">Support</Link>
           </div>
         </div>
@@ -405,16 +400,17 @@ export default function Storefront() {
           <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
             <div className="sf-events__head">
               <h2 id="events-title" className="sh-display">Meet us at the con</h2>
-              <span className="sf-muted">{(home?.events ?? []).some((e) => e.start_date) ? "Alberta conventions" : "Alberta conventions · 2027 dates TBA"}</span>
+              <Link to="/events" className="sf-events__all">See all events →</Link>
             </div>
             <div className="sf-events__list">
-              {(home?.events ?? []).map((e, i) => (
-                <span key={e.id} className="sf-event">
+              {upcomingEvents.map((e, i) => (
+                <span key={e.name + e.start} className="sf-event">
                   <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
                   {e.name}
-                  {eventDates(e) && <span className="sf-muted sf-event__date">{eventDates(e)}{e.city ? ` · ${e.city}` : ""}</span>}
+                  <span className="sf-muted sf-event__date">{eventDateShort(e.start, e.end)} · {e.city}</span>
                 </span>
               ))}
+              {!upcomingEvents.length && <span className="sf-muted">No upcoming events right now. New dates are announced on Discord and Instagram.</span>}
             </div>
           </section>
         </main>
@@ -516,6 +512,7 @@ function Footer({ currency, onCurrency, onNav, onToast }: {
           <a href="#shop" onClick={go("Pre-Orders")}>Pre-orders</a>
           <a href="#shop" onClick={go("Sale")}>Sale</a>
           <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store</a>
+          <Link to="/events">Events</Link>
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Help</span>

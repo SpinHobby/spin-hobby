@@ -16,6 +16,7 @@ export default function SiteFooter() {
         <nav className="sh-footer__col" aria-label="Shop">
           <span className="sh-footer__h">Shop</span>
           <a href="/">Back to the store</a>
+          <Link to="/events">Events</Link>
           <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>
         </nav>
         <nav className="sh-footer__col" aria-label="Help">

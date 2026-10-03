@@ -11,6 +11,7 @@ const Admin = lazy(() => import("./v3/admin/Admin"));
 const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
+const Events = lazy(() => import("./v3/events/Events"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 
 // A password-reset email can only point at one address (Supabase's Site URL unless the redirect is
@@ -28,6 +29,7 @@ export default function App() {
         <Route element={<SiteLayout />}>
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/events" element={<Events />} />
         </Route>
         <Route path="/reset-password" element={<Suspense fallback={null}><ResetPassword /></Suspense>} />
         <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
