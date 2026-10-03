@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../tokens.scss";
 import "./storefront.scss";
 import { dayLabel, normalizeStatus, type Currency } from "../format";
@@ -16,7 +16,7 @@ import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
 import { buildTree, indentLabel } from "../categoryTree";
-import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SUPPORT_EMAIL } from "../links";
+import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
 
 const LOGO = "/logo/logo%20cropped.png";
@@ -187,7 +187,7 @@ export default function Storefront() {
             <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a>
             <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>
             <a href="#events">Events</a>
-            <a href={`mailto:${SUPPORT_EMAIL}`}>Support</a>
+            <Link to="/support">Support</Link>
           </div>
         </div>
       </div>
@@ -508,10 +508,10 @@ function Footer({ currency, onCurrency, onNav, onToast }: {
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Help</span>
-          <a href={`mailto:${SUPPORT_EMAIL}?subject=Pre-order%20policy`}>Pre-order policy</a>
-          <a href={`mailto:${SUPPORT_EMAIL}?subject=Shipping`}>Shipping &amp; duties</a>
-          <a href={`mailto:${SUPPORT_EMAIL}?subject=Order%20status`}>Order status</a>
-          <a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a>
+          <Link to="/support#preorders">Pre-order policy</Link>
+          <Link to="/support#shipping">Shipping &amp; duties</Link>
+          <Link to="/support#order-status">Order status</Link>
+          <Link to="/support#contact">Contact</Link>
           <a href="/legal/terms">Terms of Service</a>
           <a href="/legal/privacy">Privacy Policy</a>
         </div>

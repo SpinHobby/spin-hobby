@@ -9,6 +9,7 @@ import { isRecoveryLink } from "./lib/api";
 const Admin = lazy(() => import("./v3/admin/Admin"));
 const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
+const Support = lazy(() => import("./v3/support/Support"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 
 // A password-reset email can only point at one address (Supabase's Site URL unless the redirect is
@@ -23,6 +24,7 @@ export default function App() {
       <Routes>
         <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
         <Route path="/legal/*" element={<Suspense fallback={null}><Legal /></Suspense>} />
+        <Route path="/support" element={<Suspense fallback={null}><Support /></Suspense>} />
         <Route path="/reset-password" element={<Suspense fallback={null}><ResetPassword /></Suspense>} />
         <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
         <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
@@ -32,7 +34,7 @@ export default function App() {
   );
 }
 
-/** Everything other than admin/legal: gated by maintenance mode. */
+/** Everything other than admin/legal/support: gated by maintenance mode. */
 function GatedApp() {
   // undefined = still checking; null = config fetch failed, fail open rather
   // than blocking the whole storefront on a flag we couldn't read.

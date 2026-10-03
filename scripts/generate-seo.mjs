@@ -112,17 +112,18 @@ async function main() {
     await writePage(productPath(p), html);
   }
 
-  const legalPages = [
+  const staticPages = [
+    { path: "/support", title: "Help & Support | Spin Hobby", description: "Contact Spin Hobby and find answers on shipping, pre-orders, order status, returns and restock alerts." },
     { path: "/legal/terms", title: "Terms of Service | Spin Hobby", description: "Spin Hobby's terms of service — shipping, pre-orders, payments and more." },
     { path: "/legal/privacy", title: "Privacy Policy | Spin Hobby", description: "Spin Hobby's privacy policy — what we collect and how we use it." },
   ];
-  for (const page of legalPages) {
+  for (const page of staticPages) {
     await writePage(page.path, withHead(template, page));
   }
 
   const urls = [
     { path: "/" },
-    ...legalPages,
+    ...staticPages,
     ...products.map((p) => ({ path: productPath(p), lastmod: p.createdAt ?? undefined })),
   ];
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${
