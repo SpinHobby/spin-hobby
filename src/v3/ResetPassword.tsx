@@ -4,6 +4,7 @@ import "./tokens.scss";
 import "./legal/legal.scss";
 import { completeOAuthRedirect, updatePassword } from "../lib/api";
 import { useTheme } from "./hooks";
+import PasswordInput from "./PasswordInput";
 
 const LOGO = "/logo/logo%20cropped.png";
 
@@ -63,7 +64,7 @@ export default function ResetPassword() {
             <h1>Set a new password</h1>
             <p className="lg-updated">Choose a new password for your account.</p>
             <form className="sh-signin__form" onSubmit={submit} style={{ maxWidth: 360 }}>
-              <input className="sh-input" type="password" required minLength={8} autoComplete="new-password"
+              <PasswordInput required minLength={8} autoComplete="new-password"
                 placeholder="New password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="New password" />
               <button className="sh-btn" disabled={busy}>{busy ? "Saving…" : "Save password"}</button>
             </form>
