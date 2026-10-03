@@ -366,7 +366,7 @@
 
 // events
 .sf-events {
-  border-radius: 18px; padding: 20px 22px;
+  border-radius: 18px; padding: 20px 22px; scroll-margin-top: calc(var(--header-h) + 12px);
   &__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px;
     h2 { font-size: 20px; margin: 0; } }
   &__list { display: flex; gap: 8px; flex-wrap: wrap; }

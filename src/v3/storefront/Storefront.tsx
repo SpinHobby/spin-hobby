@@ -104,6 +104,17 @@ export default function Storefront() {
   const home = store.home;
   const facets = store.facets;
   const results = useProducts(filters, wishOnly ? wishlist.list : null);
+
+  // Arriving from another page at /#events: the section only exists once the data has loaded, so the
+  // browser's own jump finds nothing. Scroll to it once, when the page has its final shape.
+  const hashScrolled = useRef(false);
+  useEffect(() => {
+    if (!location.hash || hashScrolled.current || !home || results.loading) return;
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (!target) return;
+    hashScrolled.current = true;
+    target.scrollIntoView({ block: "start" });
+  }, [location.hash, home, results.loading]);
   useEscape(filtersOpen ? () => setFiltersOpen(false) : null);
   const scrollShop = useCallback(() => {
     window.setTimeout(() => {
