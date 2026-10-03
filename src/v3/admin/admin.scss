@@ -283,6 +283,22 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
   select { width: auto; min-width: 220px; padding: 7px 9px; }
 }
 .ad-checkcell { display: grid; place-items: center; input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; } }
-.ad-table--products .ad-tr { grid-template-columns: 28px 52px minmax(220px, 2.2fr) 1.2fr 90px 90px 110px 150px 70px; }
+.ad-table--products { min-width: 1060px; }
+.ad-table--products .ad-tr { grid-template-columns: 28px 52px minmax(220px, 2.2fr) 1.2fr 80px 100px 112px 140px 90px 66px; }
+.ad-table--products.is-loading { opacity: .55; transition: opacity .15s; }
+.ad-tr.is-retired { opacity: .6; }
+.ad-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; text-align: left;
+  &:hover, &.is-active { color: var(--text); } }
+.ad-sort-select { width: auto; min-width: 190px; padding: 9px 10px; }
+.ad-source-filter { width: auto; min-width: 150px; padding: 9px 10px; }
+.ad-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font-size: 13.5px; }
+.ad-price-filter { display: inline-flex; align-items: center; gap: 6px; .sh-input { width: 84px; padding: 8px 9px; } }
+.ad-check { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text2); cursor: pointer; input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; } }
+.ad-summary-line { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; font-weight: 600; color: var(--text2); .ad-muted { font-weight: 500; } }
+.ad-pager { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; .sh-input { width: auto; padding: 6px 8px; } &__nav { display: inline-flex; align-items: center; gap: 12px; } }
+.ad-vars { display: grid; gap: 6px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13.5px;
+  &__row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 70px 40px; gap: 8px; align-items: center; } }
+.ad-tag-var { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text2); background: var(--surface2); padding: 1px 6px; border-radius: 5px; margin-right: 6px; vertical-align: 1px; }
+.ad-alert-pill { margin-left: 6px; font-size: 11px; font-weight: 800; color: var(--text2); background: var(--surface2); padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
 .ad-cat-filter { width: auto; min-width: 200px; padding: 9px 10px; }
 @media (max-width: 860px) { .ad-cat__actions { width: 100%; padding-left: 36px; flex-wrap: wrap; } }

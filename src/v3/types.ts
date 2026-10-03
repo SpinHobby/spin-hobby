@@ -32,6 +32,30 @@ export interface Product {
   source?: "square" | "manual";
   description?: string | null;
   alertsWaiting?: number;
+  // Admin catalog list (/admin/catalog) only.
+  state?: AdminState;
+  manufacturer?: string | null;
+  isActive?: boolean;
+  isVisible?: boolean;
+  sellable?: boolean;
+  sku?: string | null;
+  variationCount?: number;
+  variations?: ProductVariation[];
+  updatedAt?: string | null;
+  syncedAt?: string | null;
+}
+
+/** What an admin sees an item as: the storefront status, or why shoppers can't see/buy it. */
+export type AdminState = "in" | "low" | "out" | "pre" | "closed" | "unavailable" | "hidden" | "retired";
+
+export interface ProductVariation {
+  id: string;
+  name: string | null;
+  sku: string | null;
+  priceCents: number;
+  sellable: boolean;
+  stockCount: number | null;
+  isDefault: boolean;
 }
 
 export interface ProductPage { success: true; items: Product[]; cursor?: string; total: number }

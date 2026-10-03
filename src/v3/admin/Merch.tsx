@@ -263,12 +263,12 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
 
 // ---------------------------------------------------------------- inline stock for the products table
 
-export function InlineStock({ ctx, p }: { ctx: Ctx; p: Product }) {
+export function InlineStock({ ctx, p, onChange }: { ctx: Ctx; p: Product; onChange?: (stockCount: number | null) => void }) {
   const [busy, setBusy] = useState(false);
   const change = async (delta: number) => {
     const next = Math.max(0, (p.stockCount ?? 0) + delta);
     setBusy(true);
-    const update = (stockCount: number | null) => ctx.setData((x) => ({ ...x, products: x.products.map((q) => (q.id === p.id ? { ...q, stockCount, status: stockCount === null ? "in" : stockCount <= 0 ? "out" : stockCount <= x.settings.low_stock_threshold ? "low" : "in" } : q)) }));
+    const update = (stockCount: number | null) => { onChange?.(stockCount); ctx.setData((x) => ({ ...x, products: x.products.map((q) => (q.id === p.id ? { ...q, stockCount, status: stockCount === null ? "in" : stockCount <= 0 ? "out" : stockCount <= x.settings.low_stock_threshold ? "low" : "in" } : q)) })); };
     const previous = p.stockCount;
     update(next);
     try {

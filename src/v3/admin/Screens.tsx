@@ -1,11 +1,16 @@
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
-import { dayLabel, discountPct, money, monthLabel, normalizeStatus, relativeAge, shortDate, STATUS_META, statusLabel } from "../format";
+import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
 import type { Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
+import { ProductFilters } from "./ProductFilters";
+import {
+  activeFilterCount, DEFAULT_SORT, EMPTY_FILTERS, filtersFromShortcut, STATE_META, useCatalog, useDebounced,
+  type CatalogFilters, type Sort, type SortDir, type SortKey,
+} from "./catalog";
 import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
@@ -24,11 +29,6 @@ export interface Ctx {
 }
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
-
-function adminStatus(p: Product) {
-  if (p.availability === "hidden") return { badge: "HIDDEN", color: "#8a8d96" };
-  return STATUS_META[normalizeStatus(p.status)];
-}
 
 function Card({ title, action, children, className = "" }: { title: React.ReactNode; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
@@ -137,34 +137,63 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
 }
 
 // ================================================================ Products
-const PRODUCT_FILTERS: Record<string, (p: Product) => boolean> = {
-  All: () => true,
-  "In stock": (p) => p.status === "in",
-  "Low / sold out": (p) => p.status === "low" || p.status === "out",
-  "Pre-order": (p) => p.status === "pre",
-  Featured: (p) => !!p.isFeatured,
-};
-
 async function patchProduct(ctx: Ctx, id: string, body: Record<string, unknown>) {
   await api(`/admin/products/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
 }
 
+const PAGE_SIZES = [25, 50, 100];
+const ago = (iso: string) => { const a = relativeAge(iso); return a === "just now" ? a : `${a} ago`; };
+/** The first click on a column sorts the natural way: A→Z, cheapest and lowest stock first, newest first. */
+const FIRST_DIR: Record<SortKey, SortDir> = { name: "asc", category: "asc", price: "asc", stock: "asc", status: "asc", release: "asc", updated: "desc", created: "desc", alerts: "desc" };
+const stockStatus = (stock: number | null, low: number) => (stock === null ? "in" : stock <= 0 ? "out" : stock <= low ? "low" : "in");
+
+function SortHeader({ label, k, sort, onSort }: { label: string; k: SortKey; sort: Sort; onSort: (s: Sort) => void }) {
+  const on = sort.key === k;
+  return (
+    <span role="columnheader" aria-sort={on ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button type="button" className={`ad-sort ${on ? "is-active" : ""}`} onClick={() => onSort(on ? { key: k, dir: sort.dir === "asc" ? "desc" : "asc" } : { key: k, dir: FIRST_DIR[k] })}>
+        {label}<span aria-hidden>{on ? (sort.dir === "asc" ? " ▲" : " ▼") : ""}</span>
+      </button>
+    </span>
+  );
+}
+
 export function ProductsScreen({ ctx }: { ctx: Ctx }) {
-  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<CatalogFilters>(() => filtersFromShortcut(ctx.productFilter) ?? EMPTY_FILTERS);
+  const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string>(""); // "" all, "none" uncategorised, or a category id
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set()); // kept across pages and filter changes
   const [bulkTarget, setBulkTarget] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  const drawerDirty = useRef(false);
   const tree = useMemo(() => buildTree(ctx.data.categories), [ctx.data.categories]);
-  const products = ctx.data.products;
-  const q = query.trim().toLowerCase();
-  const inCategory = categoryFilter && categoryFilter !== "none" ? tree.descendants(categoryFilter) : null;
-  const rows = products
-    .filter(PRODUCT_FILTERS[ctx.productFilter] ?? (() => true))
-    .filter((p) => (categoryFilter === "none" ? !p.categoryId : !inCategory || (p.categoryId != null && inCategory.has(p.categoryId))))
-    .filter((p) => !q || [p.name, p.series, p.janCode, p.category].some((v) => v?.toLowerCase().includes(q)));
+
+  // The dashboard's shortcuts ("Low / sold out") are one-shot: used for the first view, then cleared so they
+  // don't re-apply on the next visit.
+  const shortcut = ctx.productFilter;
+  const clearShortcut = ctx.setProductFilter;
+  useEffect(() => { if (shortcut !== "All") clearShortcut("All"); }, [shortcut, clearShortcut]);
+
+  const q = useDebounced(filters.q);
+  const min = useDebounced(filters.min);
+  const max = useDebounced(filters.max);
+  const effective = useMemo(() => ({ ...filters, q, min, max }), [filters, q, min, max]);
+  const { data, loading, error, refresh, patch } = useCatalog(effective, sort, page, pageSize);
+
+  const changeFilters = (change: Partial<CatalogFilters>) => { setFilters((f) => ({ ...f, ...change })); setPage(0); };
+  const changeSort = (next: Sort) => { setSort(next); setPage(0); };
+  const rows = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const counts = data?.counts ?? null;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const filtered = activeFilterCount(filters) > 0;
+
+  // After deleting or filtering away the last rows of a page, step back instead of showing an empty page.
+  useEffect(() => { if (data && !rows.length && total > 0 && page > 0) setPage(Math.max(0, pages - 1)); }, [data, rows.length, total, page, pages]);
+
   const allSelected = rows.length > 0 && rows.every((p) => selected.has(p.id));
   const toggleSelect = (id: string) => setSelected((cur) => { const next = new Set(cur); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const bulkMove = async () => {
@@ -175,40 +204,37 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
       const res = await api<{ updated: number }>("/admin/products/bulk-category", { method: "POST", body: JSON.stringify({ ids: [...selected], categoryId }) });
       ctx.flash(`Moved ${res.updated} product${res.updated === 1 ? "" : "s"} ${categoryId ? `to ${tree.path(categoryId).join(" › ")}` : "out of their category"}`);
       setSelected(new Set()); setBulkTarget("");
+      refresh();
       ctx.reload();
     } catch (e) { ctx.flash(errMsg(e)); } finally { setBulkBusy(false); }
   };
-  const open = products.find((p) => p.id === openId) ?? null;
+  const open = rows.find((p) => p.id === openId) ?? null;
 
-  const update = (id: string, patch: Partial<Product>) => ctx.setData((d) => ({ ...d, products: d.products.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+  // Keep the dashboard's and homepage's copy of the product in step with what was just changed here.
+  const update = (id: string, change: Partial<Product>) => {
+    patch(id, change);
+    ctx.setData((d) => ({ ...d, products: d.products.map((p) => (p.id === id ? { ...p, ...change } : p)) }));
+  };
 
   const toggleFeatured = async (p: Product) => {
     const next = !p.isFeatured;
     update(p.id, { isFeatured: next });
-    try { await patchProduct(ctx, p.id, { is_featured: next }); ctx.flash(next ? "Featured on homepage" : "Removed from featured"); }
+    try { await patchProduct(ctx, p.id, { is_featured: next }); ctx.flash(next ? "Featured on homepage" : "Removed from featured"); refresh(); }
     catch (e) { update(p.id, { isFeatured: !next }); ctx.flash(errMsg(e)); }
   };
 
+  const onStock = (p: Product) => (stockCount: number | null) => {
+    const status = stockStatus(stockCount, ctx.data.settings.low_stock_threshold);
+    // Local only: the stock change is still being saved, so re-reading the list now could bring back the old number.
+    update(p.id, { stockCount, status, ...(p.state === "in" || p.state === "low" || p.state === "out" ? { state: status } : {}) });
+  };
+
+  const from = total ? page * pageSize + 1 : 0;
+  const to = page * pageSize + rows.length;
+
   return (
     <>
-      <div className="ad-toolbar">
-        <input className="ad-search" type="search" placeholder="Search name, series, JAN…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search products" />
-        {tree.flat.length > 0 && (
-          <select className="sh-input ad-cat-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Filter by category">
-            <option value="">All categories</option>
-            <option value="none">Uncategorised</option>
-            {tree.flat.map((c) => <option key={c.id} value={c.id}>{indentLabel(c)}</option>)}
-          </select>
-        )}
-        <button type="button" className="sh-btn ad-add-btn" onClick={() => setAdding(true)}>+ Add product</button>
-        <div className="ad-chips">
-          {Object.keys(PRODUCT_FILTERS).map((n) => (
-            <button key={n} type="button" className={`sh-chip ${ctx.productFilter === n ? "is-active" : ""}`} onClick={() => ctx.setProductFilter(n)}>
-              {n} · {products.filter(PRODUCT_FILTERS[n]).length}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ProductFilters filters={filters} onFilters={changeFilters} sort={sort} onSort={changeSort} counts={counts} tree={tree} onAdd={() => setAdding(true)} />
       {selected.size > 0 && (
         <div className="ad-bulk" role="region" aria-label="Bulk actions">
           <span>{selected.size} selected</span>
@@ -222,19 +248,39 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           {!tree.flat.length && <span className="ad-muted ad-sm">Create categories first in the Categories screen.</span>}
         </div>
       )}
+      <div className="ad-summary-line" aria-live="polite">
+        <span>
+          {data ? (total === 0 ? "No items" : `Showing ${from}–${to} of ${total} item${total === 1 ? "" : "s"}`) : "Loading…"}
+          {filtered && counts ? ` (filtered from ${counts.total})` : ""}
+        </span>
+        {counts?.lastSyncedAt && <span className="ad-muted">Square last synced {ago(counts.lastSyncedAt)}</span>}
+      </div>
       <div className="ad-table-wrap">
-        <div className="ad-table ad-table--products" role="table" aria-label="Products">
+        <div className={`ad-table ad-table--products ${loading && data ? "is-loading" : ""}`} role="table" aria-label="Products" aria-busy={loading}>
           <div className="ad-tr ad-th" role="row">
-            <span className="ad-checkcell"><input type="checkbox" checked={allSelected} aria-label="Select all shown"
-              onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((p) => p.id)))} /></span>
-            <span /><span>Product</span><span>Category</span><span>Price</span><span>Stock</span><span>Status</span><span>Release / order by</span><span>Featured</span>
+            <span className="ad-checkcell"><input type="checkbox" checked={allSelected} aria-label="Select all on this page"
+              onChange={() => setSelected((cur) => { const next = new Set(cur); for (const p of rows) { if (allSelected) next.delete(p.id); else next.add(p.id); } return next; })} /></span>
+            <span />
+            <SortHeader label="Product" k="name" sort={sort} onSort={changeSort} />
+            <SortHeader label="Category" k="category" sort={sort} onSort={changeSort} />
+            <SortHeader label="Price" k="price" sort={sort} onSort={changeSort} />
+            <SortHeader label="Stock" k="stock" sort={sort} onSort={changeSort} />
+            <SortHeader label="Status" k="status" sort={sort} onSort={changeSort} />
+            <SortHeader label="Release / order by" k="release" sort={sort} onSort={changeSort} />
+            <SortHeader label="Updated" k="updated" sort={sort} onSort={changeSort} />
+            <span>Featured</span>
           </div>
-          {ctx.data.loading ? <Empty>Loading products…</Empty> : rows.length === 0 ? (
-            <Empty>{products.length ? "No products match." : <>No products yet. <button type="button" className="ad-link" onClick={() => setAdding(true)}>Add one by hand</button> or run “Sync with Square”.</>}</Empty>
+          {!data && !error ? <Empty>Loading products…</Empty> : error && !data ? (
+            <Empty>{error} <button type="button" className="ad-link" onClick={refresh}>Try again</button></Empty>
+          ) : rows.length === 0 ? (
+            <Empty>{filtered
+              ? <>No products match. <button type="button" className="ad-link" onClick={() => changeFilters(EMPTY_FILTERS)}>Clear filters</button></>
+              : <>No products yet. <button type="button" className="ad-link" onClick={() => setAdding(true)}>Add one by hand</button> or run “Sync with Square”.</>}</Empty>
           ) : rows.map((p) => {
-            const st = adminStatus(p);
+            const st = STATE_META[p.state ?? "in"];
+            const place = p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "—";
             return (
-              <div key={p.id} role="row" tabIndex={0} className={`ad-tr ad-tr--click ${openId === p.id ? "is-selected" : ""}`}
+              <div key={p.id} role="row" tabIndex={0} className={`ad-tr ad-tr--click ${openId === p.id ? "is-selected" : ""} ${p.state === "retired" ? "is-retired" : ""}`}
                 onClick={() => setOpenId(p.id)} onKeyDown={(e) => { if (e.key === "Enter") setOpenId(p.id); }}>
                 <span className="ad-checkcell" onClick={(e) => e.stopPropagation()}>
                   <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} aria-label={`Select ${p.name}`} />
@@ -244,14 +290,19 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                   <div className="ad-strong ad-ellipsis">{p.name}</div>
                   <div className="ad-muted ad-sm ad-ellipsis">
                     {p.source === "manual" && <span className="ad-tag-manual">Manual</span>}
-                    {[p.series, p.janCode].filter(Boolean).join(" · ") || (p.source === "manual" ? "" : "—")}
+                    {(p.variationCount ?? 0) > 1 && <span className="ad-tag-var">{p.variationCount} variations</span>}
+                    {[p.series, p.janCode, p.sku].filter(Boolean).join(" · ") || (p.source === "manual" || (p.variationCount ?? 0) > 1 ? "" : "—")}
                   </div>
                 </div>
-                <span className="ad-text2 ad-ellipsis" title={p.categoryId ? tree.path(p.categoryId).join(" › ") : undefined}>{p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "—"}</span>
-                <span className="ad-strong">{money(p.priceCents)}</span>
-                <span className="ad-strong" style={{ color: st.color }}>{p.source === "manual" ? <InlineStock ctx={ctx} p={p} /> : p.stockCount == null ? "∞" : p.stockCount}</span>
-                <span><span className="sh-badge" style={{ background: st.color }}>{st.badge}</span></span>
-                <span className="ad-text2 ad-sm">{p.status === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}</span>
+                <span className="ad-text2 ad-ellipsis" title={place}>{place}</span>
+                <span className="ad-strong">{p.priceCents == null ? "—" : money(p.priceCents)}</span>
+                <span className="ad-strong" style={{ color: p.state === "retired" || p.state === "hidden" ? undefined : st.color }}>
+                  {p.source === "manual" && p.state !== "retired" ? <InlineStock ctx={ctx} p={p} onChange={onStock(p)} /> : p.stockCount == null ? "∞" : p.stockCount}
+                  {(p.alertsWaiting ?? 0) > 0 && <span className="ad-alert-pill" title={`${p.alertsWaiting} customer(s) waiting for a restock alert`}>🔔 {p.alertsWaiting}</span>}
+                </span>
+                <span><span className="sh-badge" style={{ background: st.color }} title={st.hint}>{st.badge}</span></span>
+                <span className="ad-text2 ad-sm">{p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}</span>
+                <span className="ad-text2 ad-sm" title={p.updatedAt ? new Date(p.updatedAt).toLocaleString() : undefined}>{p.updatedAt ? ago(p.updatedAt) : "—"}</span>
                 <span onClick={(e) => e.stopPropagation()}>
                   <button type="button" className={`sh-toggle ${p.isFeatured ? "is-on" : ""}`} aria-pressed={!!p.isFeatured} aria-label={`Feature ${p.name}`} onClick={() => toggleFeatured(p)} />
                 </span>
@@ -260,9 +311,24 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           })}
         </div>
       </div>
-      <p className="ad-foot-note">Square products: name, price, photos and stock come from Square Dashboard. Products you add here (tagged Manual) are fully editable here, with − / + to adjust stock right in the table.</p>
-      {open && <ProductDrawer key={open.id} ctx={ctx} p={open} onClose={() => setOpenId(null)} onSaved={(patch) => update(open.id, patch)} />}
-      {adding && <AddProductDrawer ctx={ctx} onClose={() => setAdding(false)} />}
+      {total > 0 && (
+        <div className="ad-pager">
+          <label className="ad-muted ad-sm">Per page{" "}
+            <select className="sh-input" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }} aria-label="Items per page">
+              {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <span className="ad-pager__nav">
+            <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" disabled={page === 0} onClick={() => setPage((n) => n - 1)}>‹ Prev</button>
+            <span className="ad-sm">Page {page + 1} of {pages}</span>
+            <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" disabled={page + 1 >= pages} onClick={() => setPage((n) => n + 1)}>Next ›</button>
+          </span>
+        </div>
+      )}
+      <p className="ad-foot-note">Every item from Square is listed here, including ones that are hidden, sold out or deleted in Square (shown as Retired, kept so past orders still resolve). Square products: name, price, photos and stock come from Square Dashboard. Products you add here (tagged Manual) are fully editable here, with − / + to adjust stock right in the table.</p>
+      {open && <ProductDrawer key={open.id} ctx={ctx} p={open} onClose={() => { setOpenId(null); if (drawerDirty.current) { drawerDirty.current = false; refresh(); } }}
+        onSaved={(change) => { drawerDirty.current = true; update(open.id, change); }} />}
+      {adding && <AddProductDrawer ctx={ctx} onClose={() => { setAdding(false); refresh(); }} />}
     </>
   );
 }
@@ -363,9 +429,27 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
               <div>
                 <div className="ad-strong" style={{ fontSize: 15, fontWeight: 800 }}>{p.name}</div>
                 <div className="ad-muted" style={{ fontSize: 13, marginTop: 2 }}>{p.category ?? "Uncategorised"} · {money(p.priceCents)} · stock {p.stockCount == null ? "∞" : p.stockCount}</div>
+                {(p.sku || p.syncedAt) && <div className="ad-muted ad-sm" style={{ marginTop: 2 }}>{[p.sku && `SKU ${p.sku}`, p.syncedAt && `synced ${ago(p.syncedAt)}`].filter(Boolean).join(" · ")}</div>}
                 <a href={squareUrl} target="_blank" rel="noreferrer" className="ad-link ad-sm" style={{ display: "inline-block", marginTop: 6 }}>Edit in Square ↗</a>
               </div>
             </div>
+          )}
+          {(p.state === "retired" || p.state === "unavailable") && (
+            <div className="ad-callout"><span><b>{STATE_META[p.state].label}.</b> {STATE_META[p.state].hint}</span></div>
+          )}
+          {(p.variations?.length ?? 0) > 1 && (
+            <section className="ad-vars" aria-label="Variations">
+              <div className="ad-label" style={{ margin: 0 }}>Variations ({p.variations?.length})</div>
+              {p.variations?.map((v) => (
+                <div key={v.id} className="ad-vars__row">
+                  <span className="ad-ellipsis"><b>{v.name || "Regular"}</b>{v.isDefault && <span className="ad-tag-var" style={{ marginLeft: 6 }}>Default</span>}{!v.sellable && <span className="ad-tag-var" style={{ marginLeft: 6 }}>Not for sale</span>}</span>
+                  <span className="ad-muted ad-sm ad-ellipsis">{v.sku ?? "no SKU"}</span>
+                  <span>{money(v.priceCents)}</span>
+                  <span>{v.stockCount == null ? "∞" : v.stockCount}</span>
+                </div>
+              ))}
+              <div className="ad-muted ad-sm">The storefront sells the default variation. Manage the others in Square.</div>
+            </section>
           )}
           {(() => {
             const compare = form.compareAt.trim() ? Math.round(Number(form.compareAt) * 100) : null;
