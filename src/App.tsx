@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Storefront from "./v3/storefront/Storefront";
 import MaintenancePage from "./v3/MaintenancePage";
 import { loadStoreConfig, type StoreConfig } from "./v3/storeConfig";
+import SiteLayout from "./v3/SiteLayout";
 import { isRecoveryLink } from "./lib/api";
 
 // The admin bundle is only downloaded by staff visiting /admin.
@@ -23,8 +24,11 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
-        <Route path="/legal/*" element={<Suspense fallback={null}><Legal /></Suspense>} />
-        <Route path="/support" element={<Suspense fallback={null}><Support /></Suspense>} />
+        {/* Plain content pages share one header + footer; everything else brings its own chrome. */}
+        <Route element={<SiteLayout />}>
+          <Route path="/legal/*" element={<Legal />} />
+          <Route path="/support" element={<Support />} />
+        </Route>
         <Route path="/reset-password" element={<Suspense fallback={null}><ResetPassword /></Suspense>} />
         <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
         <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />

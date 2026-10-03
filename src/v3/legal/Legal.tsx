@@ -1,37 +1,19 @@
 import { useEffect } from "react";
 import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import "../tokens.scss";
 import "./legal.scss";
-import { useTheme } from "../hooks";
 import { useDocumentHead } from "../seo";
-import SiteFooter from "../SiteFooter";
 import { LAST_UPDATED, PRIVACY_SECTIONS, TERMS_SECTIONS, type LegalSection } from "./content";
 
-const LOGO = "/logo/logo%20cropped.png";
-
 export default function Legal() {
-  const { theme, toggle } = useTheme();
-
   return (
-    <div className="sh lg">
-      <header className="lg-header">
-        <a href="/" className="lg-logo"><img src={LOGO} alt="Spin Hobby" /></a>
-        <button type="button" className="sh-icon-btn" onClick={toggle} title="Toggle theme" aria-label="Toggle dark mode">
-          {theme === "dark" ? "☀" : "☾"}
-        </button>
-      </header>
+    <div className="lg-wrap">
+      <a href="/" className="lg-back">← Back to the store</a>
 
-      <div className="lg-wrap">
-        <a href="/" className="lg-back">← Back to the store</a>
-
-        <Routes>
-          <Route path="terms" element={<LegalTab privacy={false} />} />
-          <Route path="privacy" element={<LegalTab privacy={true} />} />
-          <Route path="*" element={<Navigate to="/legal/terms" replace />} />
-        </Routes>
-      </div>
-
-      <SiteFooter />
+      <Routes>
+        <Route path="terms" element={<LegalTab privacy={false} />} />
+        <Route path="privacy" element={<LegalTab privacy={true} />} />
+        <Route path="*" element={<Navigate to="/legal/terms" replace />} />
+      </Routes>
     </div>
   );
 }

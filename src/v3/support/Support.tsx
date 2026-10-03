@@ -3,13 +3,9 @@ import { Link, useLocation } from "react-router-dom";
 import "../tokens.scss";
 import "./support.scss";
 import { handlingLabel, money } from "../format";
-import { useTheme } from "../hooks";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
-import SiteFooter from "../SiteFooter";
 import { useStoreConfig } from "../storeConfig";
-
-const LOGO = "/logo/logo%20cropped.png";
 
 /** Topic buttons open the visitor's mail app with a ready subject line and a prompt for the details we need. */
 const TOPICS: { label: string; subject: string; body: string }[] = [
@@ -24,7 +20,6 @@ const mailto = (subject: string, body = "") =>
   `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}${body ? `&body=${encodeURIComponent(body)}` : ""}`;
 
 export default function Support() {
-  const { theme, toggle } = useTheme();
   const { hash, pathname } = useLocation();
   const config = useStoreConfig();
 
@@ -47,14 +42,7 @@ export default function Support() {
     : "Shipping costs are shown in your cart before you pay, and larger orders ship free.";
 
   return (
-    <div className="sh sp">
-      <header className="sp-header">
-        <a href="/" className="sp-logo"><img src={LOGO} alt="Spin Hobby" /></a>
-        <button type="button" className="sh-icon-btn" onClick={toggle} title="Toggle theme" aria-label="Toggle dark mode">
-          {theme === "dark" ? "☀" : "☾"}
-        </button>
-      </header>
-
+    <>
       <main className="sp-wrap">
         <Link to="/" className="sp-back">← Back to the store</Link>
         <h1>Help &amp; support</h1>
@@ -112,8 +100,6 @@ export default function Support() {
           </details>
         </div>
       </main>
-
-      <SiteFooter />
-    </div>
+    </>
   );
 }

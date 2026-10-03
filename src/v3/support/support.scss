@@ -1,22 +1,3 @@
-.sp {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.sp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sp-logo img {
-  height: 32px;
-  display: block;
-}
-
 .sp-wrap {
   width: 100%;
   max-width: 720px;
