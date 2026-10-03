@@ -8,7 +8,7 @@ import type { Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
 import {
-  activeFilterCount, DEFAULT_SORT, EMPTY_FILTERS, filtersFromShortcut, STATE_META, useCatalog, useDebounced,
+  activeFilterCount, densityFor, EMPTY_FILTERS, filtersFromShortcut, loadPrefs, savePrefs, STATE_META, useCatalog, useDebounced, useElementWidth,
   type CatalogFilters, type Sort, type SortDir, type SortKey,
 } from "./catalog";
 import { CategorySelect } from "./Categories";
@@ -158,24 +158,75 @@ function SortHeader({ label, k, sort, onSort }: { label: string; k: SortKey; sor
   );
 }
 
+/** One product as a tappable card, for narrow screens where a table would force sideways scrolling. */
+function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeature, onStock }: {
+  ctx: Ctx; p: Product; tree: ReturnType<typeof buildTree>; selected: boolean; open: boolean;
+  onSelect: () => void; onOpen: () => void; onFeature: () => void; onStock: (stock: number | null) => void;
+}) {
+  const st = STATE_META[p.state ?? "in"];
+  const place = p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "";
+  const sub = [p.series, p.janCode, p.sku].filter(Boolean).join(" · ");
+  const stock = p.source === "manual" && p.state !== "retired" ? <InlineStock ctx={ctx} p={p} onChange={onStock} /> : p.stockCount == null ? "∞" : p.stockCount;
+  return (
+    <div role="listitem" tabIndex={0} className={`ad-pcard ${open ? "is-selected" : ""} ${selected ? "is-checked" : ""} ${p.state === "retired" ? "is-retired" : ""}`}
+      onClick={onOpen} onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) onOpen(); }} aria-label={`${p.name}, ${st.label}. Tap to edit.`}>
+      <label className="ad-pcard__check" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={selected} onChange={onSelect} aria-label={`Select ${p.name}`} />
+      </label>
+      <Thumb src={p.images[0]} size={60} />
+      <div className="ad-pcard__body">
+        <div className="ad-pcard__name">{p.name}</div>
+        {(sub || p.source === "manual" || (p.variationCount ?? 0) > 1) && (
+          <div className="ad-pcard__sub">
+            {p.source === "manual" && <span className="ad-tag-manual">Manual</span>}
+            {(p.variationCount ?? 0) > 1 && <span className="ad-tag-var">{p.variationCount} variations</span>}
+            {sub}
+          </div>
+        )}
+        <div className="ad-pcard__facts">
+          <b>{p.priceCents == null ? "—" : money(p.priceCents)}</b>
+          <span className="ad-pcard__stock">Stock {stock}{(p.alertsWaiting ?? 0) > 0 && <span className="ad-alert-pill">🔔 {p.alertsWaiting}</span>}</span>
+          <span className="sh-badge" style={{ background: st.color }}>{st.badge}</span>
+        </div>
+        {(place || p.updatedAt || (p.status === "pre" && p.state === "pre")) && (
+          <div className="ad-pcard__meta">
+            {[place, p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}` : "", p.updatedAt ? `Updated ${ago(p.updatedAt)}` : ""].filter(Boolean).join(" · ")}
+          </div>
+        )}
+      </div>
+      <button type="button" className={`ad-star ${p.isFeatured ? "is-on" : ""}`} aria-pressed={!!p.isFeatured} aria-label={p.isFeatured ? `Remove ${p.name} from featured` : `Feature ${p.name}`}
+        onClick={(e) => { e.stopPropagation(); onFeature(); }}>{p.isFeatured ? "★" : "☆"}</button>
+    </div>
+  );
+}
+
 export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [filters, setFilters] = useState<CatalogFilters>(() => filtersFromShortcut(ctx.productFilter) ?? EMPTY_FILTERS);
-  const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
+  const [prefs] = useState(loadPrefs);
+  const [sort, setSort] = useState<Sort>(prefs.sort);
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(prefs.pageSize);
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set()); // kept across pages and filter changes
   const [bulkTarget, setBulkTarget] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
   const drawerDirty = useRef(false);
+  const listRef = useRef<HTMLDivElement>(null);
   const tree = useMemo(() => buildTree(ctx.data.categories), [ctx.data.categories]);
+
+  // Layout follows the room the list actually has (the sidebar takes some), not the window: cards when it's tight,
+  // otherwise columns drop away one by one instead of forcing a sideways scroll.
+  const width = useElementWidth(listRef);
+  const density = densityFor(width);
+  const compact = density === "cards";
 
   // The dashboard's shortcuts ("Low / sold out") are one-shot: used for the first view, then cleared so they
   // don't re-apply on the next visit.
   const shortcut = ctx.productFilter;
   const clearShortcut = ctx.setProductFilter;
   useEffect(() => { if (shortcut !== "All") clearShortcut("All"); }, [shortcut, clearShortcut]);
+  useEffect(() => { savePrefs({ sort, pageSize }); }, [sort, pageSize]);
 
   const q = useDebounced(filters.q);
   const min = useDebounced(filters.min);
@@ -194,8 +245,16 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   // After deleting or filtering away the last rows of a page, step back instead of showing an empty page.
   useEffect(() => { if (data && !rows.length && total > 0 && page > 0) setPage(Math.max(0, pages - 1)); }, [data, rows.length, total, page, pages]);
 
+  // Turning the page brings the top of the list back into view, like any paginated list.
+  const firstPage = useRef(true);
+  useEffect(() => {
+    if (firstPage.current) { firstPage.current = false; return; }
+    listRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [page]);
+
   const allSelected = rows.length > 0 && rows.every((p) => selected.has(p.id));
   const toggleSelect = (id: string) => setSelected((cur) => { const next = new Set(cur); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const toggleAll = () => setSelected((cur) => { const next = new Set(cur); for (const p of rows) { if (allSelected) next.delete(p.id); else next.add(p.id); } return next; });
   const bulkMove = async () => {
     if (!bulkTarget) return;
     const categoryId = bulkTarget === "none" ? null : bulkTarget;
@@ -231,12 +290,27 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
 
   const from = total ? page * pageSize + 1 : 0;
   const to = page * pageSize + rows.length;
+  const search = filters.q.trim();
+
+  const empty = !data && !error ? (
+    <div className="ad-skeletons" aria-hidden>{Array.from({ length: 6 }, (_, i) => <div key={i} className="ad-skel" />)}</div>
+  ) : error && !data ? (
+    <Empty>{error} <button type="button" className="ad-link" onClick={refresh}>Try again</button></Empty>
+  ) : rows.length === 0 ? (
+    <Empty>
+      {filtered
+        ? <>{search ? <>No products match “{search}”{activeFilterCount({ ...filters, q: "" }) ? " with these filters" : ""}. </> : <>No products match these filters. </>}
+            <button type="button" className="ad-link" onClick={() => changeFilters(EMPTY_FILTERS)}>Clear {search ? "search and filters" : "filters"}</button>
+            {search && <div className="ad-muted ad-sm" style={{ marginTop: 6 }}>Tip: you can search by name, series, JAN, SKU or Square ID.</div>}</>
+        : <>No products yet. <button type="button" className="ad-link" onClick={() => setAdding(true)}>Add one by hand</button> or run “Sync with Square”.</>}
+    </Empty>
+  ) : null;
 
   return (
     <>
-      <ProductFilters filters={filters} onFilters={changeFilters} sort={sort} onSort={changeSort} counts={counts} tree={tree} onAdd={() => setAdding(true)} />
+      <ProductFilters filters={filters} onFilters={changeFilters} sort={sort} onSort={changeSort} counts={counts} tree={tree} onAdd={() => setAdding(true)} compact={compact} />
       {selected.size > 0 && (
-        <div className="ad-bulk" role="region" aria-label="Bulk actions">
+        <div className={`ad-bulk ${compact ? "is-sticky" : ""}`} role="region" aria-label="Bulk actions">
           <span>{selected.size} selected</span>
           <select className="sh-input" value={bulkTarget} onChange={(e) => setBulkTarget(e.target.value)} aria-label="Move to category">
             <option value="">Move to category…</option>
@@ -255,61 +329,68 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
         </span>
         {counts?.lastSyncedAt && <span className="ad-muted">Square last synced {ago(counts.lastSyncedAt)}</span>}
       </div>
-      <div className="ad-table-wrap">
-        <div className={`ad-table ad-table--products ${loading && data ? "is-loading" : ""}`} role="table" aria-label="Products" aria-busy={loading}>
-          <div className="ad-tr ad-th" role="row">
-            <span className="ad-checkcell"><input type="checkbox" checked={allSelected} aria-label="Select all on this page"
-              onChange={() => setSelected((cur) => { const next = new Set(cur); for (const p of rows) { if (allSelected) next.delete(p.id); else next.add(p.id); } return next; })} /></span>
-            <span />
-            <SortHeader label="Product" k="name" sort={sort} onSort={changeSort} />
-            <SortHeader label="Category" k="category" sort={sort} onSort={changeSort} />
-            <SortHeader label="Price" k="price" sort={sort} onSort={changeSort} />
-            <SortHeader label="Stock" k="stock" sort={sort} onSort={changeSort} />
-            <SortHeader label="Status" k="status" sort={sort} onSort={changeSort} />
-            <SortHeader label="Release / order by" k="release" sort={sort} onSort={changeSort} />
-            <SortHeader label="Updated" k="updated" sort={sort} onSort={changeSort} />
-            <span>Featured</span>
+      <div ref={listRef} className={compact ? "ad-cards-wrap" : "ad-table-wrap"}>
+        {compact ? (
+          <div className={`ad-cards ${loading && data ? "is-loading" : ""}`} role="list" aria-label="Products" aria-busy={loading}>
+            {rows.length > 0 && (
+              <label className="ad-cards__all"><input type="checkbox" checked={allSelected} onChange={toggleAll} /> Select all on this page</label>
+            )}
+            {empty}
+            {rows.map((p) => (
+              <ProductCardRow key={p.id} ctx={ctx} p={p} tree={tree} selected={selected.has(p.id)} open={openId === p.id}
+                onSelect={() => toggleSelect(p.id)} onOpen={() => setOpenId(p.id)} onFeature={() => toggleFeatured(p)} onStock={onStock(p)} />
+            ))}
           </div>
-          {!data && !error ? <Empty>Loading products…</Empty> : error && !data ? (
-            <Empty>{error} <button type="button" className="ad-link" onClick={refresh}>Try again</button></Empty>
-          ) : rows.length === 0 ? (
-            <Empty>{filtered
-              ? <>No products match. <button type="button" className="ad-link" onClick={() => changeFilters(EMPTY_FILTERS)}>Clear filters</button></>
-              : <>No products yet. <button type="button" className="ad-link" onClick={() => setAdding(true)}>Add one by hand</button> or run “Sync with Square”.</>}</Empty>
-          ) : rows.map((p) => {
-            const st = STATE_META[p.state ?? "in"];
-            const place = p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "—";
-            return (
-              <div key={p.id} role="row" tabIndex={0} className={`ad-tr ad-tr--click ${openId === p.id ? "is-selected" : ""} ${p.state === "retired" ? "is-retired" : ""}`}
-                onClick={() => setOpenId(p.id)} onKeyDown={(e) => { if (e.key === "Enter") setOpenId(p.id); }}>
-                <span className="ad-checkcell" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} aria-label={`Select ${p.name}`} />
-                </span>
-                <Thumb src={p.images[0]} />
-                <div className="ad-cell-main">
-                  <div className="ad-strong ad-ellipsis">{p.name}</div>
-                  <div className="ad-muted ad-sm ad-ellipsis">
-                    {p.source === "manual" && <span className="ad-tag-manual">Manual</span>}
-                    {(p.variationCount ?? 0) > 1 && <span className="ad-tag-var">{p.variationCount} variations</span>}
-                    {[p.series, p.janCode, p.sku].filter(Boolean).join(" · ") || (p.source === "manual" || (p.variationCount ?? 0) > 1 ? "" : "—")}
+        ) : (
+          <div className={`ad-table ad-table--products ${loading && data ? "is-loading" : ""}`} data-density={density} role="table" aria-label="Products" aria-busy={loading}>
+            <div className="ad-tr ad-th" role="row">
+              <span className="ad-checkcell"><input type="checkbox" checked={allSelected} aria-label="Select all on this page" onChange={toggleAll} /></span>
+              <span />
+              <SortHeader label="Product" k="name" sort={sort} onSort={changeSort} />
+              <span className="c-cat"><SortHeader label="Category" k="category" sort={sort} onSort={changeSort} /></span>
+              <SortHeader label="Price" k="price" sort={sort} onSort={changeSort} />
+              <SortHeader label="Stock" k="stock" sort={sort} onSort={changeSort} />
+              <SortHeader label="Status" k="status" sort={sort} onSort={changeSort} />
+              <span className="c-rel"><SortHeader label="Release / order by" k="release" sort={sort} onSort={changeSort} /></span>
+              <span className="c-upd"><SortHeader label="Updated" k="updated" sort={sort} onSort={changeSort} /></span>
+              <span>Featured</span>
+            </div>
+            {empty}
+            {rows.map((p) => {
+              const st = STATE_META[p.state ?? "in"];
+              const place = p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "—";
+              return (
+                <div key={p.id} role="row" tabIndex={0} className={`ad-tr ad-tr--click ${openId === p.id ? "is-selected" : ""} ${p.state === "retired" ? "is-retired" : ""}`}
+                  title="Click to edit" onClick={() => setOpenId(p.id)} onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) setOpenId(p.id); }}>
+                  <span className="ad-checkcell" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} aria-label={`Select ${p.name}`} />
+                  </span>
+                  <Thumb src={p.images[0]} />
+                  <div className="ad-cell-main">
+                    <div className="ad-strong ad-ellipsis">{p.name}</div>
+                    <div className="ad-muted ad-sm ad-ellipsis">
+                      {p.source === "manual" && <span className="ad-tag-manual">Manual</span>}
+                      {(p.variationCount ?? 0) > 1 && <span className="ad-tag-var">{p.variationCount} variations</span>}
+                      {[p.series, p.janCode, p.sku].filter(Boolean).join(" · ") || (p.source === "manual" || (p.variationCount ?? 0) > 1 ? "" : "—")}
+                    </div>
                   </div>
+                  <span className="ad-text2 ad-ellipsis c-cat" title={place}>{place}</span>
+                  <span className="ad-strong">{p.priceCents == null ? "—" : money(p.priceCents)}</span>
+                  <span className="ad-strong" style={{ color: p.state === "retired" || p.state === "hidden" ? undefined : st.color }}>
+                    {p.source === "manual" && p.state !== "retired" ? <InlineStock ctx={ctx} p={p} onChange={onStock(p)} /> : p.stockCount == null ? "∞" : p.stockCount}
+                    {(p.alertsWaiting ?? 0) > 0 && <span className="ad-alert-pill" title={`${p.alertsWaiting} customer(s) waiting for a restock alert`}>🔔 {p.alertsWaiting}</span>}
+                  </span>
+                  <span><span className="sh-badge" style={{ background: st.color }} title={st.hint}>{st.badge}</span></span>
+                  <span className="ad-text2 ad-sm c-rel">{p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}</span>
+                  <span className="ad-text2 ad-sm c-upd" title={p.updatedAt ? new Date(p.updatedAt).toLocaleString() : undefined}>{p.updatedAt ? ago(p.updatedAt) : "—"}</span>
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className={`sh-toggle ${p.isFeatured ? "is-on" : ""}`} aria-pressed={!!p.isFeatured} aria-label={`Feature ${p.name}`} onClick={() => toggleFeatured(p)} />
+                  </span>
                 </div>
-                <span className="ad-text2 ad-ellipsis" title={place}>{place}</span>
-                <span className="ad-strong">{p.priceCents == null ? "—" : money(p.priceCents)}</span>
-                <span className="ad-strong" style={{ color: p.state === "retired" || p.state === "hidden" ? undefined : st.color }}>
-                  {p.source === "manual" && p.state !== "retired" ? <InlineStock ctx={ctx} p={p} onChange={onStock(p)} /> : p.stockCount == null ? "∞" : p.stockCount}
-                  {(p.alertsWaiting ?? 0) > 0 && <span className="ad-alert-pill" title={`${p.alertsWaiting} customer(s) waiting for a restock alert`}>🔔 {p.alertsWaiting}</span>}
-                </span>
-                <span><span className="sh-badge" style={{ background: st.color }} title={st.hint}>{st.badge}</span></span>
-                <span className="ad-text2 ad-sm">{p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}</span>
-                <span className="ad-text2 ad-sm" title={p.updatedAt ? new Date(p.updatedAt).toLocaleString() : undefined}>{p.updatedAt ? ago(p.updatedAt) : "—"}</span>
-                <span onClick={(e) => e.stopPropagation()}>
-                  <button type="button" className={`sh-toggle ${p.isFeatured ? "is-on" : ""}`} aria-pressed={!!p.isFeatured} aria-label={`Feature ${p.name}`} onClick={() => toggleFeatured(p)} />
-                </span>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       {total > 0 && (
         <div className="ad-pager">
@@ -326,6 +407,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
         </div>
       )}
       <p className="ad-foot-note">Every item from Square is listed here, including ones that are hidden, sold out or deleted in Square (shown as Retired, kept so past orders still resolve). Square products: name, price, photos and stock come from Square Dashboard. Products you add here (tagged Manual) are fully editable here, with − / + to adjust stock right in the table.</p>
+      {compact && selected.size > 0 && <div className="ad-bulk-spacer" aria-hidden />}
       {open && <ProductDrawer key={open.id} ctx={ctx} p={open} onClose={() => { setOpenId(null); if (drawerDirty.current) { drawerDirty.current = false; refresh(); } }}
         onSaved={(change) => { drawerDirty.current = true; update(open.id, change); }} />}
       {adding && <AddProductDrawer ctx={ctx} onClose={() => { setAdding(false); refresh(); }} />}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { api } from "../../lib/api";
 import type { AdminState, Product } from "../types";
 
@@ -134,4 +134,45 @@ export function useCatalog(filters: CatalogFilters, sort: Sort, page: number, pa
     setData((d) => (d ? { ...d, items: d.items.map((p) => (p.id === id ? { ...p, ...change } : p)) } : d)), []);
 
   return { data, loading, error, refresh, patch };
+}
+
+// ---------------------------------------------------------------- layout + preferences
+
+/** Width of an element, kept current as it resizes (0 until measured). Drives layout by the space the list actually has. */
+export function useElementWidth(ref: RefObject<HTMLElement>) {
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setWidth(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return width;
+}
+
+/** Below this the table becomes a list of cards; above it, columns drop away one by one as space shrinks. */
+export const CARD_BELOW = 700;
+export type Density = "full" | "wide" | "medium" | "narrow" | "cards";
+export function densityFor(width: number): Density {
+  if (width === 0 || width >= 1090) return "full";
+  if (width >= 920) return "wide";   // drops "Release / order by"
+  if (width >= 800) return "medium"; // ...and "Updated"
+  if (width >= CARD_BELOW) return "narrow"; // ...and "Category"
+  return "cards";
+}
+
+const PREFS_KEY = "spinhobby-admin-products";
+export interface ProductPrefs { sort: Sort; pageSize: number }
+/** Sort order and page size are habits worth remembering; filters are not (a leftover filter looks like missing products). */
+export function loadPrefs(): ProductPrefs {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
+    const okSort = raw?.sort && SORT_OPTIONS.some((o) => o.value === `${raw.sort.key}:${raw.sort.dir}`);
+    return { sort: okSort ? raw.sort : DEFAULT_SORT, pageSize: [25, 50, 100].includes(raw?.pageSize) ? raw.pageSize : 50 };
+  } catch { return { sort: DEFAULT_SORT, pageSize: 50 }; }
+}
+export function savePrefs(prefs: ProductPrefs) {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage blocked */ }
 }

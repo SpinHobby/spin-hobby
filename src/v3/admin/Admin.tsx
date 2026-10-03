@@ -99,7 +99,7 @@ export default function Admin() {
         <div className="ad-side__foot">
           <div className="ad-side__status">
             <span className="ad-dot" style={{ background: connected ? "#3fbf92" : "#f06a6e" }} />
-            <span>{connected ? `Square connected · synced ${syncAgo(lastSync)}` : "Square not connected"}</span>
+            <span>{connected ? (lastSync ? `Square connected · synced ${syncAgo(lastSync)}` : "Square connected · not synced yet") : "Square not connected"}</span>
           </div>
           <div className="ad-side__status">
             <span className="ad-dot" style={{ background: "var(--gold)" }} />

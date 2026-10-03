@@ -283,9 +283,17 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
   select { width: auto; min-width: 220px; padding: 7px 9px; }
 }
 .ad-checkcell { display: grid; place-items: center; input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; } }
-.ad-table--products { min-width: 1060px; }
-.ad-table--products .ad-tr { grid-template-columns: 28px 52px minmax(220px, 2.2fr) 1.2fr 80px 100px 112px 140px 90px 66px; }
-.ad-table--products.is-loading { opacity: .55; transition: opacity .15s; }
+// Columns by how much room the list has (set from its measured width, see densityFor in catalog.ts):
+// each step drops the least important column so rows never need a sideways scroll.
+.ad-table--products { min-width: 0; }
+.ad-table--products .ad-tr { grid-template-columns: 28px 44px minmax(200px, 2.2fr) minmax(110px, 1.2fr) 80px 92px 104px 128px 80px 60px; }
+.ad-table--products[data-density="wide"] .ad-tr { grid-template-columns: 28px 44px minmax(180px, 2.2fr) minmax(110px, 1.2fr) 80px 92px 104px 80px 60px; }
+.ad-table--products[data-density="medium"] .ad-tr { grid-template-columns: 28px 44px minmax(160px, 2.2fr) minmax(110px, 1.2fr) 80px 92px 104px 60px; }
+.ad-table--products[data-density="narrow"] .ad-tr { grid-template-columns: 28px 44px minmax(160px, 2.2fr) 80px 92px 104px 60px; }
+.ad-table--products[data-density="wide"] .c-rel,
+.ad-table--products[data-density="medium"] .c-rel, .ad-table--products[data-density="medium"] .c-upd,
+.ad-table--products[data-density="narrow"] .c-rel, .ad-table--products[data-density="narrow"] .c-upd, .ad-table--products[data-density="narrow"] .c-cat { display: none; }
+.ad-table--products.is-loading, .ad-cards.is-loading { opacity: .55; transition: opacity .15s; }
 .ad-tr.is-retired { opacity: .6; }
 .ad-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; text-align: left;
   &:hover, &.is-active { color: var(--text); } }
@@ -298,6 +306,70 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-pager { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; .sh-input { width: auto; padding: 6px 8px; } &__nav { display: inline-flex; align-items: center; gap: 12px; } }
 .ad-vars { display: grid; gap: 6px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13.5px;
   &__row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 70px 40px; gap: 8px; align-items: center; } }
+// ---- loading skeleton
+.ad-skeletons { display: grid; padding: 6px 0; }
+.ad-skel { height: 60px; margin: 6px 16px; border-radius: 10px; background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: ad-shimmer 1.2s infinite linear; }
+@keyframes ad-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .ad-skel { animation: none; } }
+
+// ---- filter chips, tags and the folded filter panel
+.ad-chip-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+.sh-chip.is-active .ad-chip-dot { box-shadow: 0 0 0 2px rgba(255, 255, 255, .55); }
+.ad-checks { display: contents; }
+.ad-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ad-ftag { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: 12.5px; font-weight: 700; color: var(--text2); cursor: pointer;
+  &:hover { border-color: var(--primary); color: var(--text); } }
+.ad-filters-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; white-space: nowrap;
+  &__count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--primary); color: var(--on-primary); font-size: 11.5px; display: grid; place-items: center; } }
+
+// ---- product cards (narrow screens)
+.ad-cards { display: grid; gap: 10px; }
+.ad-cards__all { display: flex; align-items: center; gap: 10px; padding: 2px 4px; font-size: 13.5px; font-weight: 600; color: var(--text2); cursor: pointer;
+  input { width: 20px; height: 20px; accent-color: var(--primary); } }
+.ad-cards .ad-skel { margin: 0; height: 104px; border-radius: 14px; }
+.ad-cards .ad-empty { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.ad-pcard { display: grid; grid-template-columns: 28px 60px minmax(0, 1fr) 40px; gap: 10px 12px; align-items: start; padding: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  &:active, &:focus-visible { background: var(--surface2); outline: 0; }
+  &.is-selected { border-color: var(--primary); }
+  &.is-checked { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, var(--surface)); }
+  &.is-retired { opacity: .65; }
+  &__check { display: grid; place-items: center; height: 60px; cursor: pointer; input { width: 20px; height: 20px; accent-color: var(--primary); } }
+  &__body { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+  &__name { font-weight: 700; font-size: 14.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  &__sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  &__facts { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 14px; b { font-size: 15px; } }
+  &__stock { color: var(--text2); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+  &__meta { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+  .ad-inline-stock button { width: 30px; height: 30px; font-size: 16px; border-radius: 8px; }
+}
+.ad-star { border: 0; background: none; width: 40px; height: 40px; border-radius: 10px; font-size: 25px; line-height: 1; color: var(--muted); cursor: pointer;
+  &.is-on { color: var(--gold); } &:active { background: var(--surface2); } }
+
+// ---- phones
+.ad-toolbar.is-compact {
+  .ad-search { flex: 1 1 100%; padding: 12px 14px; font-size: 16px; } // 16px stops iOS zooming into the field
+  .ad-sort-select { flex: 1 1 130px; min-width: 0; padding: 11px 10px; }
+  .ad-add-btn { padding: 11px 16px; }
+  .ad-add-btn__long { display: none; }
+  .ad-filters-btn { padding: 11px 14px; }
+}
+.ad-toolbar.is-compact + .ad-chips { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 2px 16px; scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+.ad-toolbar.is-compact + .ad-chips .sh-chip { flex: none; padding: 10px 14px; }
+.ad-filterbar.is-compact { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  .sh-input { padding: 11px 12px; font-size: 16px; }
+  .ad-cat-filter { grid-column: 1 / -1; width: 100%; }
+  .ad-source-filter { width: 100%; min-width: 0; grid-column: 1 / -1; }
+  .ad-price-filter { grid-column: 1 / -1; .sh-input { flex: 1; width: auto; } }
+  .ad-checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 12px 18px; }
+  .ad-check { font-size: 14px; input { width: 20px; height: 20px; } } }
+.ad-bulk.is-sticky { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 40; background: var(--surface); box-shadow: 0 10px 28px rgba(0, 0, 0, .35);
+  select { flex: 1 1 100%; min-width: 0; } }
+.ad-bulk-spacer { height: 130px; flex: none; }
+@media (max-width: 760px) {
+  .ad-pager { gap: 12px; &__nav { width: 100%; justify-content: space-between; } .ad-btn-sm { padding: 11px 16px; } }
+  .ad-summary-line { font-size: 12.5px; }
+}
 .ad-tag-var { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text2); background: var(--surface2); padding: 1px 6px; border-radius: 5px; margin-right: 6px; vertical-align: 1px; }
 .ad-alert-pill { margin-left: 6px; font-size: 11px; font-weight: 800; color: var(--text2); background: var(--surface2); padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
 .ad-cat-filter { width: auto; min-width: 200px; padding: 9px 10px; }
