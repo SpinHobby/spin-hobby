@@ -1,5 +1,7 @@
 .sp {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .sp-header {
@@ -16,9 +18,10 @@
 }
 
 .sp-wrap {
+  width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  padding: 32px 24px 80px;
+  padding: 32px 24px 64px;
 
   h1 {
     font-family: var(--font-display);

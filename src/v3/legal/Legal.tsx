@@ -4,6 +4,7 @@ import "../tokens.scss";
 import "./legal.scss";
 import { useTheme } from "../hooks";
 import { useDocumentHead } from "../seo";
+import SiteFooter from "../SiteFooter";
 import { LAST_UPDATED, PRIVACY_SECTIONS, TERMS_SECTIONS, type LegalSection } from "./content";
 
 const LOGO = "/logo/logo%20cropped.png";
@@ -29,6 +30,8 @@ export default function Legal() {
           <Route path="*" element={<Navigate to="/legal/terms" replace />} />
         </Routes>
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

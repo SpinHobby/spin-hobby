@@ -6,6 +6,7 @@ import { handlingLabel, money } from "../format";
 import { useTheme } from "../hooks";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
+import SiteFooter from "../SiteFooter";
 import { useStoreConfig } from "../storeConfig";
 
 const LOGO = "/logo/logo%20cropped.png";
@@ -111,6 +112,8 @@ export default function Support() {
           </details>
         </div>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }
