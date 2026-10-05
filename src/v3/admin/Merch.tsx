@@ -1,15 +1,18 @@
-import { DragEvent, useRef, useState } from "react";
+import { DragEvent, Suspense, lazy, useRef, useState } from "react";
+import type { AtelierResult } from "@atelier/react";
 import { api } from "../../lib/api";
 import { money, statusLabel } from "../format";
 import { useEscape } from "../hooks";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import type { Product } from "../types";
-import { formatBytes, prepareImage, uploadPrepared } from "./image";
+import { formatBytes, prepareImage, preparedFromBlob, uploadPrepared } from "./image";
 import { CategorySelect } from "./Categories";
 import type { Ctx } from "./Screens";
 
 const PREVIEW: CardActions = { currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {}, onOpen: () => {} };
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
+// The photo editor is only downloaded when someone opens it.
+const PhotoEditor = lazy(() => import("./PhotoEditor"));
 
 // ---------------------------------------------------------------- photos
 
@@ -22,7 +25,23 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
   const limit = single ? 1 : max;
+
+  /** Uploads the edited photo and puts it in place of the one that was opened. */
+  const saveEdit = async (index: number, result: AtelierResult) => {
+    setEditing(null);
+    setError(""); setNote("");
+    setBusy("Uploading edited photo…");
+    try {
+      const url = await uploadPrepared(await preparedFromBlob(result.blob, result.width, result.height), folder);
+      onChange(urls.map((u, k) => (k === index ? url : u)));
+    } catch (e) {
+      setError(errMsg(e));
+    } finally {
+      setBusy("");
+    }
+  };
 
   const add = async (files: FileList | File[]) => {
     const list = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, Math.max(limit - (single ? 0 : urls.length), 0));
@@ -65,6 +84,7 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
               <img src={url} alt="" />
               {!single && i === 0 && <span className="ad-photos__cover">Cover</span>}
               <div className="ad-photos__actions">
+                <button type="button" onClick={() => setEditing(i)} disabled={!!busy} title="Edit photo" aria-label="Edit photo">✎</button>
                 {!single && i > 0 && <button type="button" onClick={() => move(i)} title="Make cover photo">★</button>}
                 <button type="button" onClick={() => remove(i)} aria-label="Remove photo">×</button>
               </div>
@@ -83,6 +103,11 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
       <input ref={input} type="file" accept="image/*" multiple={!single} hidden onChange={(e) => e.target.files && add(e.target.files)} />
       {note && !error && <span className="ad-photos__note">Optimized {note}</span>}
       {error && <span className="ad-error">{error}</span>}
+      {editing !== null && urls[editing] && (
+        <Suspense fallback={null}>
+          <PhotoEditor url={urls[editing]} folder={folder} onCancel={() => setEditing(null)} onDone={(r) => saveEdit(editing, r)} />
+        </Suspense>
+      )}
     </div>
   );
 }
