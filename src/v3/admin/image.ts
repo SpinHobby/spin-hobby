@@ -65,6 +65,11 @@ export async function prepareImage(file: File, maxSize = 1200, quality = 0.82): 
   return { blob, dataUrl: await toDataUrl(blob), type: blob.type, width: canvas.width, height: canvas.height, originalBytes: file.size };
 }
 
+/** Wraps an image the photo editor already sized and encoded, so it uploads like any prepared image. */
+export async function preparedFromBlob(blob: Blob, width: number, height: number): Promise<PreparedImage> {
+  return { blob, dataUrl: await toDataUrl(blob), type: blob.type, width, height, originalBytes: blob.size };
+}
+
 /** Uploads an already-prepared image to the product-images bucket and returns its public URL. */
 export async function uploadPrepared(image: PreparedImage, folder: "products" | "slides"): Promise<string> {
   const res = await api<{ url: string }>("/admin/uploads", {
