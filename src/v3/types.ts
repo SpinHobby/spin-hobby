@@ -175,9 +175,9 @@ export interface Readiness {
   appAndLocationConnected: boolean;
   catalogAndInventorySyncing: boolean;
   webhookKeySet: boolean;
-  sandboxPaymentsConfigured: boolean;
+  /** Square is in live mode, so real cards are charged (false means the sandbox). */
+  liveMode: boolean;
   threeDSecureEnabled: boolean;
-  applePayDomainVerified: boolean;
   activeProvider?: "paypal" | "square";
   lastSyncAt: string | null;
 }
