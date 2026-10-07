@@ -2,6 +2,7 @@ import { dayLabel, discountPct, money, monthLabel, normalizeStatus, STATUS_META,
 import type { MouseEvent, ReactNode } from "react";
 import type { Product } from "../types";
 import { productPath } from "./data";
+import { photo } from "../photo";
 
 export interface CardActions {
   currency: Currency;
@@ -27,7 +28,7 @@ export function ProductImage({ p, className = "", label = true }: { p: Product; 
   const src = p.images[0];
   return (
     <div className={`sf-img ${src ? "" : "sh-ph"} ${className}`}>
-      {src ? <img src={src} alt={p.name} loading="lazy" /> : label && <span className="sf-img__ph" aria-hidden>[ product image ]</span>}
+      {src ? <img {...photo(src, 480)} alt={p.name} loading="lazy" /> : label && <span className="sf-img__ph" aria-hidden>[ product image ]</span>}
     </div>
   );
 }
@@ -36,7 +37,7 @@ function Thumb({ p, size }: { p: Product; size: number }) {
   const src = p.images[0];
   return (
     <div className={`sh-thumb ${src ? "" : "sh-ph sh-ph--sm"}`} style={{ width: size, height: size }}>
-      {src && <img src={src} alt="" loading="lazy" />}
+      {src && <img {...photo(src, size * 2)} alt="" loading="lazy" />}
     </div>
   );
 }

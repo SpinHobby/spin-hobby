@@ -5,6 +5,7 @@ import { greetingName, money, storeFormat, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
 import type { CartLine } from "./data";
+import { photo } from "../photo";
 
 
 export function CartDrawer({ lines, subtotal, currency, onQty, onClose }: {
@@ -40,7 +41,7 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onClose }: {
               {lines.map((l) => (
                 <div className="sf-cart-line" key={l.variationId}>
                   <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 56, height: 56 }}>
-                    {l.imageUrl && <img src={l.imageUrl} alt="" />}
+                    {l.imageUrl && <img {...photo(l.imageUrl, 112)} alt="" />}
                   </div>
                   <div className="sf-cart-line__main">
                     <div className="sf-cart-line__name">{l.name}</div>

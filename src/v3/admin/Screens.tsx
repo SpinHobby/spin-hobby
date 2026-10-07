@@ -14,6 +14,7 @@ import {
 import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
+import { photo } from "../photo";
 
 export interface Ctx {
   data: AdminData;
@@ -46,7 +47,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 function Thumb({ src, size = 44 }: { src?: string | null; size?: number }) {
   return (
     <div className={`sh-thumb ${src ? "" : "sh-ph sh-ph--xs"}`} style={{ width: size, height: size, borderRadius: 9 }}>
-      {src && <img src={src} alt="" loading="lazy" />}
+      {src && <img {...photo(src, size * 2)} alt="" loading="lazy" />}
     </div>
   );
 }

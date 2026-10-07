@@ -11,6 +11,7 @@ import { loadStoreConfig } from "../storeConfig";
 import { useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
+import { photo } from "../photo";
 
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
@@ -305,7 +306,7 @@ export default function Checkout() {
                   return (
                     <div key={l.variationId} className="co-line">
                       <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 68, height: 68 }}>
-                        {l.imageUrl && <img src={l.imageUrl} alt="" />}
+                        {l.imageUrl && <img {...photo(l.imageUrl, 136)} alt="" />}
                       </div>
                       <div className="co-line__main">
                         <span className="co-line__name">{l.name}</span>

@@ -10,6 +10,7 @@ import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions } from "./ProductViews";
+import { photo } from "../photo";
 
 function productJsonLd(p: Product) {
   const availability = normalizeStatus(p.status) === "out" ? "https://schema.org/OutOfStock"
@@ -197,7 +198,7 @@ function Gallery({ p }: { p: Product }) {
         <div className="sf-pp__thumbs" role="tablist" aria-label="Photos">
           {images.map((src, n) => (
             <button key={src + n} type="button" role="tab" aria-selected={n === i} className={n === i ? "is-active" : ""} onClick={() => jump(n)} aria-label={`Photo ${n + 1}`}>
-              <img src={src} alt="" loading="lazy" />
+              <img {...photo(src, 160)} alt="" loading="lazy" />
             </button>
           ))}
         </div>
@@ -206,7 +207,7 @@ function Gallery({ p }: { p: Product }) {
         <div className="sf-pp__main" ref={stripRef} onScroll={onScroll}>
           {images.map((src, n) => (
             <button key={src + n} type="button" className={`sf-pp__slide ${n === i ? "is-active" : ""}`} onClick={() => { setI(n); setZoom(true); }} aria-label={`Enlarge photo ${n + 1}`}>
-              <img src={src} alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`} loading={n === 0 ? "eager" : "lazy"} />
+              <img {...photo(src, 1000)} alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`} loading={n === 0 ? "eager" : "lazy"} />
             </button>
           ))}
         </div>
@@ -239,7 +240,7 @@ function Lightbox({ images, index, name, onIndex, onClose }: { images: string[];
   }, [index, onIndex]);
   return (
     <div className="sf-lightbox" role="dialog" aria-modal="true" aria-label={`${name} photos`} onClick={onClose}>
-      <img src={images[index]} alt={`${name}, photo ${index + 1} of ${images.length}`} onClick={(e) => e.stopPropagation()} />
+      <img {...photo(images[index], 1600)} alt={`${name}, photo ${index + 1} of ${images.length}`} onClick={(e) => e.stopPropagation()} />
       <button ref={closeRef} type="button" className="sf-lightbox__close" onClick={onClose} aria-label="Close">×</button>
       {images.length > 1 && (
         <>

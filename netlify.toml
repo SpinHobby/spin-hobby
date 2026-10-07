@@ -5,6 +5,10 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# Netlify's image service may shrink Square's product photos (see src/v3/photo.ts).
+[images]
+  remote_images = ["https://items-images-[a-z]+\\.s3\\.[a-z0-9-]+\\.amazonaws\\.com/.*"]
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
