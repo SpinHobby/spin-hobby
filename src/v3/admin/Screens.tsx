@@ -979,15 +979,15 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
     try { await put(patch); ctx.flash("Settings saved"); } catch (e) { ctx.flash(errMsg(e)); } finally { setSaving(false); }
   };
 
-  const checks: [string, boolean | undefined][] = [
-    ["Square app & location connected", r?.appAndLocationConnected],
-    ["Catalog + inventory syncing", r?.catalogAndInventorySyncing],
-    ["Webhook signature key set", r?.webhookKeySet],
-    ["Sandbox test payments passed", r?.sandboxPaymentsConfigured],
-    ["3-D Secure (verifyBuyer) enabled", r?.threeDSecureEnabled],
-    ["Apple Pay domain verified", r?.applePayDomainVerified],
+  // [label, passes, needed before Square can take payments]. The webhook only keeps stock fresh, so it is recommended, not required.
+  const checks: [string, boolean | undefined, boolean][] = [
+    ["Square app & location connected", r?.appAndLocationConnected, true],
+    ["Catalog + inventory syncing", r?.catalogAndInventorySyncing, true],
+    ["Live mode (real cards are charged)", r?.liveMode, false],
+    ["3-D Secure (verifyBuyer) enabled", r?.threeDSecureEnabled, false],
+    ["Webhook signature key set (keeps stock up to date)", r?.webhookKeySet, false],
   ];
-  const squareReady = checks.every(([, ok]) => ok);
+  const squareReady = checks.every(([, ok, needed]) => ok || !needed);
   const field = (k: keyof typeof form) => ({ value: form[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value })), disabled: !ctx.isOwner });
 
   return (
@@ -1045,7 +1045,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
             {checks.map(([label, ok]) => (
               <div key={label} className="ad-check"><span style={{ background: ok ? "var(--teal)" : "var(--gold)" }}>{ok ? "✓" : "!"}</span>{label}</div>
             ))}
-            {!squareReady && <div className="ad-muted ad-sm" style={{ marginTop: 4 }}>Keep PayPal active until every check passes.</div>}
+            {!squareReady && <div className="ad-muted ad-sm" style={{ marginTop: 4 }}>Keep PayPal active until the first two checks pass.</div>}
+            {squareReady && !r?.webhookKeySet && <div className="ad-muted ad-sm" style={{ marginTop: 4 }}>Recommended: add Square's webhook so stock sold in the store shows up here right away.</div>}
           </div>
         </section>
         <div className="ad-stack">
