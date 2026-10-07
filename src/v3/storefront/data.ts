@@ -53,7 +53,8 @@ export interface Filters {
 }
 
 export const ALL = "All categories";
-export const DEFAULT_AVAIL: Filters["avail"] = { "In stock": true, "Pre-order": true, "Sold out": true };
+// Sold-out items are hidden until a shopper ticks "Sold out": most of the catalog is out of stock, and the shop should lead with what can be bought.
+export const DEFAULT_AVAIL: Filters["avail"] = { "In stock": true, "Pre-order": true, "Sold out": false };
 const PAGE = 24;
 
 function toQuery(f: Filters, wishlistIds: string[] | null) {

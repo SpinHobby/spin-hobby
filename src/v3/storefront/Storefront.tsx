@@ -160,7 +160,7 @@ export default function Storefront() {
   const availCounts: Record<string, number> = { "In stock": facets?.status.in ?? 0, "Pre-order": facets?.status.pre ?? 0, "Sold out": facets?.status.out ?? 0 };
 
   const isHome = filters.nav === "Home" && filters.category === ALL && !filters.categoryId && !filters.query.trim() && !wishOnly;
-  const hasFilters = filters.price !== "Any" || Object.values(filters.avail).some((v) => !v) || filters.category !== ALL || !!filters.categoryId;
+  const hasFilters = filters.price !== "Any" || AVAIL.some((a) => filters.avail[a.name] !== DEFAULT_AVAIL[a.name]) || filters.category !== ALL || !!filters.categoryId;
 
   const preorders = home?.preorders ?? [];
   const ranking = home?.ranking ?? [];
