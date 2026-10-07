@@ -112,13 +112,12 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
         <div className="ad-stack">
           <Card title="Low stock" action={<button type="button" className="ad-link" onClick={() => ctx.go("Products", { productFilter: "Low / sold out" })}>View →</button>}>
             {(d?.lowStockList ?? []).length === 0 ? <Empty>{loading ? "Loading…" : "Stock levels look healthy."}</Empty> : d!.lowStockList.slice(0, 5).map((p) => {
-              const full = ctx.data.products.find((x) => x.id === p.id);
               const qty = p.stock_count ?? 0;
               return (
                 <div key={p.id} className="ad-line">
                   <span className="ad-line__main">{p.name}</span>
                   <span className="ad-strong ad-sm" style={{ color: qty <= 0 ? "var(--muted)" : "var(--red)" }}>{qty <= 0 ? "Sold out" : `${qty} left`}</span>
-                  {full?.alertsWaiting !== undefined && <span className="ad-muted ad-sm">{full.alertsWaiting} alerts</span>}
+                  {p.alerts_waiting !== undefined && <span className="ad-muted ad-sm">{p.alerts_waiting} alerts</span>}
                 </div>
               );
             })}
@@ -805,8 +804,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
   };
 
   const visibleSlides = slides.filter((sl) => sl.is_visible);
-  const closingSoon = ctx.data.products.filter((p) => p.status === "pre" && p.orderByDate && Date.parse(p.orderByDate) <= Date.now() + 30 * 86_400_000 && Date.parse(p.orderByDate) >= Date.now() - 86_400_000).length;
-  const maxOff = ctx.data.products.reduce((m, p) => Math.max(m, discountPct(p)), 0);
+  const { closingSoon, maxDiscountPct: maxOff } = ctx.data.promos;
 
   const moveFeatured = async (i: number, dir: number) => {
     const j = i + dir;

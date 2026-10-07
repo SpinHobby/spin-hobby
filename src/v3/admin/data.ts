@@ -22,30 +22,29 @@ export interface AdminData {
   categories: ShopCategory[];
   /** What the storefront hero shows when no custom slides exist (from GET /homepage). */
   previewSlides: HeroSlide[];
+  /** Closing-soon pre-orders and the biggest discount in the catalog (from GET /homepage). */
+  promos: { closingSoon: number; maxDiscountPct: number };
   loading: boolean;
   errors: string[];
 }
 
-async function allAdminProducts() {
-  const items: Product[] = [];
-  let cursor: string | undefined = "0";
-  for (let i = 0; cursor !== undefined && i < 20; i += 1) {
-    const page: ProductPage = await api<ProductPage>(`/admin/products?limit=60&cursor=${cursor}`);
-    items.push(...page.items);
-    cursor = page.cursor;
-  }
-  // Older server builds don't return is_featured on the list; recover it from the featured filter.
-  if (items.length && items.every((p) => p.isFeatured === undefined)) {
-    const featured = await api<ProductPage>("/admin/products?filter=featured&limit=60").catch(() => null);
-    const ids = new Set(featured?.items.map((p) => p.id) ?? []);
-    for (const p of items) p.isFeatured = ids.has(p.id);
-  }
-  return items;
+/**
+ * The products the admin needs up front: the featured ones (Homepage screen) and the pre-orders. The whole catalog
+ * can hold thousands of items, so the Products screen pages through it on its own instead of downloading it here.
+ */
+async function adminProductsUpFront() {
+  const [featured, preorders] = await Promise.all([
+    api<ProductPage>("/admin/products?filter=featured&limit=60"),
+    api<ProductPage>("/admin/products?filter=pre&limit=60"),
+  ]);
+  const byId = new Map<string, Product>();
+  for (const p of [...featured.items, ...preorders.items]) byId.set(p.id, p);
+  return [...byId.values()];
 }
 
 export function useAdminData(enabled: boolean) {
   const [data, setData] = useState<AdminData>({
-    dashboard: null, products: [], orders: [], slides: [], events: [], settings: DEFAULT_SETTINGS, readiness: null, categories: [], previewSlides: [], loading: true, errors: [],
+    dashboard: null, products: [], orders: [], slides: [], events: [], settings: DEFAULT_SETTINGS, readiness: null, categories: [], previewSlides: [], promos: { closingSoon: 0, maxDiscountPct: 0 }, loading: true, errors: [],
   });
   const [nonce, setNonce] = useState(0);
 
@@ -55,7 +54,7 @@ export function useAdminData(enabled: boolean) {
     setData((d) => ({ ...d, loading: true }));
     const jobs = [
       api<Dashboard>("/admin/dashboard"),
-      allAdminProducts(),
+      adminProductsUpFront(),
       api<{ items: Order[] }>("/admin/orders?limit=100"),
       api<{ slides: HeroSlide[] }>("/admin/homepage/slides"),
       api<{ events: StoreEvent[] }>("/admin/events"),
@@ -80,6 +79,7 @@ export function useAdminData(enabled: boolean) {
         readiness: val(readiness)?.readiness ?? null,
         categories: val(categories)?.categories ?? [],
         previewSlides: (val(home)?.slides ?? []) as HeroSlide[],
+        promos: val(home)?.promos ?? { closingSoon: 0, maxDiscountPct: 0 },
         loading: false,
         errors: Array.from(new Set(errors)),
       });

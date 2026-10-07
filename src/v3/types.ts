@@ -99,6 +99,8 @@ export interface Homepage {
   newInStock: Product[];
   events: StoreEvent[];
   categories?: ShopCategory[];
+  /** Two numbers for the promo cards beside the hero, worked out by the server over the whole catalog. */
+  promos?: { closingSoon: number; maxDiscountPct: number };
 }
 
 export type Role = "customer" | "staff" | "owner";
@@ -154,7 +156,7 @@ export interface Dashboard {
   lowStock: number;
   alertsWaiting: number;
   toShipList: Pick<Order, "id" | "billing_email" | "total_cents" | "status" | "created_at">[];
-  lowStockList: { id: string; name: string; variation_id: string; stock_count: number | null; status: string; order_by_date: string | null }[];
+  lowStockList: { id: string; name: string; variation_id: string; stock_count: number | null; status: string; order_by_date: string | null; /** Shoppers waiting for a restock email. */ alerts_waiting?: number }[];
   closingPreorders: { id: string; name: string; variation_id: string; stock_count: number | null; status: string; order_by_date: string | null }[];
 }
 
