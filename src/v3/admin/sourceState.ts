@@ -7,8 +7,8 @@ export const isLocal = (p: Product) => p.source === "manual";
 /** Is the product on the website right now? */
 export const isShown = (p: Product) => p.state !== "hidden" && p.state !== "retired" && p.isVisible !== false;
 
-/** Products added with "Add product" have ids starting `manual-`; those are the ones that can move into Square (the server enforces the same rule). */
-export const canMoveToSquare = (p: Product) => isLocal(p) && p.id.startsWith("manual-") && p.state !== "retired";
+/** Any product kept in our own database that has not already moved can be moved into Square (the server checks the same). */
+export const canMoveToSquare = (p: Product) => isLocal(p) && p.state !== "retired";
 
 export interface MoveResult { id: string; name: string; photosMoved: number; photosRemoved: number; alreadyMoved: boolean }
 
