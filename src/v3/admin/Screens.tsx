@@ -4,7 +4,7 @@ import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statu
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
-import type { Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
+import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
 import {
@@ -15,6 +15,8 @@ import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 import { photo } from "../photo";
+import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
+import { isShown, setVisible } from "./sourceState";
 
 export interface Ctx {
   data: AdminData;
@@ -159,9 +161,10 @@ function SortHeader({ label, k, sort, onSort }: { label: string; k: SortKey; sor
 }
 
 /** One product as a tappable card, for narrow screens where a table would force sideways scrolling. */
-function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeature, onStock }: {
+function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeature, onStock, onMove, onToggleVisible, visibilityBusy }: {
   ctx: Ctx; p: Product; tree: ReturnType<typeof buildTree>; selected: boolean; open: boolean;
   onSelect: () => void; onOpen: () => void; onFeature: () => void; onStock: (stock: number | null) => void;
+  onMove: () => void; onToggleVisible: () => void; visibilityBusy: boolean;
 }) {
   const st = STATE_META[p.state ?? "in"];
   const place = p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "";
@@ -176,13 +179,16 @@ function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeat
       <Thumb src={p.images[0]} size={60} />
       <div className="ad-pcard__body">
         <div className="ad-pcard__name">{p.name}</div>
-        {(sub || p.source === "manual" || (p.variationCount ?? 0) > 1) && (
+        {(sub || (p.variationCount ?? 0) > 1) && (
           <div className="ad-pcard__sub">
-            {p.source === "manual" && <span className="ad-tag-manual">Manual</span>}
             {(p.variationCount ?? 0) > 1 && <span className="ad-tag-var">{p.variationCount} variations</span>}
             {sub}
           </div>
         )}
+        <div className="ad-pcard__source" onClick={(e) => e.stopPropagation()}>
+          <SourceBadge p={p} canMove={ctx.isOwner} onMove={onMove} />
+          <label className="ad-pcard__show"><VisibilityToggle p={p} busy={visibilityBusy} onToggle={onToggleVisible} /><span>On website</span></label>
+        </div>
         <div className="ad-pcard__facts">
           <b>{p.priceCents == null ? "—" : money(p.priceCents)}</b>
           <span className="ad-pcard__stock">Stock {stock}{(p.alertsWaiting ?? 0) > 0 && <span className="ad-alert-pill">🔔 {p.alertsWaiting}</span>}</span>
@@ -211,6 +217,8 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [selected, setSelected] = useState<Set<string>>(new Set()); // kept across pages and filter changes
   const [bulkTarget, setBulkTarget] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [moving, setMoving] = useState<Product | null>(null);
+  const [visibilityBusy, setVisibilityBusy] = useState<Set<string>>(new Set());
   const drawerDirty = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
   const tree = useMemo(() => buildTree(ctx.data.categories), [ctx.data.categories]);
@@ -273,6 +281,21 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const update = (id: string, change: Partial<Product>) => {
     patch(id, change);
     ctx.setData((d) => ({ ...d, products: d.products.map((p) => (p.id === id ? { ...p, ...change } : p)) }));
+  };
+
+  /** Shows or hides a product on the website (and in Square, for a Square product). */
+  const toggleVisible = async (p: Product) => {
+    const next = !isShown(p);
+    setVisibilityBusy((cur) => new Set(cur).add(p.id));
+    try {
+      await setVisible(p.id, next);
+      update(p.id, { isVisible: next, state: next ? (p.status as AdminState) : "hidden" });
+      ctx.flash(next ? "Shown on the website" : p.source === "manual" ? "Hidden from the website" : "Hidden from the website and in Square");
+      refresh();
+      ctx.reload();
+    } catch (e) { ctx.flash(errMsg(e)); } finally {
+      setVisibilityBusy((cur) => { const done = new Set(cur); done.delete(p.id); return done; });
+    }
   };
 
   const toggleFeatured = async (p: Product) => {
@@ -338,7 +361,8 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
             {empty}
             {rows.map((p) => (
               <ProductCardRow key={p.id} ctx={ctx} p={p} tree={tree} selected={selected.has(p.id)} open={openId === p.id}
-                onSelect={() => toggleSelect(p.id)} onOpen={() => setOpenId(p.id)} onFeature={() => toggleFeatured(p)} onStock={onStock(p)} />
+                onSelect={() => toggleSelect(p.id)} onOpen={() => setOpenId(p.id)} onFeature={() => toggleFeatured(p)} onStock={onStock(p)}
+                onMove={() => setMoving(p)} onToggleVisible={() => toggleVisible(p)} visibilityBusy={visibilityBusy.has(p.id)} />
             ))}
           </div>
         ) : (
@@ -347,12 +371,14 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
               <span className="ad-checkcell"><input type="checkbox" checked={allSelected} aria-label="Select all on this page" onChange={toggleAll} /></span>
               <span />
               <SortHeader label="Product" k="name" sort={sort} onSort={changeSort} />
+              <span>Source</span>
               <span className="c-cat"><SortHeader label="Category" k="category" sort={sort} onSort={changeSort} /></span>
               <SortHeader label="Price" k="price" sort={sort} onSort={changeSort} />
               <SortHeader label="Stock" k="stock" sort={sort} onSort={changeSort} />
               <SortHeader label="Status" k="status" sort={sort} onSort={changeSort} />
               <span className="c-rel"><SortHeader label="Release / order by" k="release" sort={sort} onSort={changeSort} /></span>
               <span className="c-upd"><SortHeader label="Updated" k="updated" sort={sort} onSort={changeSort} /></span>
+              <span>On site</span>
               <span>Featured</span>
             </div>
             {empty}
@@ -369,11 +395,11 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                   <div className="ad-cell-main">
                     <div className="ad-strong ad-ellipsis">{p.name}</div>
                     <div className="ad-muted ad-sm ad-ellipsis">
-                      {p.source === "manual" && <span className="ad-tag-manual">Manual</span>}
                       {(p.variationCount ?? 0) > 1 && <span className="ad-tag-var">{p.variationCount} variations</span>}
-                      {[p.series, p.janCode, p.sku].filter(Boolean).join(" · ") || (p.source === "manual" || (p.variationCount ?? 0) > 1 ? "" : "—")}
+                      {[p.series, p.janCode, p.sku].filter(Boolean).join(" · ") || ((p.variationCount ?? 0) > 1 ? "" : "—")}
                     </div>
                   </div>
+                  <span onClick={(e) => e.stopPropagation()}><SourceBadge p={p} canMove={ctx.isOwner} onMove={() => setMoving(p)} /></span>
                   <span className="ad-text2 ad-ellipsis c-cat" title={place}>{place}</span>
                   <span className="ad-strong">{p.priceCents == null ? "—" : money(p.priceCents)}</span>
                   <span className="ad-strong" style={{ color: p.state === "retired" || p.state === "hidden" ? undefined : st.color }}>
@@ -383,6 +409,9 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                   <span><span className="sh-badge" style={{ background: st.color }} title={st.hint}>{st.badge}</span></span>
                   <span className="ad-text2 ad-sm c-rel">{p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}</span>
                   <span className="ad-text2 ad-sm c-upd" title={p.updatedAt ? new Date(p.updatedAt).toLocaleString() : undefined}>{p.updatedAt ? ago(p.updatedAt) : "—"}</span>
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <VisibilityToggle p={p} busy={visibilityBusy.has(p.id)} onToggle={() => toggleVisible(p)} />
+                  </span>
                   <span onClick={(e) => e.stopPropagation()}>
                     <button type="button" className={`sh-toggle ${p.isFeatured ? "is-on" : ""}`} aria-pressed={!!p.isFeatured} aria-label={`Feature ${p.name}`} onClick={() => toggleFeatured(p)} />
                   </span>
@@ -406,16 +435,21 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           </span>
         </div>
       )}
-      <p className="ad-foot-note">Every item from Square is listed here, including ones that are hidden, sold out or deleted in Square (shown as Retired, kept so past orders still resolve). Square products: name, price, photos and stock come from Square Dashboard. Products you add here (tagged Manual) are fully editable here, with − / + to adjust stock right in the table.</p>
+      <p className="ad-foot-note">Every item from Square is listed here, including ones that are hidden, sold out or deleted in Square (shown as Retired, kept so past orders still resolve). The Source column shows where each product lives: Square (its name, price, photos and stock are edited in Square) or our own database (fully editable here, with − / + for stock). Switch “Move to Square” on a local product to create it in Square and free the space its photos use here. “On site” shows or hides a product on the website (a Square product is hidden in Square too), and the product always stays in the database.</p>
       {compact && selected.size > 0 && <div className="ad-bulk-spacer" aria-hidden />}
       {open && <ProductDrawer key={open.id} ctx={ctx} p={open} onClose={() => { setOpenId(null); if (drawerDirty.current) { drawerDirty.current = false; refresh(); } }}
-        onSaved={(change) => { drawerDirty.current = true; update(open.id, change); }} />}
+        onSaved={(change) => { drawerDirty.current = true; update(open.id, change); }}
+        onMove={() => setMoving(open)} onToggleVisible={() => toggleVisible(open)} visibilityBusy={visibilityBusy.has(open.id)} />}
       {adding && <AddProductDrawer ctx={ctx} onClose={() => { setAdding(false); refresh(); }} />}
+      {moving && <MoveToSquareDialog p={moving} flash={ctx.flash} onClose={() => setMoving(null)} onMoved={() => { setMoving(null); setOpenId(null); refresh(); ctx.reload(); }} />}
     </>
   );
 }
 
-function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onClose: () => void; onSaved: (patch: Partial<Product>) => void }) {
+function ProductDrawer({ ctx, p, onClose, onSaved, onMove, onToggleVisible, visibilityBusy }: {
+  ctx: Ctx; p: Product; onClose: () => void; onSaved: (patch: Partial<Product>) => void;
+  onMove: () => void; onToggleVisible: () => void; visibilityBusy: boolean;
+}) {
   useEscape(onClose);
   const [form, setForm] = useState({
     availability: (p.availability ?? (p.status === "pre" ? "preorder" : "auto")) as Availability,
@@ -516,6 +550,17 @@ function ProductDrawer({ ctx, p, onClose, onSaved }: { ctx: Ctx; p: Product; onC
               </div>
             </div>
           )}
+          <section className="ad-where" aria-label="Where this product lives">
+            <div className="ad-where__row">
+              <span className="ad-label" style={{ margin: 0 }}>Lives in</span>
+              <SourceBadge p={p} canMove={ctx.isOwner} onMove={onMove} />
+            </div>
+            <div className="ad-where__row">
+              <span className="ad-label" style={{ margin: 0 }}>On the website</span>
+              <span className="ad-where__toggle"><VisibilityToggle p={p} busy={visibilityBusy} onToggle={onToggleVisible} /><span>{isShown(p) ? "Shown" : "Hidden"}</span></span>
+            </div>
+            <div className="ad-muted ad-sm">{manual ? "Kept in our database. Move it to Square to manage it there and free the space its photos use here." : "Hiding it here hides it in Square too, so the cashier tool won't offer it either."}</div>
+          </section>
           {(p.state === "retired" || p.state === "unavailable") && (
             <div className="ad-callout"><span><b>{STATE_META[p.state].label}.</b> {STATE_META[p.state].hint}</span></div>
           )}

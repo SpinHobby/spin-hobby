@@ -30,6 +30,10 @@ export interface Product {
   isFeatured?: boolean;
   sortOrder?: number;
   source?: "square" | "manual";
+  /** Where the first photo is kept: Square, our own storage, somewhere else, or nowhere (admin catalog list). */
+  photoSource?: "square" | "storage" | "external" | "none";
+  /** On a hand-entered product that was moved into Square: the id of its Square replacement. */
+  replacedBy?: string | null;
   description?: string | null;
   alertsWaiting?: number;
   // Admin catalog list (/admin/catalog) only.

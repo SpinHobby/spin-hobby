@@ -286,10 +286,10 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 // Columns by how much room the list has (set from its measured width, see densityFor in catalog.ts):
 // each step drops the least important column so rows never need a sideways scroll.
 .ad-table--products { min-width: 0; }
-.ad-table--products .ad-tr { grid-template-columns: 28px 44px minmax(200px, 2.2fr) minmax(110px, 1.2fr) 80px 92px 104px 128px 80px 60px; }
-.ad-table--products[data-density="wide"] .ad-tr { grid-template-columns: 28px 44px minmax(180px, 2.2fr) minmax(110px, 1.2fr) 80px 92px 104px 80px 60px; }
-.ad-table--products[data-density="medium"] .ad-tr { grid-template-columns: 28px 44px minmax(160px, 2.2fr) minmax(110px, 1.2fr) 80px 92px 104px 60px; }
-.ad-table--products[data-density="narrow"] .ad-tr { grid-template-columns: 28px 44px minmax(160px, 2.2fr) 80px 92px 104px 60px; }
+.ad-table--products .ad-tr { grid-template-columns: 28px 44px minmax(190px, 2fr) 128px minmax(100px, 1fr) 80px 92px 104px 128px 80px 64px 60px; }
+.ad-table--products[data-density="wide"] .ad-tr { grid-template-columns: 28px 44px minmax(170px, 2fr) 128px minmax(100px, 1fr) 80px 92px 104px 80px 64px 60px; }
+.ad-table--products[data-density="medium"] .ad-tr { grid-template-columns: 28px 44px minmax(150px, 2fr) 128px minmax(100px, 1fr) 80px 92px 104px 64px 60px; }
+.ad-table--products[data-density="narrow"] .ad-tr { grid-template-columns: 28px 44px minmax(140px, 2fr) 120px 80px 92px 104px 64px 60px; }
 .ad-table--products[data-density="wide"] .c-rel,
 .ad-table--products[data-density="medium"] .c-rel, .ad-table--products[data-density="medium"] .c-upd,
 .ad-table--products[data-density="narrow"] .c-rel, .ad-table--products[data-density="narrow"] .c-upd, .ad-table--products[data-density="narrow"] .c-cat { display: none; }
@@ -374,3 +374,23 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-alert-pill { margin-left: 6px; font-size: 11px; font-weight: 800; color: var(--text2); background: var(--surface2); padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
 .ad-cat-filter { width: auto; min-width: 200px; padding: 9px 10px; }
 @media (max-width: 860px) { .ad-cat__actions { width: 100%; padding-left: 36px; flex-wrap: wrap; } }
+
+// Where a product lives (Square or our database), shown/hidden on the website, and moving it to Square.
+.ad-src-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; line-height: 1.25; }
+.ad-src { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.ad-src--square { color: var(--green, #1c7c4d); background: color-mix(in srgb, var(--green, #1c7c4d) 14%, var(--surface)); }
+.ad-src--local { color: var(--blue); background: color-mix(in srgb, var(--blue) 14%, var(--surface)); }
+.ad-src--moved { color: var(--muted, #6b7280); background: color-mix(in srgb, var(--muted, #6b7280) 16%, var(--surface)); }
+.ad-src__photos { font-size: 11px; color: var(--muted, #6b7280); white-space: nowrap; }
+.ad-src__move { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; margin-top: 2px;
+  &.is-disabled { opacity: .5; cursor: not-allowed; } }
+.ad-pcard__source { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 6px;
+  .ad-src-cell { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; } }
+.ad-pcard__show { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.ad-where { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line, #e5e7eb); border-radius: 10px; }
+.ad-where__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ad-where__toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.ad-modal-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
+.ad-modal { width: min(520px, 100%); max-height: 90vh; overflow: auto; background: var(--surface); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }
+.ad-modal__list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
+.ad-modal__actions { display: flex; justify-content: flex-end; gap: 8px; }
