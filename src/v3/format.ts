@@ -26,6 +26,13 @@ export function monthLabel(value: string | null | undefined) {
   return `${MONTHS[Number(match[2]) - 1]} ${match[1]}`;
 }
 
+/** ISO timestamp → "Oct 8, 2026", in the viewer's own time zone (the day something was added, for the admin list). */
+export function dateLabel(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+}
+
 /** ISO date → "Oct 20" */
 export function dayLabel(value: string | null | undefined) {
   if (!value) return "TBA";

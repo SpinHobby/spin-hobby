@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
-import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
+import { dateLabel, dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
@@ -194,9 +194,9 @@ function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeat
           <span className="ad-pcard__stock">Stock {stock}{(p.alertsWaiting ?? 0) > 0 && <span className="ad-alert-pill">🔔 {p.alertsWaiting}</span>}</span>
           <span className="sh-badge" style={{ background: st.color }}>{st.badge}</span>
         </div>
-        {(place || p.updatedAt || (p.status === "pre" && p.state === "pre")) && (
+        {(place || p.createdAt || (p.status === "pre" && p.state === "pre")) && (
           <div className="ad-pcard__meta">
-            {[place, p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}` : "", p.updatedAt ? `Updated ${ago(p.updatedAt)}` : ""].filter(Boolean).join(" · ")}
+            {[place, p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}` : "", p.createdAt ? `Added ${dateLabel(p.createdAt)}` : ""].filter(Boolean).join(" · ")}
           </div>
         )}
       </div>
@@ -377,7 +377,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
               <SortHeader label="Stock" k="stock" sort={sort} onSort={changeSort} />
               <SortHeader label="Status" k="status" sort={sort} onSort={changeSort} />
               <span className="c-rel"><SortHeader label="Release / order by" k="release" sort={sort} onSort={changeSort} /></span>
-              <span className="c-upd"><SortHeader label="Updated" k="updated" sort={sort} onSort={changeSort} /></span>
+              <span className="c-upd"><SortHeader label="Added" k="created" sort={sort} onSort={changeSort} /></span>
               <span>On site</span>
               <span>Featured</span>
             </div>
@@ -408,7 +408,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                   </span>
                   <span><span className="sh-badge" style={{ background: st.color }} title={st.hint}>{st.badge}</span></span>
                   <span className="ad-text2 ad-sm c-rel">{p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}</span>
-                  <span className="ad-text2 ad-sm c-upd" title={p.updatedAt ? new Date(p.updatedAt).toLocaleString() : undefined}>{p.updatedAt ? ago(p.updatedAt) : "—"}</span>
+                  <span className="ad-text2 ad-sm c-upd" title={p.createdAt ? new Date(p.createdAt).toLocaleString() : undefined}>{dateLabel(p.createdAt)}</span>
                   <span onClick={(e) => e.stopPropagation()}>
                     <VisibilityToggle p={p} busy={visibilityBusy.has(p.id)} onToggle={() => toggleVisible(p)} />
                   </span>

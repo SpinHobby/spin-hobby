@@ -159,7 +159,7 @@ export type Density = "full" | "wide" | "medium" | "narrow" | "cards";
 export function densityFor(width: number): Density {
   if (width === 0 || width >= 1270) return "full";
   if (width >= 1110) return "wide";   // drops "Release / order by"
-  if (width >= 1000) return "medium"; // ...and "Updated"
+  if (width >= 1000) return "medium"; // ...and "Added"
   if (width >= CARD_BELOW) return "narrow"; // ...and "Category"
   return "cards";
 }
