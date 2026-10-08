@@ -63,7 +63,8 @@ async function accessToken() {
 
 async function request<T>(path: string, init: ApiRequest, token: string | null): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  // A FormData body sets its own Content-Type (with the multipart boundary).
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
   let response: Response;
   try {

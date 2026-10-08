@@ -404,3 +404,14 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
   button { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 11px; cursor: pointer;
     &:hover:not(:disabled) { background: var(--surface2); } &:disabled { opacity: .35; cursor: not-allowed; } } }
 .ad-pcard__front { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+
+// Barcode scanner.
+.ad-scan { width: min(480px, 100%); }
+.ad-scan__view { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 4 / 3;
+  video { width: 100%; height: 100%; object-fit: cover; display: block; } }
+.ad-scan__line { position: absolute; left: 8%; right: 8%; top: 50%; height: 2px; background: color-mix(in srgb, var(--red, #e5484d) 85%, transparent); box-shadow: 0 0 10px var(--red, #e5484d); }
+
+// Add product: AI suggestion line and the barcode box.
+.ad-ai { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 8px 10px; border-radius: 10px; background: var(--surface2); color: var(--text2);
+  &--failed { color: var(--red); } &--working { opacity: .8; } }
+.ad-barcode { display: flex; gap: 8px; .sh-input { flex: 1; min-width: 0; } .sh-btn { white-space: nowrap; } }

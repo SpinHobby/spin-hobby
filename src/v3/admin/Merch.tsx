@@ -1,4 +1,4 @@
-import { DragEvent, Suspense, lazy, useRef, useState } from "react";
+import { DragEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
 import type { AtelierResult } from "@atelier/react";
 import { api } from "../../lib/api";
 import { money, statusLabel } from "../format";
@@ -7,12 +7,15 @@ import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import type { Product } from "../types";
 import { formatBytes, prepareImage, preparedFromBlob, uploadPrepared } from "./image";
 import { CategorySelect } from "./Categories";
+import { cleanBarcode } from "./barcode";
 import type { Ctx } from "./Screens";
 
 const PREVIEW: CardActions = { currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {}, onOpen: () => {} };
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 // The photo editor is only downloaded when someone opens it.
 const PhotoEditor = lazy(() => import("./PhotoEditor"));
+// So is the barcode scanner (it carries its own decoder).
+const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
 
 // ---------------------------------------------------------------- photos
 
@@ -142,8 +145,20 @@ interface Draft {
   name: string; price: string; compareAt: string; stock: number | null; photos: string[];
   preorder: boolean; release: string; orderBy: string; series: string; jan: string; maxPer: string; featured: boolean; description: string;
   categoryId: string | null;
+  /** In a sealed box: the box artwork can be used as the main photo. */
+  sealed: boolean;
+  /** The category name in Square (suggested by the AI, editable). */
+  squareCategory: string;
+  crop: ArtworkCrop | null;
+  useArtwork: boolean;
+  hidden: boolean;
+  /** Create it in Square (the default), or keep it only in our own database. */
+  inSquare: boolean;
 }
-const EMPTY: Draft = { name: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "", categoryId: null };
+interface ArtworkCrop { x: number; y: number; width: number; height: number; rotationDegrees: number }
+interface AiDraft { title: string; description: string; category: string; artworkCrop?: ArtworkCrop; barcode?: string }
+interface ExistingProduct { id: string; name: string; source: "square" | "manual"; stockCount: number | null; isActive: boolean }
+const EMPTY: Draft = { name: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "", categoryId: null, sealed: true, squareCategory: "", crop: null, useArtwork: true, hidden: false, inSquare: true };
 
 const toCents = (v: string) => (v.trim() ? Math.round(Number(v) * 100) : null);
 
@@ -153,7 +168,56 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [ai, setAi] = useState<{ state: "idle" | "working" | "done" | "failed"; note: string }>({ state: "idle", note: "" });
+  const [scanning, setScanning] = useState(false);
+  const [existing, setExisting] = useState<ExistingProduct | null>(null);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
+  const code = cleanBarcode(d.jan);
+  const codeBad = d.inSquare && d.jan.trim() !== "" && !code;
+
+  /** Claude reads the first photo: title, description, category, the box artwork and any legible barcode. Fills only what is still empty. */
+  const suggest = async (url: string, sealed: boolean) => {
+    setAi({ state: "working", note: "Reading the photo…" });
+    try {
+      const blob = await (await fetch(url)).blob();
+      const form = new FormData();
+      form.append("photo", blob, "photo.webp");
+      form.append("condition", sealed ? "sealed" : "used");
+      const r = await api<AiDraft>("/cashier/identify", { method: "POST", body: form });
+      setD((x) => ({
+        ...x, name: x.name || r.title, description: x.description || r.description, squareCategory: x.squareCategory || r.category,
+        crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "",
+      }));
+      setAi({ state: "done", note: "Suggested from the photo. Please check the title and description." });
+    } catch (e) {
+      setAi({ state: "failed", note: `${errMsg(e)}` });
+    }
+  };
+  const onPhotos = (urls: string[]) => {
+    const first = d.photos.length === 0 && urls.length > 0;
+    set("photos", urls);
+    if (first && d.inSquare) void suggest(urls[0], d.sealed);
+  };
+
+  // Is this barcode already a product? Then adding more stock beats making a second listing.
+  useEffect(() => {
+    setExisting(null);
+    if (!code || !d.inSquare) return;
+    let current = true;
+    api<{ product: ExistingProduct | null }>(`/admin/products/by-barcode/${code}`).then((r) => { if (current) setExisting(r.product); }).catch(() => undefined);
+    return () => { current = false; };
+  }, [code, d.inSquare]);
+
+  const addToExisting = async () => {
+    if (!existing) return;
+    setSaving(true);
+    try {
+      const r = await api<{ stockCount: number }>(`/admin/products/${encodeURIComponent(existing.id)}/add-stock`, { method: "POST", body: JSON.stringify({ quantity: Math.max(1, d.stock ?? 1) }) });
+      ctx.reload();
+      ctx.flash(`${existing.name}: stock is now ${r.stockCount}`);
+      setD({ ...EMPTY, categoryId: d.categoryId }); setAi({ state: "idle", note: "" }); setTouched(false);
+    } catch (e) { ctx.flash(errMsg(e)); } finally { setSaving(false); }
+  };
 
   const price = toCents(d.price);
   const compare = toCents(d.compareAt);
@@ -163,6 +227,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   if (compare !== null && (!Number.isFinite(compare) || (price && compare <= price))) errors.compareAt = "Must be higher than the price";
   if (d.preorder && !d.orderBy) errors.orderBy = "Required for pre-orders";
   if (d.maxPer && (!Number.isInteger(Number(d.maxPer)) || Number(d.maxPer) < 1)) errors.maxPer = "Whole number";
+  if (codeBad) errors.jan = "Not a valid barcode";
   const valid = Object.keys(errors).length === 0;
   const show = (k: keyof Draft) => (touched ? errors[k] : undefined);
 
@@ -184,10 +249,17 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
       isFeatured: d.featured, description: d.description.trim() || null, categoryId: d.categoryId,
     };
     try {
-      await api("/admin/products", { method: "POST", body: JSON.stringify(body) });
+      if (d.inSquare) {
+        await api("/admin/products/quick-add", { method: "POST", body: JSON.stringify({
+          ...body, janCode: null, barcode: code, category: d.squareCategory.trim() || null, hidden: d.hidden,
+          artworkCrop: d.sealed && d.useArtwork ? d.crop : null,
+        }) });
+      } else {
+        await api("/admin/products", { method: "POST", body: JSON.stringify(body) });
+      }
       ctx.reload();
-      ctx.flash(`${body.name} added to the shop`);
-      if (addAnother) { setD({ ...EMPTY, categoryId: d.categoryId }); setTouched(false); }
+      ctx.flash(`${body.name} added${d.inSquare ? " to Square and the shop" : " to the shop"}`);
+      if (addAnother) { setD({ ...EMPTY, categoryId: d.categoryId, inSquare: d.inSquare }); setAi({ state: "idle", note: "" }); setTouched(false); }
       else onClose();
     } catch (e) {
       ctx.flash(errMsg(e));
@@ -205,7 +277,25 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
           <div className="ad-add__form">
             <section className="ad-add__section">
               <div className="ad-label">Photos</div>
-              <PhotoUploader urls={d.photos} onChange={(v) => set("photos", v)} />
+              <PhotoUploader urls={d.photos} onChange={onPhotos} />
+              {d.inSquare && (
+                <>
+                  <div className="ad-seg" role="group" aria-label="Condition">
+                    <button type="button" className={d.sealed ? "is-active" : ""} onClick={() => set("sealed", true)}>Sealed in box</button>
+                    <button type="button" className={!d.sealed ? "is-active" : ""} onClick={() => set("sealed", false)}>Opened / loose</button>
+                  </div>
+                  {ai.state !== "idle" && (
+                    <div className={`ad-ai ad-ai--${ai.state}`} role="status">
+                      <span>{ai.state === "working" ? "✨ " : ai.state === "done" ? "✨ " : "⚠ "}{ai.note}</span>
+                      {ai.state !== "working" && d.photos[0] && <button type="button" className="ad-link" onClick={() => suggest(d.photos[0], d.sealed)}>Suggest again</button>}
+                    </div>
+                  )}
+                  {ai.state === "idle" && d.photos[0] && <button type="button" className="ad-link" onClick={() => suggest(d.photos[0], d.sealed)}>✨ Suggest title and description from the photo</button>}
+                  {d.sealed && d.crop && (
+                    <label className="ad-check-inline"><input type="checkbox" checked={d.useArtwork} onChange={(e) => set("useArtwork", e.target.checked)} />Use the picture printed on the box as the main photo (your photo is kept as the next one)</label>
+                  )}
+                </>
+              )}
             </section>
 
             <section className="ad-add__section">
@@ -219,6 +309,32 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
                   <input className="sh-input" placeholder="e.g. Re:Zero" value={d.series} onChange={(e) => set("series", e.target.value)} maxLength={120} />
                 </label>
               </div>
+              <label className="ad-field">Description<textarea className="sh-input" rows={3} value={d.description} onChange={(e) => set("description", e.target.value)} maxLength={2000} /></label>
+              <div className="ad-grid2">
+                <label className={`ad-field ${show("jan") ? "has-error" : ""}`}>
+                  <span className="ad-field__top">Barcode {show("jan") && <em>{show("jan")}</em>}</span>
+                  <span className="ad-barcode">
+                    <input className="sh-input" inputMode="numeric" placeholder="scan or type" value={d.jan} onChange={(e) => set("jan", e.target.value.replace(/[^\d\s-]/g, ""))} maxLength={20} />
+                    <button type="button" className="sh-btn sh-btn--ghost" onClick={() => setScanning(true)}>📷 Scan</button>
+                  </span>
+                </label>
+                {d.inSquare && (
+                  <label className="ad-field">Category in Square
+                    <input className="sh-input" placeholder="e.g. Figures" value={d.squareCategory} onChange={(e) => set("squareCategory", e.target.value)} maxLength={120} />
+                  </label>
+                )}
+              </div>
+              {existing && (
+                <div className="ad-callout" role="status">
+                  <span><b>Already in your catalog:</b> {existing.name} ({existing.stockCount == null ? "stock not tracked" : `${existing.stockCount} in stock`}).</span>
+                  {existing.source === "square" && <button type="button" className="ad-link" onClick={addToExisting} disabled={saving}>Add {Math.max(1, d.stock ?? 1)} to its stock instead</button>}
+                </div>
+              )}
+              {scanning && (
+                <Suspense fallback={null}>
+                  <BarcodeScanner onClose={() => setScanning(false)} onCode={(c) => { set("jan", c); setScanning(false); }} />
+                </Suspense>
+              )}
             </section>
 
             <section className="ad-add__section">
@@ -252,18 +368,18 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
               )}
             </section>
 
-            <button type="button" className="ad-link ad-add__more" onClick={() => setShowMore((v) => !v)}>{showMore ? "− Fewer details" : "+ More details (description, JAN, limits, featured)"}</button>
+            <button type="button" className="ad-link ad-add__more" onClick={() => setShowMore((v) => !v)}>{showMore ? "− Fewer details" : "+ More details (limits, featured, hide, where it is kept)"}</button>
             {showMore && (
               <section className="ad-add__section">
-                <label className="ad-field">Description<textarea className="sh-input" rows={3} value={d.description} onChange={(e) => set("description", e.target.value)} maxLength={2000} /></label>
                 <div className="ad-grid2">
-                  <label className="ad-field">JAN code<input className="sh-input" inputMode="numeric" value={d.jan} onChange={(e) => set("jan", e.target.value)} maxLength={20} /></label>
                   <label className={`ad-field ${show("maxPer") ? "has-error" : ""}`}>
                     <span className="ad-field__top">Max per customer {show("maxPer") && <em>{show("maxPer")}</em>}</span>
                     <input className="sh-input" inputMode="numeric" placeholder="No limit" value={d.maxPer} onChange={(e) => set("maxPer", e.target.value.replace(/\D/g, ""))} />
                   </label>
                 </div>
                 <label className="ad-check-inline"><input type="checkbox" checked={d.featured} onChange={(e) => set("featured", e.target.checked)} />Feature on the homepage and at the top of the catalog</label>
+                {d.inSquare && <label className="ad-check-inline"><input type="checkbox" checked={d.hidden} onChange={(e) => set("hidden", e.target.checked)} />Keep it off the website for now (it is still created in Square)</label>}
+                <label className="ad-check-inline"><input type="checkbox" checked={!d.inSquare} onChange={(e) => { set("inSquare", !e.target.checked); if (e.target.checked) setAi({ state: "idle", note: "" }); }} />Keep it only in our database (don't create it in Square)</label>
               </section>
             )}
           </div>
@@ -278,8 +394,8 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
         </div>
         <div className="sh-drawer__foot">
           {touched && !valid && <span className="ad-error" style={{ marginRight: "auto" }}>Fix the highlighted fields</span>}
-          <button type="button" className="sh-btn sh-btn--ghost" onClick={() => save(true)} disabled={saving}>Save & add another</button>
-          <button type="button" className="sh-btn" onClick={() => save(false)} disabled={saving}>{saving ? "Saving…" : "Add to shop"}</button>
+          <button type="button" className="sh-btn sh-btn--ghost" onClick={() => save(true)} disabled={saving || ai.state === "working"}>Save & add another</button>
+          <button type="button" className="sh-btn" onClick={() => save(false)} disabled={saving}>{saving ? (d.inSquare ? "Adding to Square…" : "Saving…") : d.inSquare ? "Add to Square" : "Add to shop"}</button>
         </div>
       </aside>
     </>
