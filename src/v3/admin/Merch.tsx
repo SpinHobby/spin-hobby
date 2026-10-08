@@ -156,7 +156,11 @@ interface Draft {
   inSquare: boolean;
 }
 interface ArtworkCrop { x: number; y: number; width: number; height: number; rotationDegrees: number }
-interface AiDraft { title: string; description: string; category: string; artworkCrop?: ArtworkCrop; barcode?: string }
+interface AiUsage { inputTokens: number; outputTokens: number; costUsd: number; monthSpendUsd: number; monthStopUsd: number }
+interface AiDraft { title: string; description: string; category: string; artworkCrop?: ArtworkCrop; barcode?: string; usage?: AiUsage }
+/** "2,621 in + 167 out tokens, about $0.017 (this month $1.53 of the $30 limit)". */
+const usageText = (u: AiUsage) =>
+  `${u.inputTokens.toLocaleString()} in + ${u.outputTokens.toLocaleString()} out tokens, about $${u.costUsd.toFixed(3)} (this month $${u.monthSpendUsd.toFixed(2)} of the $${u.monthStopUsd} limit)`;
 interface ExistingProduct { id: string; name: string; source: "square" | "manual"; stockCount: number | null; isActive: boolean }
 const EMPTY: Draft = { name: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "", categoryId: null, sealed: true, squareCategory: "", crop: null, useArtwork: true, hidden: false, inSquare: true };
 
@@ -189,7 +193,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
         ...x, name: r.title, description: r.description, squareCategory: r.category,
         crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "",
       }));
-      setAi({ state: "done", note: "Written by AI from the photo. Please check the title and description." });
+      setAi({ state: "done", note: `Written by AI from the photo. Please check the title and description.${r.usage ? ` Used ${usageText(r.usage)}.` : ""}` });
     } catch (e) {
       setAi({ state: "failed", note: `${errMsg(e)}` });
     }
