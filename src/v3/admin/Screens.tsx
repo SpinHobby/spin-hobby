@@ -16,6 +16,8 @@ import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 import { photo } from "../photo";
 import { FrontRank, MoveArrows } from "./FrontPage";
+import { SeriesSelect } from "./SeriesSelect";
+import { useSeriesList } from "./seriesList";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
 import { isShown, setVisible } from "./sourceState";
 
@@ -508,6 +510,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved, onMove, onToggleVisible, visi
   const [busy, setBusy] = useState(false);
   const [notifying, setNotifying] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const { list: seriesList } = useSeriesList();
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const squareUrl = `https://app.squareup.com/dashboard/items/library/${encodeURIComponent(p.id)}`;
 
@@ -659,7 +662,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved, onMove, onToggleVisible, visi
             <label className="ad-field">Order-by date<input className="sh-input" type="date" value={form.orderBy} onChange={set("orderBy")} /></label>
             <label className="ad-field">Compare-at price<input className="sh-input" inputMode="decimal" placeholder="e.g. 199.00" value={form.compareAt} onChange={set("compareAt")} /></label>
             <label className="ad-field">Max per customer<input className="sh-input" inputMode="numeric" placeholder="No limit" value={form.maxPer} onChange={set("maxPer")} /></label>
-            <label className="ad-field">Series<input className="sh-input" value={form.series} onChange={set("series")} /></label>
+            <SeriesSelect value={form.series} onChange={(name) => setForm((f) => ({ ...f, series: name }))} list={seriesList} />
             <label className="ad-field">JAN code<input className="sh-input" inputMode="numeric" value={form.jan} onChange={set("jan")} /></label>
           </div>
           {p.alertsWaiting !== undefined && (

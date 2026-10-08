@@ -6,6 +6,7 @@ import {
   type CatalogCounts, type CatalogFilters, type Sort,
 } from "./catalog";
 import type { AdminState } from "../types";
+import { useSeriesList } from "./seriesList";
 
 interface Props {
   filters: CatalogFilters;
@@ -20,7 +21,7 @@ interface Props {
 }
 
 /** How many of the folded-away filters are on (the search box and status chips are always visible). */
-const hiddenFilterCount = (f: CatalogFilters) => [f.source, f.categoryId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim()].filter(Boolean).length;
+const hiddenFilterCount = (f: CatalogFilters) => [f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim()].filter(Boolean).length;
 
 /** Search, sort, status chips and the secondary filters for the admin product list. */
 export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree, onAdd, compact }: Props) {
@@ -46,8 +47,10 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const { list: seriesList } = useSeriesList(counts);
   const tags: { key: string; label: string; clear: Partial<CatalogFilters> }[] = [];
   if (filters.categoryId) tags.push({ key: "cat", label: filters.categoryId === "none" ? "Uncategorised" : tree.path(filters.categoryId).join(" › "), clear: { categoryId: "" } });
+  if (filters.seriesId) tags.push({ key: "series", label: filters.seriesId === "none" ? "No series" : `Series: ${seriesList.find((s) => s.id === filters.seriesId)?.name ?? "…"}`, clear: { seriesId: "" } });
   if (filters.source) tags.push({ key: "src", label: filters.source === "square" ? "From Square" : "Added manually", clear: { source: "" } });
   if (filters.min.trim() || filters.max.trim()) {
     const lo = filters.min.trim(), hi = filters.max.trim();
@@ -64,6 +67,13 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
           <option value="">All categories</option>
           <option value="none">Uncategorised</option>
           {tree.flat.map((c) => <option key={c.id} value={c.id}>{indentLabel(c)}</option>)}
+        </select>
+      )}
+      {seriesList.length > 0 && (
+        <select className="sh-input ad-cat-filter" value={filters.seriesId} onChange={(e) => onFilters({ seriesId: e.target.value })} aria-label="Filter by series">
+          <option value="">All series</option>
+          <option value="none">No series</option>
+          {seriesList.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.productCount})</option>)}
         </select>
       )}
       <select className="sh-input ad-source-filter" value={filters.source} onChange={(e) => onFilters({ source: e.target.value as CatalogFilters["source"] })} aria-label="Filter by source">

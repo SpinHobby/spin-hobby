@@ -26,6 +26,7 @@ export interface CatalogFilters {
   status: AdminState[];
   source: "" | "square" | "manual";
   categoryId: string; // "" all, "none" uncategorised, or a category id
+  seriesId: string; // "" all, "none" no series, or a series id
   featured: boolean;
   alerts: boolean;
   noPhoto: boolean;
@@ -33,7 +34,7 @@ export interface CatalogFilters {
   max: string;
 }
 
-export const EMPTY_FILTERS: CatalogFilters = { q: "", status: [], source: "", categoryId: "", featured: false, alerts: false, noPhoto: false, min: "", max: "" };
+export const EMPTY_FILTERS: CatalogFilters = { q: "", status: [], source: "", categoryId: "", seriesId: "", featured: false, alerts: false, noPhoto: false, min: "", max: "" };
 
 /** How many featured products the homepage shows (the same number the API uses). */
 export const FRONT_PAGE_SLOTS = 8;
@@ -64,7 +65,7 @@ export const parseSort = (value: string): Sort => { const [key, dir] = value.spl
 
 /** How many filters are narrowing the list (the search box counts as one). */
 export function activeFilterCount(f: CatalogFilters) {
-  return [f.q.trim(), f.status.length, f.source, f.categoryId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim()].filter(Boolean).length;
+  return [f.q.trim(), f.status.length, f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim()].filter(Boolean).length;
 }
 
 /** Maps the dashboard's old deep links ("Low / sold out") onto the new filters. */
@@ -99,6 +100,7 @@ export function catalogQuery(f: CatalogFilters, sort: Sort, page: number, pageSi
   if (f.status.length) p.set("status", f.status.join(","));
   if (f.source) p.set("source", f.source);
   if (f.categoryId) p.set("categoryId", f.categoryId);
+  if (f.seriesId) p.set("seriesId", f.seriesId);
   if (f.featured) p.set("featured", "1");
   if (f.alerts) p.set("alerts", "1");
   if (f.noPhoto) p.set("noPhoto", "1");

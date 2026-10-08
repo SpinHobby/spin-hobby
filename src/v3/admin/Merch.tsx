@@ -8,6 +8,8 @@ import type { Product } from "../types";
 import { formatBytes, prepareImage, preparedFromBlob, uploadPrepared } from "./image";
 import { CategorySelect } from "./Categories";
 import { cleanBarcode } from "./barcode";
+import { SeriesSelect } from "./SeriesSelect";
+import { useSeriesList } from "./seriesList";
 import type { Ctx } from "./Screens";
 
 const PREVIEW: CardActions = { currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {}, onOpen: () => {} };
@@ -157,7 +159,7 @@ interface Draft {
 }
 interface ArtworkCrop { x: number; y: number; width: number; height: number; rotationDegrees: number }
 interface AiUsage { inputTokens: number; outputTokens: number; costUsd: number; monthSpendUsd: number; monthStopUsd: number }
-interface AiDraft { title: string; description: string; category: string; artworkCrop?: ArtworkCrop; barcode?: string; usage?: AiUsage }
+interface AiDraft { title: string; description: string; category: string; artworkCrop?: ArtworkCrop; barcode?: string; series?: string; seriesIsNew?: boolean; usage?: AiUsage }
 /** "2,621 in + 167 out tokens, about $0.017 (this month $1.53 of the $30 limit)". */
 const usageText = (u: AiUsage) =>
   `${u.inputTokens.toLocaleString()} in + ${u.outputTokens.toLocaleString()} out tokens, about $${u.costUsd.toFixed(3)} (this month $${u.monthSpendUsd.toFixed(2)} of the $${u.monthStopUsd} limit)`;
@@ -175,6 +177,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const [ai, setAi] = useState<{ state: "idle" | "working" | "done" | "failed"; note: string }>({ state: "idle", note: "" });
   const [scanning, setScanning] = useState(false);
   const [existing, setExisting] = useState<ExistingProduct | null>(null);
+  const { list: seriesList } = useSeriesList();
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const code = cleanBarcode(d.jan);
   const codeBad = d.inSquare && d.jan.trim() !== "" && !code;
@@ -191,7 +194,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
       setD((x) => ({
         // Asked for explicitly, so the suggestion replaces what is there (except a barcode already scanned or typed).
         ...x, name: r.title, description: r.description, squareCategory: r.category,
-        crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "",
+        crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "", series: r.series ?? x.series,
       }));
       setAi({ state: "done", note: `Written by AI from the photo. Please check the title and description.${r.usage ? ` Used ${usageText(r.usage)}.` : ""}` });
     } catch (e) {
@@ -312,9 +315,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
               </label>
               <div className="ad-grid2">
                 <CategorySelect ctx={ctx} value={d.categoryId} onChange={(id) => set("categoryId", id)} />
-                <label className="ad-field">Series
-                  <input className="sh-input" placeholder="e.g. Re:Zero" value={d.series} onChange={(e) => set("series", e.target.value)} maxLength={120} />
-                </label>
+                <SeriesSelect value={d.series} onChange={(name) => set("series", name)} list={seriesList} />
               </div>
               <label className="ad-field">Description<textarea className="sh-input" rows={3} value={d.description} onChange={(e) => set("description", e.target.value)} maxLength={2000} /></label>
               <div className="ad-grid2">

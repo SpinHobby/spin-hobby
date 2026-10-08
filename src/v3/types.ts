@@ -26,6 +26,8 @@ export interface Product {
   createdAt?: string | null;
   // Admin-only enrichments (present on /admin/products).
   janCode?: string | null;
+  /** The entry in the series list this product belongs to (admin catalog list). */
+  seriesId?: string | null;
   availability?: Availability | null;
   isFeatured?: boolean;
   sortOrder?: number;

@@ -417,3 +417,12 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-barcode { display: flex; gap: 8px; .sh-input { flex: 1; min-width: 0; } .sh-btn { white-space: nowrap; } }
 
 .ad-ai-btn { align-self: flex-start; }
+
+// Series dropdown (pick from the list, or add a new one; the series is optional).
+.ad-series { position: relative; }
+.ad-series__new { font-size: 11.5px; color: var(--primary); }
+.ad-series__menu { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; max-height: 260px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, .3);
+  button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; padding: 8px 10px; border: 0; border-radius: 7px; background: none; color: inherit; font: inherit; font-size: 13.5px; cursor: pointer;
+    &:hover { background: var(--surface2); } small { color: var(--muted); } }
+  .ad-series__add { color: var(--primary); font-weight: 700; } }
