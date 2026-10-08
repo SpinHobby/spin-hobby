@@ -435,7 +435,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           </span>
         </div>
       )}
-      <p className="ad-foot-note">Every item from Square is listed here, including ones that are hidden, sold out or deleted in Square (shown as Retired, kept so past orders still resolve). The Source column shows where each product lives: Square (its name, price, photos and stock are edited in Square) or our own database (fully editable here, with − / + for stock). Switch “Move to Square” on a local product to create it in Square and free the space its photos use here. “On site” shows or hides a product on the website (a Square product is hidden in Square too), and the product always stays in the database.</p>
+      <p className="ad-foot-note">Every item from Square is listed here, including ones that are hidden, sold out or deleted in Square (shown as Retired, kept so past orders still resolve). The Source column shows where each product lives: Square (its name, price, photos and stock are edited in Square) or our own database (fully editable here, with − / + for stock). Press “Move to Square” on a local product to create it in Square (it is checked first, and undone if anything is off) and free the space its photos use here. “On site” shows or hides a product on the website (a Square product is hidden in Square too), and the product always stays in the database.</p>
       {compact && selected.size > 0 && <div className="ad-bulk-spacer" aria-hidden />}
       {open && <ProductDrawer key={open.id} ctx={ctx} p={open} onClose={() => { setOpenId(null); if (drawerDirty.current) { drawerDirty.current = false; refresh(); } }}
         onSaved={(change) => { drawerDirty.current = true; update(open.id, change); }}

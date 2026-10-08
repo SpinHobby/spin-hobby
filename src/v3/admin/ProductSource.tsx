@@ -13,7 +13,7 @@ const PHOTO_TEXT = {
   none: "No photo",
 } as const;
 
-/** Where the product lives (Square or our database) and where its photos are kept, with the "Move to Square" switch for local ones. */
+/** Where the product lives (Square or our database) and where its photos are kept, with a "Move to Square" button for local ones. */
 export function SourceBadge({ p, canMove, onMove }: { p: Product; canMove: boolean; onMove: () => void }) {
   const local = isLocal(p);
   return (
@@ -23,11 +23,11 @@ export function SourceBadge({ p, canMove, onMove }: { p: Product; canMove: boole
       </span>
       <span className="ad-src__photos">{PHOTO_TEXT[p.photoSource ?? (p.images.length ? "external" : "none")]}</span>
       {canMoveToSquare(p) && (
-        <label className={`ad-src__move ${canMove ? "" : "is-disabled"}`} title={canMove ? "Create this product in Square and free the space its photos use here" : "Only the owner can move products into Square"}>
-          <button type="button" role="switch" aria-checked="false" className="sh-toggle" disabled={!canMove} aria-label={`Move ${p.name} to Square`}
-            onClick={(e) => { e.stopPropagation(); onMove(); }} />
-          <span>Move to Square</span>
-        </label>
+        <button type="button" className="ad-src__move" disabled={!canMove} aria-label={`Move ${p.name} to Square`}
+          title={canMove ? "Create this product in Square and free the space its photos use here" : "Only the owner can move products into Square"}
+          onClick={(e) => { e.stopPropagation(); onMove(); }}>
+          Move to Square →
+        </button>
       )}
     </span>
   );
@@ -70,9 +70,9 @@ export function MoveToSquareDialog({ p, onClose, onMoved, flash }: { p: Product;
           <li>{photos ? <><b>Copies {photos} photo{photos === 1 ? "" : "s"}</b> to Square, then <b>deletes the files from our storage</b> to free the space.</> : "It has no photos to copy."}</li>
           <li><b>Keeps</b> series, JAN code, featured status, shop category, wishlists and restock alerts.</li>
           <li>Square gives it a <b>new ID</b>. The old one stays on past orders.</li>
-          <li>From then on you edit its name, price, photos and stock in Square.</li>
+          <li>From then on you edit its name, price, photos and stock in Square, and the product here is removed so it only exists once.</li>
         </ul>
-        <p className="ad-muted ad-sm">This can't be undone from here. If anything fails part way, nothing is deleted and you can safely try again.</p>
+        <p className="ad-muted ad-sm">Before anything is deleted here, the Square copy is checked against this product (name, price, stock and photos). If the check or any step fails, the copy is removed from Square again and the product stays exactly as it is.</p>
         {error && <div className="ad-error" role="alert">{error}</div>}
         <div className="ad-modal__actions">
           <button type="button" className="sh-btn sh-btn--ghost" onClick={onClose} disabled={busy}>Cancel</button>
