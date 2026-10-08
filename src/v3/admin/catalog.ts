@@ -153,12 +153,13 @@ export function useElementWidth(ref: RefObject<HTMLElement>) {
 }
 
 /** Below this the table becomes a list of cards; above it, columns drop away one by one as space shrinks. */
-export const CARD_BELOW = 700;
+// Widths are what each column set needs (columns + gaps + padding, see admin.scss) so a row never scrolls sideways.
+export const CARD_BELOW = 870;
 export type Density = "full" | "wide" | "medium" | "narrow" | "cards";
 export function densityFor(width: number): Density {
-  if (width === 0 || width >= 1090) return "full";
-  if (width >= 920) return "wide";   // drops "Release / order by"
-  if (width >= 800) return "medium"; // ...and "Updated"
+  if (width === 0 || width >= 1270) return "full";
+  if (width >= 1110) return "wide";   // drops "Release / order by"
+  if (width >= 1000) return "medium"; // ...and "Updated"
   if (width >= CARD_BELOW) return "narrow"; // ...and "Category"
   return "cards";
 }
