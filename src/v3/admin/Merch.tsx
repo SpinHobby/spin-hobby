@@ -175,7 +175,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const code = cleanBarcode(d.jan);
   const codeBad = d.inSquare && d.jan.trim() !== "" && !code;
 
-  /** Claude reads the first photo: title, description, category, the box artwork and any legible barcode. Fills only what is still empty. */
+  /** Claude reads the first photo: title, description, category, the box artwork and any legible barcode. */
   const suggest = async (url: string, sealed: boolean) => {
     setAi({ state: "working", note: "Reading the photo…" });
     try {
@@ -185,19 +185,17 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
       form.append("condition", sealed ? "sealed" : "used");
       const r = await api<AiDraft>("/cashier/identify", { method: "POST", body: form });
       setD((x) => ({
-        ...x, name: x.name || r.title, description: x.description || r.description, squareCategory: x.squareCategory || r.category,
+        // Asked for explicitly, so the suggestion replaces what is there (except a barcode already scanned or typed).
+        ...x, name: r.title, description: r.description, squareCategory: r.category,
         crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "",
       }));
-      setAi({ state: "done", note: "Suggested from the photo. Please check the title and description." });
+      setAi({ state: "done", note: "Written by AI from the photo. Please check the title and description." });
     } catch (e) {
       setAi({ state: "failed", note: `${errMsg(e)}` });
     }
   };
-  const onPhotos = (urls: string[]) => {
-    const first = d.photos.length === 0 && urls.length > 0;
-    set("photos", urls);
-    if (first && d.inSquare) void suggest(urls[0], d.sealed);
-  };
+  // The AI only runs when the admin asks for it (each suggestion costs a few cents).
+  const onPhotos = (urls: string[]) => set("photos", urls);
 
   // Is this barcode already a product? Then adding more stock beats making a second listing.
   useEffect(() => {
@@ -290,7 +288,12 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
                       {ai.state !== "working" && d.photos[0] && <button type="button" className="ad-link" onClick={() => suggest(d.photos[0], d.sealed)}>Suggest again</button>}
                     </div>
                   )}
-                  {ai.state === "idle" && d.photos[0] && <button type="button" className="ad-link" onClick={() => suggest(d.photos[0], d.sealed)}>✨ Suggest title and description from the photo</button>}
+                  {ai.state === "idle" && (
+                    <button type="button" className="sh-btn sh-btn--ghost ad-ai-btn" disabled={!d.photos[0]} onClick={() => suggest(d.photos[0], d.sealed)}
+                      title={d.photos[0] ? "Claude reads the first photo and suggests a title, description and category (costs a few cents)" : "Add a photo first"}>
+                      ✨ Write title &amp; description with AI
+                    </button>
+                  )}
                   {d.sealed && d.crop && (
                     <label className="ad-check-inline"><input type="checkbox" checked={d.useArtwork} onChange={(e) => set("useArtwork", e.target.checked)} />Use the picture printed on the box as the main photo (your photo is kept as the next one)</label>
                   )}

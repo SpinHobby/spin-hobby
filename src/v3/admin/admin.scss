@@ -415,3 +415,5 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-ai { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 8px 10px; border-radius: 10px; background: var(--surface2); color: var(--text2);
   &--failed { color: var(--red); } &--working { opacity: .8; } }
 .ad-barcode { display: flex; gap: 8px; .sh-input { flex: 1; min-width: 0; } .sh-btn { white-space: nowrap; } }
+
+.ad-ai-btn { align-self: flex-start; }
