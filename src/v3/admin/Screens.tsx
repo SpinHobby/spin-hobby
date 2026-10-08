@@ -8,13 +8,14 @@ import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, S
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
 import {
-  activeFilterCount, densityFor, EMPTY_FILTERS, filtersFromShortcut, loadPrefs, savePrefs, STATE_META, useCatalog, useDebounced, useElementWidth,
+  activeFilterCount, DEFAULT_SORT, densityFor, FRONT_PAGE_SLOTS, EMPTY_FILTERS, filtersFromShortcut, loadPrefs, savePrefs, STATE_META, useCatalog, useDebounced, useElementWidth,
   type CatalogFilters, type Sort, type SortDir, type SortKey,
 } from "./catalog";
 import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 import { photo } from "../photo";
+import { FrontRank, MoveArrows } from "./FrontPage";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
 import { isShown, setVisible } from "./sourceState";
 
@@ -146,7 +147,7 @@ async function patchProduct(ctx: Ctx, id: string, body: Record<string, unknown>)
 const PAGE_SIZES = [25, 50, 100];
 const ago = (iso: string) => { const a = relativeAge(iso); return a === "just now" ? a : `${a} ago`; };
 /** The first click on a column sorts the natural way: A→Z, cheapest and lowest stock first, newest first. */
-const FIRST_DIR: Record<SortKey, SortDir> = { name: "asc", category: "asc", price: "asc", stock: "asc", status: "asc", release: "asc", updated: "desc", created: "desc", alerts: "desc" };
+const FIRST_DIR: Record<SortKey, SortDir> = { name: "asc", category: "asc", price: "asc", stock: "asc", status: "asc", release: "asc", updated: "desc", created: "desc", alerts: "desc", front: "asc" };
 const stockStatus = (stock: number | null, low: number) => (stock === null ? "in" : stock <= 0 ? "out" : stock <= low ? "low" : "in");
 
 function SortHeader({ label, k, sort, onSort }: { label: string; k: SortKey; sort: Sort; onSort: (s: Sort) => void }) {
@@ -161,10 +162,12 @@ function SortHeader({ label, k, sort, onSort }: { label: string; k: SortKey; sor
 }
 
 /** One product as a tappable card, for narrow screens where a table would force sideways scrolling. */
-function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeature, onStock, onMove, onToggleVisible, visibilityBusy }: {
+function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeature, onStock, onMove, onToggleVisible, visibilityBusy, arrange }: {
   ctx: Ctx; p: Product; tree: ReturnType<typeof buildTree>; selected: boolean; open: boolean;
   onSelect: () => void; onOpen: () => void; onFeature: () => void; onStock: (stock: number | null) => void;
   onMove: () => void; onToggleVisible: () => void; visibilityBusy: boolean;
+  /** Set while arranging the homepage order: this product's controls. */
+  arrange?: { first: boolean; last: boolean; busy: boolean; onMove: (direction: -1 | 1) => void };
 }) {
   const st = STATE_META[p.state ?? "in"];
   const place = p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "";
@@ -183,6 +186,12 @@ function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeat
           <div className="ad-pcard__sub">
             {(p.variationCount ?? 0) > 1 && <span className="ad-tag-var">{p.variationCount} variations</span>}
             {sub}
+          </div>
+        )}
+        {p.isFeatured && (
+          <div className="ad-pcard__front" onClick={(e) => e.stopPropagation()}>
+            <span className="ad-muted ad-sm">Homepage</span> <FrontRank p={p} />
+            {arrange && <MoveArrows name={p.name} first={arrange.first} last={arrange.last} busy={arrange.busy} onMove={arrange.onMove} />}
           </div>
         )}
         <div className="ad-pcard__source" onClick={(e) => e.stopPropagation()}>
@@ -242,10 +251,32 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const effective = useMemo(() => ({ ...filters, q, min, max }), [filters, q, min, max]);
   const { data, loading, error, refresh, patch } = useCatalog(effective, sort, page, pageSize);
 
-  const changeFilters = (change: Partial<CatalogFilters>) => { setFilters((f) => ({ ...f, ...change })); setPage(0); };
+  const changeFilters = (change: Partial<CatalogFilters>) => {
+    setFilters((f) => ({ ...f, ...change }));
+    setPage(0);
+    // Looking at the featured products means arranging the homepage, so list them in homepage order.
+    if (change.featured === true && sort.key === DEFAULT_SORT.key) setSort({ key: "front", dir: "asc" });
+    if (change.featured === false && sort.key === "front") setSort(DEFAULT_SORT);
+  };
   const changeSort = (next: Sort) => { setSort(next); setPage(0); };
   const rows = data?.items ?? [];
   const total = data?.total ?? 0;
+  // Arranging the homepage: only when every featured product is on screen, so the saved order is the whole order.
+  const arranging = filters.featured && sort.key === "front";
+  const canArrange = arranging && !loading && rows.length > 0 && rows.length === total;
+  const [arrangeBusy, setArrangeBusy] = useState(false);
+  const moveFront = async (index: number, direction: -1 | 1) => {
+    const to = index + direction;
+    if (to < 0 || to >= rows.length) return;
+    const ids = rows.map((r) => r.id);
+    [ids[index], ids[to]] = [ids[to], ids[index]];
+    setArrangeBusy(true);
+    try {
+      await api("/admin/products/front-page-order", { method: "PUT", body: JSON.stringify({ ids }) });
+      refresh();
+      ctx.reload();
+    } catch (e) { ctx.flash(errMsg(e)); } finally { setArrangeBusy(false); }
+  };
   const counts = data?.counts ?? null;
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const filtered = activeFilterCount(filters) > 0;
@@ -352,6 +383,13 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
         </span>
         {counts?.lastSyncedAt && <span className="ad-muted">Square last synced {ago(counts.lastSyncedAt)}</span>}
       </div>
+      {arranging && (
+        <div className="ad-callout" role="status">
+          <span><b>Homepage order.</b> {canArrange
+            ? `Use ▲ ▼ to rearrange. The first ${FRONT_PAGE_SLOTS} appear on the homepage, in this order; the rest wait their turn.`
+            : loading ? "Loading…" : total === 0 ? "No featured products yet. Switch Featured on for a product to put it on the homepage." : "Show more products per page (below) to see every featured product, then you can rearrange them."}</span>
+        </div>
+      )}
       <div ref={listRef} className={compact ? "ad-cards-wrap" : "ad-table-wrap"}>
         {compact ? (
           <div className={`ad-cards ${loading && data ? "is-loading" : ""}`} role="list" aria-label="Products" aria-busy={loading}>
@@ -359,10 +397,11 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
               <label className="ad-cards__all"><input type="checkbox" checked={allSelected} onChange={toggleAll} /> Select all on this page</label>
             )}
             {empty}
-            {rows.map((p) => (
+            {rows.map((p, i) => (
               <ProductCardRow key={p.id} ctx={ctx} p={p} tree={tree} selected={selected.has(p.id)} open={openId === p.id}
                 onSelect={() => toggleSelect(p.id)} onOpen={() => setOpenId(p.id)} onFeature={() => toggleFeatured(p)} onStock={onStock(p)}
-                onMove={() => setMoving(p)} onToggleVisible={() => toggleVisible(p)} visibilityBusy={visibilityBusy.has(p.id)} />
+                onMove={() => setMoving(p)} onToggleVisible={() => toggleVisible(p)} visibilityBusy={visibilityBusy.has(p.id)}
+                arrange={canArrange ? { first: i === 0, last: i === rows.length - 1, busy: arrangeBusy, onMove: (d) => moveFront(i, d) } : undefined} />
             ))}
           </div>
         ) : (
@@ -379,10 +418,10 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
               <span className="c-rel"><SortHeader label="Release / order by" k="release" sort={sort} onSort={changeSort} /></span>
               <span className="c-upd"><SortHeader label="Added" k="created" sort={sort} onSort={changeSort} /></span>
               <span>On site</span>
-              <span>Featured</span>
+              <span>Front page</span>
             </div>
             {empty}
-            {rows.map((p) => {
+            {rows.map((p, i) => {
               const st = STATE_META[p.state ?? "in"];
               const place = p.categoryId ? tree.path(p.categoryId).join(" › ") : p.category ?? "—";
               return (
@@ -412,8 +451,11 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                   <span onClick={(e) => e.stopPropagation()}>
                     <VisibilityToggle p={p} busy={visibilityBusy.has(p.id)} onToggle={() => toggleVisible(p)} />
                   </span>
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <button type="button" className={`sh-toggle ${p.isFeatured ? "is-on" : ""}`} aria-pressed={!!p.isFeatured} aria-label={`Feature ${p.name}`} onClick={() => toggleFeatured(p)} />
+                  <span className="ad-front" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className={`sh-toggle ${p.isFeatured ? "is-on" : ""}`} aria-pressed={!!p.isFeatured} aria-label={`${p.isFeatured ? "Remove" : "Put"} ${p.name} ${p.isFeatured ? "from" : "on"} the front page`}
+                      title={p.isFeatured ? "On the front page. Click to remove" : "Click to put on the front page (it goes last)"} onClick={() => toggleFeatured(p)} />
+                    <FrontRank p={p} />
+                    {canArrange && <MoveArrows name={p.name} first={i === 0} last={i === rows.length - 1} busy={arrangeBusy} onMove={(d) => moveFront(i, d)} />}
                   </span>
                 </div>
               );
@@ -856,9 +898,9 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     if (j < 0 || j >= featured.length) return;
     const next = [...featured];
     [next[i], next[j]] = [next[j], next[i]];
-    const order = new Map(next.map((p, k) => [p.id, k]));
+    const order = new Map(next.map((p, k) => [p.id, k + 1]));
     ctx.setData((d) => ({ ...d, products: d.products.map((p) => (order.has(p.id) ? { ...p, sortOrder: order.get(p.id) } : p)) }));
-    try { await Promise.all([next[i], next[j]].map((p) => patchProduct(ctx, p.id, { sort_order: order.get(p.id) }))); }
+    try { await api("/admin/products/front-page-order", { method: "PUT", body: JSON.stringify({ ids: next.map((p) => p.id) }) }); }
     catch (e) { ctx.flash(errMsg(e)); ctx.reload(); }
   };
 
@@ -881,12 +923,12 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
                 <button type="button" onClick={() => moveFeatured(i, -1)} disabled={i === 0} aria-label={`Move ${p.name} up`}>▲</button>
                 <button type="button" onClick={() => moveFeatured(i, 1)} disabled={i === featured.length - 1} aria-label={`Move ${p.name} down`}>▼</button>
               </span>
-              <span className="ad-muted" style={{ fontWeight: 800, width: 18 }}>{i + 1}</span>
+              <span className="ad-muted" style={{ fontWeight: 800, width: 18 }} title={i < FRONT_PAGE_SLOTS ? undefined : `The homepage only shows the first ${FRONT_PAGE_SLOTS}`}>{i + 1}</span>
               <span className="ad-line__main">{p.name}</span>
               <span className="ad-strong">{money(p.priceCents)}</span>
             </div>
           ))}
-          <div className="ad-muted ad-sm" style={{ padding: "10px 18px" }}>Shown first, in this order, when shoppers browse the catalog (the default “Featured” sort).</div>
+          <div className="ad-muted ad-sm" style={{ padding: "10px 18px" }}>The first {FRONT_PAGE_SLOTS} appear on the homepage in this order, and all of them come first when shoppers browse the catalog. Arrange them in Products with the Featured filter, or here.</div>
         </Card>
         <EventsCard ctx={ctx} />
       </div>

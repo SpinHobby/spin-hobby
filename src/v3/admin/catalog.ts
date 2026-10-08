@@ -35,7 +35,10 @@ export interface CatalogFilters {
 
 export const EMPTY_FILTERS: CatalogFilters = { q: "", status: [], source: "", categoryId: "", featured: false, alerts: false, noPhoto: false, min: "", max: "" };
 
-export type SortKey = "name" | "price" | "stock" | "category" | "status" | "updated" | "created" | "release" | "alerts";
+/** How many featured products the homepage shows (the same number the API uses). */
+export const FRONT_PAGE_SLOTS = 8;
+
+export type SortKey = "name" | "price" | "stock" | "category" | "status" | "updated" | "created" | "release" | "alerts" | "front";
 export type SortDir = "asc" | "desc";
 export interface Sort { key: SortKey; dir: SortDir }
 export const DEFAULT_SORT: Sort = { key: "created", dir: "desc" };
@@ -50,10 +53,11 @@ const SORT_LABELS: Record<SortKey, [asc: string, desc: string]> = {
   status: ["Status: best first", "Status: worst first"],
   release: ["Release: soonest", "Release: latest"],
   alerts: ["Fewest restock alerts", "Most restock alerts"],
+  front: ["Front page order", "Front page order"],
 };
 export const SORT_OPTIONS = (Object.keys(SORT_LABELS) as SortKey[]).flatMap((key) =>
   (["desc", "asc"] as SortDir[])
-    .filter((dir) => !(key === "alerts" && dir === "asc"))
+    .filter((dir) => !(key === "alerts" && dir === "asc") && !(key === "front" && dir === "desc"))
     .map((dir) => ({ value: `${key}:${dir}`, label: SORT_LABELS[key][dir === "asc" ? 0 : 1] })));
 
 export const parseSort = (value: string): Sort => { const [key, dir] = value.split(":"); return { key: key as SortKey, dir: dir as SortDir }; };
@@ -154,12 +158,12 @@ export function useElementWidth(ref: RefObject<HTMLElement>) {
 
 /** Below this the table becomes a list of cards; above it, columns drop away one by one as space shrinks. */
 // Widths are what each column set needs (columns + gaps + padding, see admin.scss) so a row never scrolls sideways.
-export const CARD_BELOW = 870;
+export const CARD_BELOW = 954;
 export type Density = "full" | "wide" | "medium" | "narrow" | "cards";
 export function densityFor(width: number): Density {
-  if (width === 0 || width >= 1270) return "full";
-  if (width >= 1110) return "wide";   // drops "Release / order by"
-  if (width >= 1000) return "medium"; // ...and "Added"
+  if (width === 0 || width >= 1354) return "full";
+  if (width >= 1194) return "wide";   // drops "Release / order by"
+  if (width >= 1084) return "medium"; // ...and "Added"
   if (width >= CARD_BELOW) return "narrow"; // ...and "Category"
   return "cards";
 }

@@ -29,6 +29,8 @@ export interface Product {
   availability?: Availability | null;
   isFeatured?: boolean;
   sortOrder?: number;
+  /** Position on the homepage (1 = first) for a featured product shoppers can see; null/absent otherwise (admin catalog list). */
+  frontPage?: number | null;
   source?: "square" | "manual";
   /** Where the first photo is kept: Square, our own storage, somewhere else, or nowhere (admin catalog list). */
   photoSource?: "square" | "storage" | "external" | "none";
