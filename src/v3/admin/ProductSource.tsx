@@ -15,14 +15,6 @@ const PHOTO_TEXT = {
 
 /** Where the product lives (Square or our database) and where its photos are kept, with the "Move to Square" switch for local ones. */
 export function SourceBadge({ p, canMove, onMove }: { p: Product; canMove: boolean; onMove: () => void }) {
-  if (isLocal(p) && p.state === "retired" && p.replacedBy) {
-    return (
-      <span className="ad-src-cell" title="This product was moved into Square. The Square copy is the live one.">
-        <span className="ad-src ad-src--moved">Moved</span>
-        <span className="ad-src__photos">now in Square</span>
-      </span>
-    );
-  }
   const local = isLocal(p);
   return (
     <span className="ad-src-cell">
