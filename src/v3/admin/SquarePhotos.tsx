@@ -3,6 +3,8 @@ import type { AtelierResult } from "@atelier/react";
 import { api, apiBlob } from "../../lib/api";
 import type { Product } from "../types";
 import { prepareImage, preparedFromBlob } from "./image";
+import { PolishOptions, type PolishChoice } from "./PolishOptions";
+import { polishPhoto } from "./polish";
 import type { Ctx } from "./Screens";
 
 const PhotoEditor = lazy(() => import("./PhotoEditor"));
@@ -24,6 +26,8 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   const [editing, setEditing] = useState<{ photo: Photo; source: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const [polishing, setPolishing] = useState<Photo | null>(null);
+  const [choice, setChoice] = useState<PolishChoice>({ removeBackground: true, removeStickers: false, text: false });
 
   const apply = useCallback((next: PhotoLists) => { setLists({ shown: next.shown, hidden: next.hidden }); onChanged(next.shown.map((x) => x.url)); }, [onChanged]);
   useEffect(() => {
@@ -71,6 +75,22 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
     ctx.flash("Saved as a new photo. The original is kept (hidden).");
   };
 
+  /** Tidies one photo and saves the result as a NEW photo in its place; the original is hidden, never deleted. */
+  const runPolish = async () => {
+    const target = polishing;
+    if (!target) return;
+    await run("Polishing the photo…", async () => {
+      const original = await apiBlob(`/admin/photo-proxy?url=${encodeURIComponent(target.url)}`);
+      const { blob, report } = await polishPhoto(original, { removeBackground: choice.removeBackground, removeStickers: choice.removeStickers });
+      const prepared = await preparedFromBlob(blob, 0, 0);
+      const result = await api<PhotoLists>(base, { method: "POST", body: JSON.stringify({ data: prepared.dataUrl, contentType: prepared.type, replaces: target.id }) });
+      const notes = [choice.removeBackground ? (report.backgroundRemoved ? "backdrop removed" : "no green backdrop found") : "", choice.removeStickers ? (report.stickersFilled ? `${report.stickersFilled} sticker painted over` : "no sticker found") : ""].filter(Boolean);
+      ctx.flash(`Saved as a new photo (${notes.join(", ")}). The original is kept, hidden.${report.usage ? ` About $${report.usage.costUsd.toFixed(3)}.` : ""}`);
+      return result;
+    });
+    setPolishing(null);
+  };
+
   return (
     <section className="ad-photos-sq" aria-label="Photos">
       <div className="ad-between">
@@ -87,6 +107,7 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
               {i === 0 && <span className="ad-photos__cover">Main</span>}
               <div className="ad-photos__actions">
                 <button type="button" onClick={() => openEditor(photo)} disabled={!!busy} title="Edit (saved as a new photo; the original is kept)" aria-label="Edit photo">✎</button>
+                <button type="button" onClick={() => setPolishing(polishing?.id === photo.id ? null : photo)} disabled={!!busy} title="Polish: remove green backdrop or shop sticker (saved as a new photo)" aria-label="Polish photo">✨</button>
                 {i > 0 && <button type="button" onClick={() => move(i, 0)} disabled={!!busy} title="Make main photo">★</button>}
                 {i > 0 && <button type="button" onClick={() => move(i, i - 1)} disabled={!!busy} title="Move earlier" aria-label="Move earlier">◀</button>}
                 {i < shown.length - 1 && <button type="button" onClick={() => move(i, i + 1)} disabled={!!busy} title="Move later" aria-label="Move later">▶</button>}
@@ -94,6 +115,12 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {polishing && (
+        <div className="ad-polish-box">
+          <div className="ad-label" style={{ margin: 0 }}>Polish this photo <span className="ad-muted">· saved as a new photo, the original is kept hidden</span></div>
+          <PolishOptions choice={choice} onChange={setChoice} showText={false} busy={!!busy} onRun={runPolish} runLabel="Polish" />
         </div>
       )}
       {hidden.length > 0 && (

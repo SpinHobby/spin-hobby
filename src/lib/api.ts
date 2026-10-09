@@ -109,6 +109,24 @@ export async function apiBlob(path: string): Promise<Blob> {
   return response.blob();
 }
 
+/** Sends a request (usually a photo as a form) and returns the file that comes back plus the response headers. */
+export async function apiFile(path: string, init: ApiRequest = {}): Promise<{ blob: Blob; headers: Headers }> {
+  const token = await accessToken();
+  const headers = new Headers(init.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  } catch {
+    throw new Error("Can't reach the shop server. Check your connection and try again.");
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error ?? "The photo could not be processed.");
+  }
+  return { blob: await response.blob(), headers: response.headers };
+}
+
 // ---------------------------------------------------------------- sign-in
 
 export type OAuthProvider = "google" | "discord";

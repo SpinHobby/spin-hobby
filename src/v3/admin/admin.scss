@@ -432,3 +432,10 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-photos-sq__hidden { display: flex; flex-direction: column; gap: 8px; }
 .ad-photos__item.is-hidden img { opacity: .55; filter: grayscale(.4); }
 .ad-photos__actions .is-danger { width: auto; padding: 0 8px; color: var(--red); font-weight: 700; }
+
+// Photo and text options: each step with its price; the paid ones are never ticked by default.
+.ad-polish-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+.ad-polish { display: flex; flex-direction: column; gap: 8px; }
+.ad-polish__price { margin-left: 6px; font-size: 11.5px; font-weight: 800; color: var(--muted); white-space: nowrap;
+  &--free { color: var(--green, #1c7c4d); } }
+.ad-polish__run { display: flex; justify-content: flex-start; }

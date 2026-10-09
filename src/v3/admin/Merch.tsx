@@ -9,6 +9,8 @@ import { formatBytes, prepareImage, preparedFromBlob, uploadPrepared } from "./i
 import { CategorySelect } from "./Categories";
 import { cleanBarcode } from "./barcode";
 import { SeriesSelect } from "./SeriesSelect";
+import { PolishOptions, type PolishChoice } from "./PolishOptions";
+import { polishPhoto, type StickerBox } from "./polish";
 import { useSeriesList } from "./seriesList";
 import type { Ctx } from "./Screens";
 
@@ -176,27 +178,49 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const [touched, setTouched] = useState(false);
   const [ai, setAi] = useState<{ state: "idle" | "working" | "done" | "failed"; note: string }>({ state: "idle", note: "" });
   const [scanning, setScanning] = useState(false);
+  const [choice, setChoice] = useState<PolishChoice>({ removeBackground: true, removeStickers: false, text: false });
+  const [keepOriginal, setKeepOriginal] = useState(false);
   const [existing, setExisting] = useState<ExistingProduct | null>(null);
   const { list: seriesList } = useSeriesList();
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const code = cleanBarcode(d.jan);
   const codeBad = d.inSquare && d.jan.trim() !== "" && !code;
 
-  /** Claude reads the first photo: title, description, category, the box artwork and any legible barcode. */
-  const suggest = async (url: string, sealed: boolean) => {
-    setAi({ state: "working", note: "Reading the photo…" });
+  /**
+   * Runs what the admin ticked, and only that. The free steps (green-backdrop cut-out) never use the AI. Writing the
+   * title and painting over a sticker are the paid steps; ticked together they go out as one cheaper request.
+   */
+  const runPolish = async () => {
+    const cover = d.photos[0];
+    if (!cover) { setAi({ state: "failed", note: "Add a photo first." }); return; }
+    const wantText = choice.text;
+    const wantPhoto = choice.removeBackground || choice.removeStickers;
+    setAi({ state: "working", note: "Working on the photo…" });
     try {
-      const blob = await (await fetch(url)).blob();
-      const form = new FormData();
-      form.append("photo", blob, "photo.webp");
-      form.append("condition", sealed ? "sealed" : "used");
-      const r = await api<AiDraft>("/cashier/identify", { method: "POST", body: form });
-      setD((x) => ({
+      const original = await (await fetch(cover)).blob();
+      let stickers: StickerBox[] | undefined;
+      let spent = 0;
+      const notes: string[] = [];
+      if (wantText) {
+        const form = new FormData();
+        form.append("photo", original, "photo.webp");
+        form.append("condition", d.sealed ? "sealed" : "used");
+        if (choice.removeStickers) form.append("findStickers", "true");
+        const r = await api<AiDraft & { stickers?: StickerBox[] }>("/cashier/identify", { method: "POST", body: form });
+        stickers = choice.removeStickers ? (r.stickers ?? []) : undefined;
         // Asked for explicitly, so the suggestion replaces what is there (except a barcode already scanned or typed).
-        ...x, name: r.title, description: r.description, squareCategory: r.category,
-        crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "", series: r.series ?? x.series,
-      }));
-      setAi({ state: "done", note: `Written by AI from the photo. Please check the title and description.${r.usage ? ` Used ${usageText(r.usage)}.` : ""}` });
+        setD((x) => ({ ...x, name: r.title, description: r.description, squareCategory: r.category, crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "", series: r.series ?? x.series }));
+        if (r.usage) { spent += r.usage.costUsd; notes.push(`Title and description written. Used ${usageText(r.usage)}.`); }
+      }
+      if (wantPhoto) {
+        const { blob, report } = await polishPhoto(original, { removeBackground: choice.removeBackground, removeStickers: choice.removeStickers, stickers });
+        const url = await uploadPrepared(await preparedFromBlob(blob, 0, 0), "products");
+        setD((x) => ({ ...x, photos: [url, ...(keepOriginal ? x.photos : x.photos.slice(1))] }));
+        if (report.usage) spent += report.usage.costUsd;
+        if (choice.removeBackground) notes.push(report.backgroundRemoved ? "Green backdrop removed (the background is transparent)." : "No green backdrop was found, so the background was left as it is.");
+        if (choice.removeStickers) notes.push(report.stickersFilled ? `${report.stickersFilled} sticker${report.stickersFilled === 1 ? "" : "s"} painted over${report.usage ? ` (cost about $${report.usage.costUsd.toFixed(3)})` : ""}.` : "No shop sticker was found.");
+      }
+      setAi({ state: "done", note: `${notes.join(" ")}${spent ? ` Total about $${spent.toFixed(3)}.` : " Nothing was charged."}` });
     } catch (e) {
       setAi({ state: "failed", note: `${errMsg(e)}` });
     }
@@ -289,17 +313,17 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
                     <button type="button" className={d.sealed ? "is-active" : ""} onClick={() => set("sealed", true)}>Sealed in box</button>
                     <button type="button" className={!d.sealed ? "is-active" : ""} onClick={() => set("sealed", false)}>Opened / loose</button>
                   </div>
+                  {d.photos[0] && (
+                    <div className="ad-polish-box">
+                      <div className="ad-label" style={{ margin: 0 }}>Improve with these steps <span className="ad-muted">· nothing that costs money runs unless you tick it</span></div>
+                      <PolishOptions choice={choice} onChange={setChoice} showText busy={ai.state === "working"} onRun={runPolish} />
+                      <label className="ad-check-inline"><input type="checkbox" checked={keepOriginal} onChange={(e) => setKeepOriginal(e.target.checked)} />Keep my original photo as the next picture</label>
+                    </div>
+                  )}
                   {ai.state !== "idle" && (
                     <div className={`ad-ai ad-ai--${ai.state}`} role="status">
                       <span>{ai.state === "working" ? "✨ " : ai.state === "done" ? "✨ " : "⚠ "}{ai.note}</span>
-                      {ai.state !== "working" && d.photos[0] && <button type="button" className="ad-link" onClick={() => suggest(d.photos[0], d.sealed)}>Suggest again</button>}
                     </div>
-                  )}
-                  {ai.state === "idle" && (
-                    <button type="button" className="sh-btn sh-btn--ghost ad-ai-btn" disabled={!d.photos[0]} onClick={() => suggest(d.photos[0], d.sealed)}
-                      title={d.photos[0] ? "Claude reads the first photo and suggests a title, description and category (costs a few cents)" : "Add a photo first"}>
-                      ✨ Write title &amp; description with AI
-                    </button>
                   )}
                   {d.sealed && d.crop && (
                     <label className="ad-check-inline"><input type="checkbox" checked={d.useArtwork} onChange={(e) => set("useArtwork", e.target.checked)} />Use the picture printed on the box as the main photo (your photo is kept as the next one)</label>
