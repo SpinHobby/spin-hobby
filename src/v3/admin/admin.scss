@@ -426,3 +426,9 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
   button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; padding: 8px 10px; border: 0; border-radius: 7px; background: none; color: inherit; font: inherit; font-size: 13.5px; cursor: pointer;
     &:hover { background: var(--surface2); } small { color: var(--muted); } }
   .ad-series__add { color: var(--primary); font-weight: 700; } }
+
+// Photos of a Square product (shown, hidden, edit as a new photo).
+.ad-photos-sq { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+.ad-photos-sq__hidden { display: flex; flex-direction: column; gap: 8px; }
+.ad-photos__item.is-hidden img { opacity: .55; filter: grayscale(.4); }
+.ad-photos__actions .is-danger { width: auto; padding: 0 8px; color: var(--red); font-weight: 700; }

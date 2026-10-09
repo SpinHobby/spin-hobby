@@ -16,6 +16,7 @@ import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 import { photo } from "../photo";
 import { FrontRank, MoveArrows } from "./FrontPage";
+import { SquarePhotos } from "./SquarePhotos";
 import { SeriesSelect } from "./SeriesSelect";
 import { useSeriesList } from "./seriesList";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
@@ -594,6 +595,9 @@ function ProductDrawer({ ctx, p, onClose, onSaved, onMove, onToggleVisible, visi
                 <a href={squareUrl} target="_blank" rel="noreferrer" className="ad-link ad-sm" style={{ display: "inline-block", marginTop: 6 }}>Edit in Square ↗</a>
               </div>
             </div>
+          )}
+          {!manual && p.state !== "retired" && (
+            <SquarePhotos ctx={ctx} p={p} onChanged={(urls) => onSaved({ images: urls })} />
           )}
           <section className="ad-where" aria-label="Where this product lives">
             <div className="ad-where__row">

@@ -93,6 +93,22 @@ export async function api<T>(path: string, init: ApiRequest = {}): Promise<T> {
   }
 }
 
+/** Fetches a file from the API as a Blob (a photo for the editor), signed in like any other request. */
+export async function apiBlob(path: string): Promise<Blob> {
+  const token = await accessToken();
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new Error("Can't reach the shop server. Check your connection and try again.");
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error ?? "That photo could not be loaded.");
+  }
+  return response.blob();
+}
+
 // ---------------------------------------------------------------- sign-in
 
 export type OAuthProvider = "google" | "discord";
