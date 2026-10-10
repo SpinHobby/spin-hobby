@@ -102,6 +102,23 @@
   > a:hover, > button:hover { background: var(--surface2); color: var(--text); }
 }
 
+// On phones the popover would hang off a small button in the middle of the header and run off the screen, so it
+// becomes a sheet at the top of the screen with the page dimmed behind it.
+.sf-menu__close { display: none; }
+@media (max-width: 640px) {
+  .sf-menu {
+    position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; right: 12px; width: auto; max-width: none;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px)); overflow-y: auto; overscroll-behavior: contain;
+    padding: 10px; border-radius: 18px; z-index: 90;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55), 0 20px 50px rgba(0, 0, 0, .4);
+    &__label { font-size: 13.5px; padding: 8px 4px 10px; }
+    &__signin { padding: 2px 4px 8px; }
+    > a, > button { padding: 13px 12px; font-size: 15px; }
+  }
+  .sf-menu__close { display: grid; place-items: center; position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border: 0; background: none; font-size: 26px; line-height: 1; color: var(--muted); border-radius: 10px; }
+  .sf-menu__label { padding-right: 40px; }
+}
+
 .sf-nav {
   display: flex; gap: 2px; font-size: 14px; font-weight: 600; overflow-x: auto; white-space: nowrap; scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }

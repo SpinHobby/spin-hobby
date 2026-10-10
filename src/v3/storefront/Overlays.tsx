@@ -117,9 +117,9 @@ export function AccountMenu({ email, user, onSignOut }: {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
   }, [open]);
   useEscape(open ? () => setOpen(false) : null);
 
@@ -137,6 +137,7 @@ export function AccountMenu({ email, user, onSignOut }: {
       </button>
       {open && (
         <div className="sf-menu" role="menu">
+          <button type="button" className="sf-menu__close" onClick={() => setOpen(false)} aria-label="Close">×</button>
           {email ? (
             <>
               <div className="sf-menu__who">
