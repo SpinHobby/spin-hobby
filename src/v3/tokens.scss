@@ -164,3 +164,14 @@ body { margin: 0; }
     button { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--primary); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; } }
   &--compact { gap: 8px; .sh-signin__oauth, .sh-signin__form .sh-btn { padding: 9px; font-size: 13.5px; } }
 }
+
+// Phones and touch screens: text under 16px makes iOS Safari zoom into a field when it gets focus (and stay zoomed),
+// and small targets are hard to hit. This applies to every form field in the app; sign-in also gets 44px targets.
+@media (max-width: 960px), (pointer: coarse) {
+  .sh-input, .sh select, .sh textarea { font-size: 16px; }
+  .sh-signin .sh-input, .ad-gate .sh-input, .sf-menu .sh-input { min-height: 46px; }
+  .sh-signin .sh-btn, .sh-signin__oauth, .ad-gate .sh-btn, .sf-menu .sh-btn { min-height: 46px; }
+  .sh-pw__toggle { width: 40px; height: 40px; right: 3px; }
+  .sh-signin__switch button, .sh-signin__link { padding: 10px 8px; }
+  .sh-signin { gap: 12px; &__form { gap: 10px; } }
+}

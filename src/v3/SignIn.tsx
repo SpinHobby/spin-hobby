@@ -84,8 +84,9 @@ export function SignInPanel({ returnPath, compact = false, allowSignup = false }
               <input className="sh-input" type="text" autoComplete="given-name" placeholder="First name (optional)" maxLength={80} value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-label="First name" />
             )}
             <input className="sh-input" type={usernameOk ? "text" : "email"} required autoComplete={usernameOk ? "username" : "email"}
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" enterKeyHint="next"
               placeholder={usernameOk ? "Email or username" : "you@example.com"} value={email} onChange={(e) => setEmail(e.target.value)} aria-label={usernameOk ? "Email or username" : "Email"} />
-            <PasswordInput required minLength={signingUp ? 8 : undefined} autoComplete={signingUp ? "new-password" : "current-password"}
+            <PasswordInput required enterKeyHint="go" autoCapitalize="none" autoCorrect="off" spellCheck={false} minLength={signingUp ? 8 : undefined} autoComplete={signingUp ? "new-password" : "current-password"}
               placeholder={signingUp ? "Password (8+ characters)" : "Password"} value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
             <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>
               {signingUp ? (busy ? "Creating account…" : "Create account") : (busy ? "Signing in…" : "Sign in")}
