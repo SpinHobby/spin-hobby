@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
 import { greetingName, money, storeFormat, type Currency } from "../format";
@@ -123,6 +123,25 @@ export function AccountMenu({ email, user, onSignOut }: {
   }, [open]);
   useEscape(open ? () => setOpen(false) : null);
 
+  // Whatever the screen width, keep the popover on screen: if it hangs past an edge, shift it back (the sheet layout
+  // for narrow screens is fixed and never needs this).
+  const menuRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const el = menuRef.current;
+      if (!el || getComputedStyle(el).position !== "absolute") return;
+      el.style.transform = "";
+      const r = el.getBoundingClientRect();
+      const margin = 8;
+      const shift = r.left < margin ? margin - r.left : r.right > window.innerWidth - margin ? window.innerWidth - margin - r.right : 0;
+      if (shift) el.style.transform = `translateX(${Math.round(shift)}px)`;
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open, email]);
+
   // Close the menu once a sign-in from it succeeds; the storefront shows the welcome.
   useEffect(() => { if (email) setOpen(false); }, [email]);
 
@@ -136,7 +155,7 @@ export function AccountMenu({ email, user, onSignOut }: {
         {email ? <><span className="sf-avatar" aria-hidden>{name.charAt(0).toUpperCase()}</span><span className="sf-account__hi">Hi, {name}</span></> : "Sign in"}
       </button>
       {open && (
-        <div className="sf-menu" role="menu">
+        <div className="sf-menu" role="menu" ref={menuRef}>
           <button type="button" className="sf-menu__close" onClick={() => setOpen(false)} aria-label="Close">×</button>
           {email ? (
             <>

@@ -102,12 +102,13 @@
   > a:hover, > button:hover { background: var(--surface2); color: var(--text); }
 }
 
-// On phones the popover would hang off a small button in the middle of the header and run off the screen, so it
-// becomes a sheet at the top of the screen with the page dimmed behind it.
+// Below desktop width the header wraps and the Sign in button sits in the middle of a row, so a popover hanging
+// off it runs off the screen. There it becomes a sheet at the top of the screen with the page dimmed behind it.
+// (At any other width AccountMenu also measures the popover and nudges it back into view.)
 .sf-menu__close { display: none; }
-@media (max-width: 640px) {
+@media (max-width: 960px) {
   .sf-menu {
-    position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; right: 12px; width: auto; max-width: none;
+    position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; right: 12px; width: auto; max-width: 440px; margin-inline: auto;
     max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px)); overflow-y: auto; overscroll-behavior: contain;
     padding: 10px; border-radius: 18px; z-index: 90;
     box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55), 0 20px 50px rgba(0, 0, 0, .4);

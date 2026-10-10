@@ -167,7 +167,7 @@ body { margin: 0; }
 
 // Phones and touch screens: text under 16px makes iOS Safari zoom into a field when it gets focus (and stay zoomed),
 // and small targets are hard to hit. This applies to every form field in the app; sign-in also gets 44px targets.
-@media (max-width: 640px), (pointer: coarse) {
+@media (max-width: 960px), (pointer: coarse) {
   .sh-input, .sh select, .sh textarea { font-size: 16px; }
   .sh-signin .sh-input, .ad-gate .sh-input, .sf-menu .sh-input { min-height: 46px; }
   .sh-signin .sh-btn, .sh-signin__oauth, .ad-gate .sh-btn, .sf-menu .sh-btn { min-height: 46px; }
