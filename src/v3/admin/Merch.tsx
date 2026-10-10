@@ -24,8 +24,10 @@ const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
 // ---------------------------------------------------------------- photos
 
 /** Drop or pick photos; each is shrunk in the browser, then uploaded. First photo is the cover. */
-export function PhotoUploader({ urls, onChange, folder = "products", max = 6, single = false }: {
+export function PhotoUploader({ urls, onChange, folder = "products", max = 6, single = false, selection }: {
   urls: string[]; onChange: (urls: string[]) => void; folder?: "products" | "slides"; max?: number; single?: boolean;
+  /** When given, every photo gets a tick box so several can be picked for a batch step. */
+  selection?: { selected: Set<string>; onToggle: (url: string) => void };
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState("");
@@ -89,6 +91,11 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
           {urls.map((url, i) => (
             <div key={url} className="ad-photos__item">
               <img src={url} alt="" />
+              {selection && (
+                <label className="ad-photos__pick" title="Select this photo">
+                  <input type="checkbox" checked={selection.selected.has(url)} onChange={() => selection.onToggle(url)} aria-label={`Select photo ${i + 1}`} />
+                </label>
+              )}
               {!single && i === 0 && <span className="ad-photos__cover">Cover</span>}
               <div className="ad-photos__actions">
                 <button type="button" onClick={() => setEditing(i)} disabled={!!busy} title="Edit photo" aria-label="Edit photo">✎</button>
@@ -180,30 +187,39 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const [scanning, setScanning] = useState(false);
   const [choice, setChoice] = useState<PolishChoice>({ removeBackground: true, removeStickers: false, text: false });
   const [keepOriginal, setKeepOriginal] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set()); // photos picked for the free steps
   const [existing, setExisting] = useState<ExistingProduct | null>(null);
   const { list: seriesList } = useSeriesList();
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const code = cleanBarcode(d.jan);
   const codeBad = d.inSquare && d.jan.trim() !== "" && !code;
 
+  const toggleSelected = (url: string) => setSelected((cur) => { const next = new Set(cur); if (next.has(url)) next.delete(url); else next.add(url); return next; });
+
   /**
-   * Runs what the admin ticked, and only that. The free steps (green-backdrop cut-out) never use the AI. Writing the
-   * title and painting over a sticker are the paid steps; ticked together they go out as one cheaper request.
+   * Runs what the admin ticked, and only that. The free step (green-backdrop cut-out) works on every selected photo
+   * (or the cover when none is selected) and never uses the AI. The AI steps, writing the title and painting over a
+   * price sticker, look at the cover photo only; ticked together they go out as one cheaper request.
    */
   const runPolish = async () => {
-    const cover = d.photos[0];
-    if (!cover) { setAi({ state: "failed", note: "Add a photo first." }); return; }
+    const urls = d.photos;
+    if (!urls[0]) { setAi({ state: "failed", note: "Add a photo first." }); return; }
     const wantText = choice.text;
-    const wantPhoto = choice.removeBackground || choice.removeStickers;
-    setAi({ state: "working", note: "Working on the photo…" });
+    const backdropOn = new Set<number>();
+    if (choice.removeBackground) {
+      const picked = urls.map((u, i) => (selected.has(u) ? i : -1)).filter((i) => i >= 0);
+      for (const i of picked.length ? picked : [0]) backdropOn.add(i);
+    }
+    const work = new Set<number>(backdropOn);
+    if (choice.removeStickers) work.add(0);
+    setAi({ state: "working", note: "Working on the photos…" });
     try {
-      const original = await (await fetch(cover)).blob();
       let stickers: StickerBox[] | undefined;
       let spent = 0;
       const notes: string[] = [];
       if (wantText) {
         const form = new FormData();
-        form.append("photo", original, "photo.webp");
+        form.append("photo", await (await fetch(urls[0])).blob(), "photo.webp");
         form.append("condition", d.sealed ? "sealed" : "used");
         if (choice.removeStickers) form.append("findStickers", "true");
         const r = await api<AiDraft & { stickers?: StickerBox[] }>("/cashier/identify", { method: "POST", body: form });
@@ -212,14 +228,28 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
         setD((x) => ({ ...x, name: r.title, description: r.description, squareCategory: r.category, crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "", series: r.series ?? x.series }));
         if (r.usage) { spent += r.usage.costUsd; notes.push(`Title and description written. Used ${usageText(r.usage)}.`); }
       }
-      if (wantPhoto) {
-        const { blob, report } = await polishPhoto(original, { removeBackground: choice.removeBackground, removeStickers: choice.removeStickers, stickers });
-        const url = await uploadPrepared(await preparedFromBlob(blob, 0, 0), "products");
-        setD((x) => ({ ...x, photos: [url, ...(keepOriginal ? x.photos : x.photos.slice(1))] }));
+      const next = [...urls];
+      const originals: string[] = [];
+      let removed = 0;
+      let missing = 0;
+      let stickersFilled = 0;
+      const order = [...work].sort((x, y) => x - y);
+      for (const [n, i] of order.entries()) {
+        setAi({ state: "working", note: order.length > 1 ? `Working on photo ${n + 1} of ${order.length}…` : "Working on the photo…" });
+        const coverStickers = i === 0 && choice.removeStickers;
+        const { blob, report } = await polishPhoto(await (await fetch(urls[i])).blob(), {
+          removeBackground: backdropOn.has(i), removeStickers: coverStickers, stickers: coverStickers ? stickers : undefined,
+        });
+        next[i] = await uploadPrepared(await preparedFromBlob(blob, 0, 0), "products");
+        if (keepOriginal) originals.push(urls[i]);
+        if (backdropOn.has(i)) { if (report.backgroundRemoved) removed += 1; else missing += 1; }
         if (report.usage) spent += report.usage.costUsd;
-        if (choice.removeBackground) notes.push(report.backgroundRemoved ? "Green backdrop removed (the background is transparent)." : "No green backdrop was found, so the background was left as it is.");
-        if (choice.removeStickers) notes.push(report.stickersFilled ? `${report.stickersFilled} sticker${report.stickersFilled === 1 ? "" : "s"} painted over${report.usage ? ` (cost about $${report.usage.costUsd.toFixed(3)})` : ""}.` : "No shop sticker was found.");
+        stickersFilled += report.stickersFilled;
       }
+      if (order.length) setD((x) => ({ ...x, photos: [...next, ...originals].slice(0, 8) }));
+      setSelected(new Set());
+      if (choice.removeBackground) notes.push(`Green backdrop removed from ${removed} photo${removed === 1 ? "" : "s"}${missing ? `; ${missing} had no green backdrop, so ${missing === 1 ? "it was" : "they were"} left as ${missing === 1 ? "it is" : "they are"}` : ""}.`);
+      if (choice.removeStickers) notes.push(stickersFilled ? `${stickersFilled} sticker${stickersFilled === 1 ? "" : "s"} painted over on the cover photo.` : "No shop sticker was found on the cover photo.");
       setAi({ state: "done", note: `${notes.join(" ")}${spent ? ` Total about $${spent.toFixed(3)}.` : " Nothing was charged."}` });
     } catch (e) {
       setAi({ state: "failed", note: `${errMsg(e)}` });
@@ -306,7 +336,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
           <div className="ad-add__form">
             <section className="ad-add__section">
               <div className="ad-label">Photos</div>
-              <PhotoUploader urls={d.photos} onChange={onPhotos} />
+              <PhotoUploader urls={d.photos} onChange={onPhotos} selection={d.inSquare ? { selected, onToggle: toggleSelected } : undefined} />
               {d.inSquare && (
                 <>
                   <div className="ad-seg" role="group" aria-label="Condition">
@@ -316,8 +346,9 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
                   {d.photos[0] && (
                     <div className="ad-polish-box">
                       <div className="ad-label" style={{ margin: 0 }}>Improve with these steps <span className="ad-muted">· nothing that costs money runs unless you tick it</span></div>
-                      <PolishOptions choice={choice} onChange={setChoice} showText busy={ai.state === "working"} onRun={runPolish} />
-                      <label className="ad-check-inline"><input type="checkbox" checked={keepOriginal} onChange={(e) => setKeepOriginal(e.target.checked)} />Keep my original photo as the next picture</label>
+                      <PolishOptions choice={choice} onChange={setChoice} showText busy={ai.state === "working"} onRun={runPolish}
+                        selection={{ count: d.photos.filter((u) => selected.has(u)).length, total: d.photos.length, onAll: () => setSelected(new Set(d.photos)), onNone: () => setSelected(new Set()) }} />
+                      <label className="ad-check-inline"><input type="checkbox" checked={keepOriginal} onChange={(e) => setKeepOriginal(e.target.checked)} />Keep my original photos as extra pictures</label>
                     </div>
                   )}
                   {ai.state !== "idle" && (

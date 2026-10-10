@@ -26,7 +26,8 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   const [editing, setEditing] = useState<{ photo: Photo; source: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const [polishing, setPolishing] = useState<Photo | null>(null);
+  const [polishOpen, setPolishOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [choice, setChoice] = useState<PolishChoice>({ removeBackground: true, removeStickers: false, text: false });
 
   const apply = useCallback((next: PhotoLists) => { setLists({ shown: next.shown, hidden: next.hidden }); onChanged(next.shown.map((x) => x.url)); }, [onChanged]);
@@ -75,27 +76,52 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
     ctx.flash("Saved as a new photo. The original is kept (hidden).");
   };
 
-  /** Tidies one photo and saves the result as a NEW photo in its place; the original is hidden, never deleted. */
+  /**
+   * Tidies the selected photos (the main photo when none is selected). Each result is saved as a NEW photo in the
+   * original's place and the original is hidden, never deleted. The free backdrop step runs on every selected photo;
+   * painting over a shop sticker (AI) only looks at the main photo.
+   */
   const runPolish = async () => {
-    const target = polishing;
-    if (!target) return;
-    await run("Polishing the photo…", async () => {
-      const original = await apiBlob(`/admin/photo-proxy?url=${encodeURIComponent(target.url)}`);
-      const { blob, report } = await polishPhoto(original, { removeBackground: choice.removeBackground, removeStickers: choice.removeStickers });
-      const prepared = await preparedFromBlob(blob, 0, 0);
-      const result = await api<PhotoLists>(base, { method: "POST", body: JSON.stringify({ data: prepared.dataUrl, contentType: prepared.type, replaces: target.id }) });
-      const notes = [choice.removeBackground ? (report.backgroundRemoved ? "backdrop removed" : "no green backdrop found") : "", choice.removeStickers ? (report.stickersFilled ? `${report.stickersFilled} sticker painted over` : "no sticker found") : ""].filter(Boolean);
-      ctx.flash(`Saved as a new photo (${notes.join(", ")}). The original is kept, hidden.${report.usage ? ` About $${report.usage.costUsd.toFixed(3)}.` : ""}`);
-      return result;
+    const ids = shown.map((x) => x.id);
+    const chosen = ids.filter((id) => selected.has(id));
+    const targets = choice.removeBackground ? (chosen.length ? chosen : ids.slice(0, 1)) : [];
+    if (choice.removeStickers && ids[0] && !targets.includes(ids[0])) targets.unshift(ids[0]);
+    if (!targets.length) return;
+    let latest: PhotoLists | null = null;
+    await run("Polishing…", async () => {
+      let backdrops = 0;
+      let missing = 0;
+      let stickers = 0;
+      let spent = 0;
+      for (const [n, id] of targets.entries()) {
+        setBusy(targets.length > 1 ? `Polishing photo ${n + 1} of ${targets.length}…` : "Polishing the photo…");
+        const photo = (latest ?? lists).shown.find((x) => x.id === id);
+        if (!photo) continue;
+        const main = id === ids[0] && choice.removeStickers;
+        const original = await apiBlob(`/admin/photo-proxy?url=${encodeURIComponent(photo.url)}`);
+        const { blob, report } = await polishPhoto(original, { removeBackground: choice.removeBackground && (chosen.length ? chosen.includes(id) : id === ids[0]), removeStickers: main });
+        const prepared = await preparedFromBlob(blob, 0, 0);
+        latest = await api<PhotoLists>(base, { method: "POST", body: JSON.stringify({ data: prepared.dataUrl, contentType: prepared.type, replaces: id }) });
+        if (choice.removeBackground) { if (report.backgroundRemoved) backdrops += 1; else missing += 1; }
+        stickers += report.stickersFilled;
+        spent += report.usage?.costUsd ?? 0;
+      }
+      const notes = [choice.removeBackground ? `backdrop removed from ${backdrops}${missing ? `, ${missing} had no green backdrop` : ""}` : "", choice.removeStickers ? (stickers ? "sticker painted over on the main photo" : "no sticker found") : ""].filter(Boolean);
+      ctx.flash(`Saved as new photos (${notes.join("; ")}). The originals are kept, hidden.${spent ? ` About $${spent.toFixed(3)}.` : ""}`);
+      return latest ?? lists;
     });
-    setPolishing(null);
+    setSelected(new Set());
+    setPolishOpen(false);
   };
 
   return (
     <section className="ad-photos-sq" aria-label="Photos">
       <div className="ad-between">
         <span className="ad-label" style={{ margin: 0 }}>Photos <span className="ad-muted">· saved in Square</span></span>
-        <button type="button" className="ad-link" onClick={() => input.current?.click()} disabled={!!busy}>+ Add photo</button>
+        <span style={{ display: "inline-flex", gap: 14 }}>
+          <button type="button" className="ad-link" onClick={() => setPolishOpen((v) => !v)} disabled={!!busy || shown.length === 0}>✨ Polish photos</button>
+          <button type="button" className="ad-link" onClick={() => input.current?.click()} disabled={!!busy}>+ Add photo</button>
+        </span>
       </div>
       <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => e.target.files && void addFiles(e.target.files)} />
       {shown.length === 0 && <span className="ad-muted ad-sm">No photos shown. Add one{hidden.length ? " or show a hidden one below" : ""}.</span>}
@@ -104,10 +130,15 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
           {shown.map((photo, i) => (
             <div key={photo.id} className="ad-photos__item">
               <img src={photo.url} alt="" />
+              {polishOpen && (
+                <label className="ad-photos__pick" title="Select this photo">
+                  <input type="checkbox" checked={selected.has(photo.id)} aria-label={`Select photo ${i + 1}`}
+                    onChange={() => setSelected((cur) => { const next = new Set(cur); if (next.has(photo.id)) next.delete(photo.id); else next.add(photo.id); return next; })} />
+                </label>
+              )}
               {i === 0 && <span className="ad-photos__cover">Main</span>}
               <div className="ad-photos__actions">
                 <button type="button" onClick={() => openEditor(photo)} disabled={!!busy} title="Edit (saved as a new photo; the original is kept)" aria-label="Edit photo">✎</button>
-                <button type="button" onClick={() => setPolishing(polishing?.id === photo.id ? null : photo)} disabled={!!busy} title="Polish: remove green backdrop or shop sticker (saved as a new photo)" aria-label="Polish photo">✨</button>
                 {i > 0 && <button type="button" onClick={() => move(i, 0)} disabled={!!busy} title="Make main photo">★</button>}
                 {i > 0 && <button type="button" onClick={() => move(i, i - 1)} disabled={!!busy} title="Move earlier" aria-label="Move earlier">◀</button>}
                 {i < shown.length - 1 && <button type="button" onClick={() => move(i, i + 1)} disabled={!!busy} title="Move later" aria-label="Move later">▶</button>}
@@ -117,10 +148,11 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
           ))}
         </div>
       )}
-      {polishing && (
+      {polishOpen && (
         <div className="ad-polish-box">
-          <div className="ad-label" style={{ margin: 0 }}>Polish this photo <span className="ad-muted">· saved as a new photo, the original is kept hidden</span></div>
-          <PolishOptions choice={choice} onChange={setChoice} showText={false} busy={!!busy} onRun={runPolish} runLabel="Polish" />
+          <div className="ad-label" style={{ margin: 0 }}>Polish photos <span className="ad-muted">· each is saved as a new photo, the original is kept hidden</span></div>
+          <PolishOptions choice={choice} onChange={setChoice} showText={false} busy={!!busy} onRun={runPolish} runLabel="Polish"
+            selection={{ count: shown.filter((x) => selected.has(x.id)).length, total: shown.length, onAll: () => setSelected(new Set(shown.map((x) => x.id))), onNone: () => setSelected(new Set()) }} />
         </div>
       )}
       {hidden.length > 0 && (
