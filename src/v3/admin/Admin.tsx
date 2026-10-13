@@ -17,6 +17,7 @@ import { useAuth, useTheme, useToast } from "../hooks";
 import { useDocumentHead } from "../seo";
 import { SCREENS, useAdminData, type Screen } from "./data";
 import { CategoriesScreen } from "./Categories";
+import { ImportsScreen } from "./Imports";
 import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, SettingsScreen, type Ctx } from "./Screens";
 
 const LOGO = "/logo/logo%20cropped.png";
@@ -131,6 +132,7 @@ export default function Admin() {
           )}
           {screen === "Dashboard" && <DashboardScreen ctx={ctx} />}
           {screen === "Products" && <ProductsScreen ctx={ctx} />}
+          {screen === "Imports" && <ImportsScreen ctx={ctx} />}
           {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
           {screen === "Orders" && <OrdersScreen ctx={ctx} />}
           {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
