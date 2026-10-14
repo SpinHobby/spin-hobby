@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { ListingUploads } from "./ListingUploads";
 import { SeriesSelect } from "./SeriesSelect";
 import { useSeriesList } from "./seriesList";
 import type { Ctx } from "./Screens";
@@ -27,6 +28,7 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   const [categories, setCategories] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [connect, setConnect] = useState(false);
+  const [upload, setUpload] = useState(false);
   const series = useSeriesList();
 
   const load = useCallback(async () => {
@@ -44,8 +46,10 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
         <div className="ad-muted ad-sm" style={{ flex: "1 1 320px" }}>
           Product drafts from <b>Gleamshelf</b>: a cleaned photo, a title, description, category and series, written on the shop's own computer from what is printed on the box and what the web says about it. Check each against the box, <b>type the price and stock</b>, then add it.
         </div>
+        <button type="button" className="sh-btn ad-btn-sm" onClick={() => setUpload((v) => !v)}>{upload ? "Hide" : "Make drafts from photos"}</button>
         {ctx.isOwner && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setConnect((v) => !v)}>{connect ? "Hide" : "Connect the app"}</button>}
       </div>
+      {upload && <ListingUploads ctx={ctx} onChanged={() => { void load(); }} />}
       {connect && ctx.isOwner && <ConnectPanel ctx={ctx} />}
 
       <div className="ad-chips" role="group" aria-label="Drafts">

@@ -488,3 +488,15 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-photoq__info { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .ad-photoq__zoom { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.8); display: flex; align-items: center; justify-content: center; cursor: zoom-out; img { max-width: 94vw; max-height: 94vh; background: #fff; border-radius: 8px; } }
 .ad-photoq-dialog { max-width: 520px; }
+
+.ad-uploads { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.ad-uploads__head { display: flex; flex-direction: column; gap: 2px; }
+.ad-uploads__status { display: flex; gap: 10px; align-items: center; font-size: 13.5px; padding: 8px 12px; border-radius: 10px; background: var(--surface2, rgba(127,127,127,.12)); .ad-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; } code { background: rgba(127,127,127,.18); padding: 1px 6px; border-radius: 6px; } }
+.ad-uploads__pick { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.ad-uploads__warn { font-size: 13px; color: var(--red); }
+.ad-uploads__files { display: flex; flex-wrap: wrap; gap: 6px; }
+.ad-uploads__file { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 4px 3px 10px; border: 1px solid var(--border); border-radius: 999px; button { border: 0; background: none; cursor: pointer; font-size: 15px; line-height: 1; color: var(--muted); } }
+.ad-uploads__options { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.ad-uploads__jobs { display: flex; flex-direction: column; gap: 6px; }
+.ad-uploads__job { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; padding: 6px 0; border-top: 1px solid var(--border); &.is-cancelled { opacity: .55; } }
+.ad-uploads__name { flex: 1 1 220px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
