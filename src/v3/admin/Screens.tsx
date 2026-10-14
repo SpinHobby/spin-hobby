@@ -18,6 +18,7 @@ import { photo } from "../photo";
 import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
 import { SeriesSelect } from "./SeriesSelect";
+import { ImprovePhotosDialog } from "./PhotoQueue";
 import { useSeriesList } from "./seriesList";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
 import { isShown, setVisible } from "./sourceState";
@@ -229,6 +230,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [selected, setSelected] = useState<Set<string>>(new Set()); // kept across pages and filter changes
   const [bulkTarget, setBulkTarget] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [improving, setImproving] = useState(false);
   const [moving, setMoving] = useState<Product | null>(null);
   const [visibilityBusy, setVisibilityBusy] = useState<Set<string>>(new Set());
   const drawerDirty = useRef(false);
@@ -375,10 +377,12 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
             {tree.flat.map((c) => <option key={c.id} value={c.id}>{indentLabel(c)}</option>)}
           </select>
           <button type="button" className="sh-btn ad-btn-sm" disabled={!bulkTarget || bulkBusy} onClick={bulkMove}>{bulkBusy ? "Moving…" : "Move"}</button>
+          <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setImproving(true)} title="Clean up the photos of these products on the photo computer">Improve photos</button>
           <button type="button" className="ad-link" onClick={() => setSelected(new Set())}>Clear</button>
           {!tree.flat.length && <span className="ad-muted ad-sm">Create categories first in the Categories screen.</span>}
         </div>
       )}
+      {improving && <ImprovePhotosDialog productIds={[...selected]} ctx={ctx} onClose={() => setImproving(false)} />}
       <div className="ad-summary-line" aria-live="polite">
         <span>
           {data ? (total === 0 ? "No items" : `Showing ${from}–${to} of ${total} item${total === 1 ? "" : "s"}`) : "Loading…"}
