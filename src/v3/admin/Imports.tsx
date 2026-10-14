@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { ListingUploads } from "./ListingUploads";
 import { SeriesSelect } from "./SeriesSelect";
-import { useSeriesList } from "./seriesList";
+import { findSeries, similarSeries, useSeriesList } from "./seriesList";
 import type { Ctx } from "./Screens";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
@@ -11,8 +11,11 @@ type Status = "draft" | "added" | "rejected";
 interface Draft {
   id: string; status: Status; title: string; description: string | null; category: string | null; series: string | null;
   imageUrl: string | null; productId: string | null; rejectReason: string | null; createdAt: string;
-  details: { flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
+  details: { market?: Market | null; flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
 }
+interface MarketListing { title: string; url: string; site: string; price: number; currency: "CAD" | "USD"; cad: number; condition: "new" | "used" | null; canadian: boolean }
+interface Market { low: number; median: number; high: number; count: number; canadian: number; rate: number; rateIsEstimate: boolean; note: string | null; listings: MarketListing[] }
+const cad = (n: number) => `$${n.toFixed(2)}`;
 interface Connection { id: string; label: string; createdAt: string; lastUsedAt: string | null; revoked: boolean }
 
 const LABEL: Record<Status, string> = { draft: "To review", added: "Added", rejected: "Rejected" };
@@ -72,6 +75,30 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
         ))}
       </div>
     </>
+  );
+}
+
+/**
+ * What this product asks for in North America, read from real listings (Canada first, US prices converted to CAD): a range and the links behind it. Asking prices, not sold prices,
+ * and never a price to use blindly: "Use" appears only when at least three listings agree, and it only fills the price box for the person to check.
+ */
+function MarketPrice({ market, onUse }: { market: Market; onUse: (price: string) => void }) {
+  const enough = market.count >= 3;
+  return (
+    <div className="ad-imports__market">
+      <div>
+        <b>North American market price</b>: {cad(market.low)}{market.high !== market.low ? ` – ${cad(market.high)}` : ""} CAD
+        <span className="ad-muted"> · {enough ? `typically ${cad(market.median)}` : "too few to suggest a price"} · {market.count} listing{market.count === 1 ? "" : "s"}{market.canadian ? `, ${market.canadian} Canadian` : ""}</span>
+        {enough && <button type="button" className="sh-chip" onClick={() => onUse(market.median.toFixed(2))}>Use {cad(market.median)}</button>}
+      </div>
+      {market.note && <div className="ad-muted ad-sm">{market.note}</div>}
+      <details className="ad-sm">
+        <summary>See the listings (asking prices{market.rate ? `, US dollars at ${market.rate.toFixed(2)}${market.rateIsEstimate ? ", an estimate" : ""}` : ""})</summary>
+        <ul>{market.listings.map((l) => (
+          <li key={l.url}><a href={l.url} target="_blank" rel="noreferrer">{l.site}</a> {l.currency === "USD" ? `US$${l.price.toFixed(2)} ≈ ${cad(l.cad)}` : cad(l.cad)}{l.condition === "used" ? " · used" : ""}{l.canadian ? " · Canada" : ""} <span className="ad-muted">{l.title}</span></li>
+        ))}</ul>
+      </details>
+    </div>
   );
 }
 
@@ -153,7 +180,18 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
             <datalist id={`cat-${draft.id}`}>{categories.map((c) => <option key={c} value={c} />)}</datalist></label>
           <SeriesSelect value={seriesName} onChange={setSeriesName} list={series} />
         </div>
+        {seriesName.trim() && !findSeries(seriesName, series) && (
+          <div className="ad-imports__newseries" role="status">
+            <b>New series: “{seriesName.trim()}”</b> is not in your series list, so adding this product will create it.
+            {similarSeries(seriesName, series).length > 0 && (
+              <span> Is it the same as <span className="ad-imports__similar">{similarSeries(seriesName, series).map((s) => (
+                <button key={s.id} type="button" className="sh-chip" onClick={() => setSeriesName(s.name)}>Use “{s.name}”</button>
+              ))}</span></span>
+            )}
+          </div>
+        )}
         <Evidence d={draft} />
+        {draft.details.market && <MarketPrice market={draft.details.market} onUse={setPrice} />}
         <div className="ad-imports__row ad-imports__buy">
           <label className={`ad-field ${shown("price") ? "has-error" : ""}`}><span className="ad-field__top">Price (CAD) {shown("price") && <small>{errors.price}</small>}</span>
             <input className="sh-input" inputMode="decimal" placeholder="e.g. 45.00" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
