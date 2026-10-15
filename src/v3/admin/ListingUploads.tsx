@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
+import { openPicture } from "./heic";
 import type { Ctx } from "./Screens";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
@@ -13,10 +14,10 @@ const LABEL: Record<JobStatus, string> = { queued: "Waiting", running: "Being wo
 const MAX_PHOTOS = 40;
 const MAX_BYTES = 4.8 * 1024 * 1024;
 
-/** A photo the browser can read, as a JPEG that is small enough to send (phone photos are big, and some are HEIC). Null if the browser cannot read it. */
+/** A photo as a JPEG that is small enough to send: phone photos are big, and iPhone ones are HEIC, which is converted here. Null if it cannot be read. */
 async function preparePhoto(file: File): Promise<File | null> {
   try {
-    const bitmap = await createImageBitmap(file);
+    const bitmap = await openPicture(file);
     const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
@@ -116,11 +117,11 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
       </div>
 
       <div className="ad-uploads__pick">
-        <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => { void pick(e.target.files); }} />
+        <input ref={input} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={(e) => { void pick(e.target.files); }} />
         <button type="button" className="sh-btn sh-btn--ghost" onClick={() => input.current?.click()} disabled={preparing || sending}>{preparing ? "Reading photos…" : files.length ? "Add more photos" : "Choose photos"}</button>
         {files.length > 0 && <span className="ad-muted">{files.length} photo{files.length === 1 ? "" : "s"} ready</span>}
       </div>
-      {unreadable.length > 0 && <div className="ad-uploads__warn">These could not be read, so they are left out (save them as JPEG and try again): {unreadable.join(", ")}</div>}
+      {unreadable.length > 0 && <div className="ad-uploads__warn">These could not be read, so they are left out (they may be damaged or not photos): {unreadable.join(", ")}</div>}
       {files.length > 0 && (
         <>
           <div className="ad-uploads__files">{files.map((f, i) => (
