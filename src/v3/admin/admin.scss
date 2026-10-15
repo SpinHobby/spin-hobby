@@ -503,3 +503,6 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-imports__newseries { font-size: 13px; padding: 8px 12px; border-radius: 10px; background: #fff4d6; color: #5c4600; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
 .ad-imports__similar { display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle; }
 .ad-imports__market { font-size: 13.5px; padding: 8px 12px; border-radius: 10px; background: var(--surface2, rgba(127,127,127,.12)); display: flex; flex-direction: column; gap: 4px; .sh-chip { margin-left: 8px; } ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 3px; } summary { cursor: pointer; } }
+.ad-imports__official { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; img { width: 100%; border-radius: 10px; background: #fff; } }
+.ad-imports__photo img.is-unused { opacity: .35; }
+.ad-imports__photochoice { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13.5px; }

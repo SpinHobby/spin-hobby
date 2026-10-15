@@ -11,7 +11,7 @@ type Status = "draft" | "added" | "rejected";
 interface Draft {
   id: string; status: Status; title: string; description: string | null; category: string | null; series: string | null;
   imageUrl: string | null; productId: string | null; rejectReason: string | null; createdAt: string;
-  details: { market?: Market | null; flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
+  details: { official?: { imageUrl: string; pageUrl: string; site: string } | null; market?: Market | null; flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
 }
 interface MarketListing { title: string; url: string; site: string; price: number; currency: "CAD" | "USD"; cad: number; condition: "new" | "used" | null; canadian: boolean }
 interface Market { low: number; median: number; high: number; count: number; canadian: number; rate: number; rateIsEstimate: boolean; note: string | null; listings: MarketListing[] }
@@ -131,6 +131,9 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("1");
   const [hidden, setHidden] = useState(true);
+  // which photo goes on the product: the shop's own (the default), the maker's official one, or both; the official one is never used without a click
+  const [photo, setPhoto] = useState<"own" | "official" | "both">("own");
+  const official = draft.details.official ?? null;
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -148,7 +151,7 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
     try {
       await api(`/admin/imports/${draft.id}/add`, { method: "POST", body: JSON.stringify({
         name: title.trim(), description: description.trim() || null, category: category.trim() || null, series: seriesName.trim() || null,
-        priceCents: cents, stockCount: stockNum, hidden, imageUrls: [],
+        priceCents: cents, stockCount: stockNum, hidden, imageUrls: [], photo: official ? photo : "own",
       }) });
       ctx.flash(`${title.trim()} added${hidden ? " (hidden from the website)" : ""}`);
       ctx.reload();
@@ -168,7 +171,20 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
   const shown = (k: string) => (touched ? errors[k] : undefined);
   return (
     <section className="ad-card ad-imports__card">
-      <div className="ad-imports__photo">{draft.imageUrl ? <img src={draft.imageUrl} alt={draft.title} /> : <div className="ad-empty">No photo</div>}</div>
+      <div className="ad-imports__photo">
+        {draft.imageUrl ? <img src={draft.imageUrl} alt={draft.title} className={official && photo === "official" ? "is-unused" : ""} /> : <div className="ad-empty">No photo</div>}
+        {official && (
+          <div className="ad-imports__official">
+            <img src={official.imageUrl} alt={`Official photo of ${draft.title}`} className={photo === "own" ? "is-unused" : ""} />
+            <div className="ad-muted ad-sm">Official photo from <a href={official.pageUrl} target="_blank" rel="noreferrer">{official.site}</a>. It belongs to the maker: use it only if that is OK for your shop.</div>
+            <div className="ad-imports__photochoice" role="radiogroup" aria-label="Photo to use">
+              {([["own", "Our photo"], ["official", "Official photo"], ["both", "Both"]] as const).map(([value, label]) => (
+                <label key={value} className="ad-check"><input type="radio" name={`photo-${draft.id}`} checked={photo === value} onChange={() => setPhoto(value)} /> {label}</label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
       <div className="ad-imports__form">
         <label className={`ad-field ${shown("title") ? "has-error" : ""}`}><span className="ad-field__top">Title {shown("title") && <small>{errors.title}</small>}</span>
           <input className="sh-input" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} /></label>
