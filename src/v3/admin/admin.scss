@@ -489,6 +489,17 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-photoq__zoom { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.8); display: flex; align-items: center; justify-content: center; cursor: zoom-out; img { max-width: 94vw; max-height: 94vh; background: #fff; border-radius: 8px; } }
 .ad-photoq-dialog { max-width: 520px; }
 
+.ad-labels-dialog { max-width: 620px; }
+.ad-labels { display: flex; flex-direction: column; gap: 10px; font-size: 14px; .ad-label { margin-top: 8px; } p { margin: 0; } }
+.ad-labels__big { font-size: 18px; font-weight: 700; }
+.ad-labels__sheets { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 8px; }
+.ad-labels__sheet { margin: 0; display: flex; flex-direction: column; gap: 4px; align-items: center;
+  img { width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border);
+    background: repeating-conic-gradient(#e9ebf1 0% 25%, #f7f8fb 0% 50%) 0 0 / 16px 16px; }
+  figcaption { font-size: 13px; } }
+.ad-labels__howto { font-size: 13.5px; margin-top: 6px; summary { cursor: pointer; font-weight: 700; } ol { margin: 8px 0; padding-left: 20px; display: grid; gap: 6px; } }
+.ad-select-all { font-size: 13px; }
+
 .ad-uploads { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
 .ad-uploads__head { display: flex; flex-direction: column; gap: 2px; }
 .ad-uploads__status { display: flex; gap: 10px; align-items: center; font-size: 13.5px; padding: 8px 12px; border-radius: 10px; background: var(--surface2, rgba(127,127,127,.12)); .ad-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; } code { background: rgba(127,127,127,.18); padding: 1px 6px; border-radius: 6px; } }

@@ -32,9 +32,11 @@ export interface CatalogFilters {
   noPhoto: boolean;
   min: string;
   max: string;
+  /** "" any time, or a number of hours: only products added or changed that recently. */
+  changedWithin: "" | "24" | "168";
 }
 
-export const EMPTY_FILTERS: CatalogFilters = { q: "", status: [], source: "", categoryId: "", seriesId: "", featured: false, alerts: false, noPhoto: false, min: "", max: "" };
+export const EMPTY_FILTERS: CatalogFilters = { q: "", status: [], source: "", categoryId: "", seriesId: "", featured: false, alerts: false, noPhoto: false, min: "", max: "", changedWithin: "" };
 
 /** How many featured products the homepage shows (the same number the API uses). */
 export const FRONT_PAGE_SLOTS = 8;
@@ -65,7 +67,7 @@ export const parseSort = (value: string): Sort => { const [key, dir] = value.spl
 
 /** How many filters are narrowing the list (the search box counts as one). */
 export function activeFilterCount(f: CatalogFilters) {
-  return [f.q.trim(), f.status.length, f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim()].filter(Boolean).length;
+  return [f.q.trim(), f.status.length, f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim(), f.changedWithin].filter(Boolean).length;
 }
 
 /** Maps the dashboard's old deep links ("Low / sold out") onto the new filters. */
@@ -95,7 +97,15 @@ export interface CatalogCounts {
 export interface CatalogPage { items: Product[]; total: number; counts: CatalogCounts }
 
 export function catalogQuery(f: CatalogFilters, sort: Sort, page: number, pageSize: number) {
-  const p = new URLSearchParams({ sort: sort.key, dir: sort.dir, limit: String(pageSize), cursor: String(page * pageSize) });
+  const p = new URLSearchParams(filterQuery(f, sort));
+  p.set("limit", String(pageSize));
+  p.set("cursor", String(page * pageSize));
+  return p.toString();
+}
+
+/** The filters and sort as query parameters (no paging): shared by the list and "select all". */
+export function filterQuery(f: CatalogFilters, sort: Sort) {
+  const p = new URLSearchParams({ sort: sort.key, dir: sort.dir });
   if (f.q.trim()) p.set("q", f.q.trim());
   if (f.status.length) p.set("status", f.status.join(","));
   if (f.source) p.set("source", f.source);
@@ -106,6 +116,7 @@ export function catalogQuery(f: CatalogFilters, sort: Sort, page: number, pageSi
   if (f.noPhoto) p.set("noPhoto", "1");
   if (f.min.trim()) p.set("min", f.min.trim());
   if (f.max.trim()) p.set("max", f.max.trim());
+  if (f.changedWithin) p.set("changedWithin", f.changedWithin);
   return p.toString();
 }
 

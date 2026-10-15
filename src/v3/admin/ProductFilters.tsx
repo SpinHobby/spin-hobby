@@ -21,7 +21,9 @@ interface Props {
 }
 
 /** How many of the folded-away filters are on (the search box and status chips are always visible). */
-const hiddenFilterCount = (f: CatalogFilters) => [f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim()].filter(Boolean).length;
+const hiddenFilterCount = (f: CatalogFilters) => [f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim(), f.changedWithin].filter(Boolean).length;
+
+const CHANGED_OPTIONS: [CatalogFilters["changedWithin"], string][] = [["", "Added or changed: any time"], ["24", "Added or changed in the last 24 hours"], ["168", "Added or changed in the last 7 days"]];
 
 /** Search, sort, status chips and the secondary filters for the admin product list. */
 export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree, onAdd, compact }: Props) {
@@ -56,6 +58,7 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
     const lo = filters.min.trim(), hi = filters.max.trim();
     tags.push({ key: "price", label: lo && hi ? `$${lo}–$${hi}` : lo ? `From $${lo}` : `Up to $${hi}`, clear: { min: "", max: "" } });
   }
+  if (filters.changedWithin) tags.push({ key: "changed", label: filters.changedWithin === "24" ? "Last 24 hours" : "Last 7 days", clear: { changedWithin: "" } });
   if (filters.featured) tags.push({ key: "feat", label: "Featured", clear: { featured: false } });
   if (filters.alerts) tags.push({ key: "alerts", label: "Restock alerts", clear: { alerts: false } });
   if (filters.noPhoto) tags.push({ key: "photo", label: "No photo", clear: { noPhoto: false } });
@@ -76,6 +79,9 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
           {seriesList.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.productCount})</option>)}
         </select>
       )}
+      <select className="sh-input ad-cat-filter" value={filters.changedWithin} onChange={(e) => onFilters({ changedWithin: e.target.value as CatalogFilters["changedWithin"] })} aria-label="Filter by when products were added or changed">
+        {CHANGED_OPTIONS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+      </select>
       <select className="sh-input ad-source-filter" value={filters.source} onChange={(e) => onFilters({ source: e.target.value as CatalogFilters["source"] })} aria-label="Filter by source">
         <option value="">All sources</option>
         <option value="square">From Square{counts ? ` (${counts.square})` : ""}</option>

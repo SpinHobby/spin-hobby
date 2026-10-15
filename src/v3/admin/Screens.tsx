@@ -8,7 +8,7 @@ import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, S
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
 import {
-  activeFilterCount, DEFAULT_SORT, densityFor, FRONT_PAGE_SLOTS, EMPTY_FILTERS, filtersFromShortcut, loadPrefs, savePrefs, STATE_META, useCatalog, useDebounced, useElementWidth,
+  activeFilterCount, DEFAULT_SORT, densityFor, FRONT_PAGE_SLOTS, EMPTY_FILTERS, filterQuery, filtersFromShortcut, loadPrefs, savePrefs, STATE_META, useCatalog, useDebounced, useElementWidth,
   type CatalogFilters, type Sort, type SortDir, type SortKey,
 } from "./catalog";
 import { CategorySelect } from "./Categories";
@@ -19,6 +19,7 @@ import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
 import { SeriesSelect } from "./SeriesSelect";
 import { ImprovePhotosDialog } from "./PhotoQueue";
+import { LabelsDialog } from "./Labels";
 import { useSeriesList } from "./seriesList";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
 import { isShown, setVisible } from "./sourceState";
@@ -219,6 +220,12 @@ function ProductCardRow({ ctx, p, tree, selected, open, onSelect, onOpen, onFeat
   );
 }
 
+/** The selected ids with the ones on screen first, in list order, so the stickers print in the order you see. */
+function rowOrder(rows: Product[], selected: Set<string>) {
+  const onScreen = rows.map((p) => p.id).filter((id) => selected.has(id));
+  return [...onScreen, ...[...selected].filter((id) => !onScreen.includes(id))];
+}
+
 export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [filters, setFilters] = useState<CatalogFilters>(() => filtersFromShortcut(ctx.productFilter) ?? EMPTY_FILTERS);
   const [prefs] = useState(loadPrefs);
@@ -231,6 +238,8 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [bulkTarget, setBulkTarget] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
   const [improving, setImproving] = useState(false);
+  const [labelling, setLabelling] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
   const [moving, setMoving] = useState<Product | null>(null);
   const [visibilityBusy, setVisibilityBusy] = useState<Set<string>>(new Set());
   const drawerDirty = useRef(false);
@@ -311,6 +320,16 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
       ctx.reload();
     } catch (e) { ctx.flash(errMsg(e)); } finally { setBulkBusy(false); }
   };
+  /** Selects every product the filters match, on every page (not just the ones on screen). */
+  const selectAllMatching = async () => {
+    setSelectingAll(true);
+    try {
+      const res = await api<{ ids: string[]; truncated: boolean }>(`/admin/catalog/ids?${filterQuery(effective, sort)}`);
+      setSelected(new Set(res.ids));
+      if (res.truncated) ctx.flash(`Selected the first ${res.ids.length}. Narrow the filters to pick the rest.`);
+    } catch (e) { ctx.flash(errMsg(e)); } finally { setSelectingAll(false); }
+  };
+  const allMatchingSelected = total > 0 && selected.size >= total && rows.every((p) => selected.has(p.id));
   const open = rows.find((p) => p.id === openId) ?? null;
 
   // Keep the dashboard's and homepage's copy of the product in step with what was just changed here.
@@ -378,15 +397,22 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           </select>
           <button type="button" className="sh-btn ad-btn-sm" disabled={!bulkTarget || bulkBusy} onClick={bulkMove}>{bulkBusy ? "Moving…" : "Move"}</button>
           <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setImproving(true)} title="Clean up the photos of these products on the photo computer">Improve photos</button>
+          <button type="button" className="sh-btn ad-btn-sm" onClick={() => setLabelling(true)} title="Sticker sheets for the Cricut, with a barcode the cashier scans in Square">Make labels</button>
           <button type="button" className="ad-link" onClick={() => setSelected(new Set())}>Clear</button>
           {!tree.flat.length && <span className="ad-muted ad-sm">Create categories first in the Categories screen.</span>}
         </div>
       )}
       {improving && <ImprovePhotosDialog productIds={[...selected]} ctx={ctx} onClose={() => setImproving(false)} />}
+      {labelling && <LabelsDialog productIds={rowOrder(rows, selected)} ctx={ctx} onClose={() => setLabelling(false)} />}
       <div className="ad-summary-line" aria-live="polite">
         <span>
           {data ? (total === 0 ? "No items" : `Showing ${from}–${to} of ${total} item${total === 1 ? "" : "s"}`) : "Loading…"}
           {filtered && counts ? ` (filtered from ${counts.total})` : ""}
+          {total > 0 && !allMatchingSelected && (
+            <> · <button type="button" className="ad-link ad-select-all" disabled={selectingAll} onClick={selectAllMatching}>
+              {selectingAll ? "Selecting…" : `Select all ${total}${filtered ? " matching" : ""}`}
+            </button></>
+          )}
         </span>
         {counts?.lastSyncedAt && <span className="ad-muted">Square last synced {ago(counts.lastSyncedAt)}</span>}
       </div>
