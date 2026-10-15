@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { openPicture } from "./heic";
+import { JobProgress } from "./JobProgress";
 import type { Ctx } from "./Screens";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 type JobStatus = "queued" | "running" | "done" | "failed" | "cancelled";
-interface Job { id: string; fileName: string; status: JobStatus; draftId: string | null; draftTitle: string | null; draftStatus: string | null; flags: string[]; error: string | null; createdAt: string }
+interface Job { id: string; fileName: string; status: JobStatus; draftId: string | null; draftTitle: string | null; draftStatus: string | null; flags: string[]; error: string | null; createdAt: string; progress: number | null; step: string | null; startedAt: string | null }
 interface Worker { id: string; label: string; lastSeen: string | null; online: boolean; canCreateListings: boolean; working: number }
 interface Listing { jobs: Job[]; counts: Record<JobStatus, number>; workers: Worker[] }
 
@@ -56,6 +57,7 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [load]);
   const active = !!state && state.counts.queued + state.counts.running > 0;
+  const runningNow = (state?.counts.running ?? 0) > 0;
   // while photos are waiting or being worked on, look again every 20 seconds, and refresh the drafts when something finishes
   const finished = state?.counts.done ?? 0;
   const lastFinished = useRef(finished);
@@ -64,9 +66,10 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   }, [finished]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!active) return;
-    const t = setInterval(() => { void load(); }, 20_000);
+    // a photo being worked on: look every 5 seconds, so its progress bar moves; otherwise every 20
+    const t = setInterval(() => { void load(); }, runningNow ? 5_000 : 20_000);
     return () => clearInterval(t);
-  }, [active, load]);
+  }, [active, runningNow, load]);
 
   const pick = async (list: FileList | null) => {
     if (!list?.length) return;
@@ -145,7 +148,7 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
           {recent.map((j) => (
             <div key={j.id} className={`ad-uploads__job is-${j.status}`}>
               <span className="ad-uploads__name">{j.draftTitle ?? j.fileName}</span>
-              <span className={`sh-chip ad-photoq__chip is-${j.status === "done" ? "done" : j.status === "failed" ? "failed" : j.status === "running" ? "running" : ""}`}>{LABEL[j.status]}</span>
+              {j.status === "running" ? <JobProgress progress={j.progress} step={j.step} startedAt={j.startedAt} /> : <span className={`sh-chip ad-photoq__chip is-${j.status === "done" ? "done" : j.status === "failed" ? "failed" : ""}`}>{LABEL[j.status]}</span>}
               {j.status === "done" && j.draftStatus && j.draftStatus !== "draft" && <span className="ad-muted ad-sm">{j.draftStatus === "added" ? "added to the shop" : "rejected"}</span>}
               {j.status === "failed" && <span className="ad-sm" style={{ color: "var(--red)" }}>{j.error}</span>}
               {j.status === "queued" && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => act(j.id, "cancel")}>Cancel</button>}

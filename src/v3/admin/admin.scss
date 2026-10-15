@@ -506,3 +506,10 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-imports__official { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; img { width: 100%; border-radius: 10px; background: #fff; } }
 .ad-imports__photo img.is-unused { opacity: .35; }
 .ad-imports__photochoice { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13.5px; }
+.ad-jobprogress { display: flex; align-items: center; gap: 10px; min-width: 220px; flex: 1 1 240px; }
+.ad-jobprogress__spinner { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); border-top-color: #3fbf92; animation: ad-spin .8s linear infinite; }
+.ad-jobprogress__main { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ad-jobprogress__bar { height: 8px; border-radius: 6px; background: var(--border); overflow: hidden; span { display: block; height: 100%; background: #3fbf92; border-radius: 6px; transition: width .6s ease; } }
+.ad-jobprogress__text { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes ad-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ad-jobprogress__spinner { animation-duration: 2.4s; } }

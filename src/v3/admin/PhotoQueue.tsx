@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { useEscape } from "../hooks";
+import { JobProgress } from "./JobProgress";
 import type { Ctx } from "./Screens";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
@@ -9,7 +10,7 @@ type JobStatus = "queued" | "running" | "done" | "failed" | "applied" | "rejecte
 interface Options { mode: "product" | "character"; stickers: boolean; enlarge: boolean; look: boolean }
 interface Batch { id: string; createdAt: string; scope: "main" | "all"; options: Options; counts: Record<JobStatus, number> }
 interface Worker { id: string; label: string; lastSeen: string | null; online: boolean; canImprovePhotos: boolean; working: number }
-interface Job { id: string; productId: string; productName: string; status: JobStatus; before: string; after: string | null; flags: string[]; notes: string[]; seconds: number | null; error: string | null }
+interface Job { id: string; productId: string; productName: string; status: JobStatus; before: string; after: string | null; flags: string[]; notes: string[]; seconds: number | null; error: string | null; progress: number | null; step: string | null; startedAt: string | null }
 
 /** The products that were left out, one line per reason, in words an admin can act on. */
 function groupSkipped(skipped: { name: string; reason: string }[]) {
@@ -208,11 +209,13 @@ function ReviewScreen({ batchId, ctx, onBack }: { batchId: string; ctx: Ctx; onB
   }, [batchId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [load]);
   const working = jobs?.some((j) => j.status === "queued" || j.status === "running");
+  const running = jobs?.some((j) => j.status === "running");
   useEffect(() => {
     if (!working) return;
-    const t = window.setInterval(() => void load(), 20_000);
+    // a photo being worked on: look every 5 seconds, so its progress bar moves; otherwise every 20
+    const t = window.setInterval(() => void load(), running ? 5_000 : 20_000);
     return () => window.clearInterval(t);
-  }, [working, load]);
+  }, [working, running, load]);
 
   const ready = useMemo(() => (jobs ?? []).filter((j) => j.status === "done"), [jobs]);
   const shown = (jobs ?? []).filter((j) => !onlyLook || j.flags.length > 0 || j.status === "failed");
@@ -260,7 +263,7 @@ function ReviewScreen({ batchId, ctx, onBack }: { batchId: string; ctx: Ctx; onB
             </div>
             <div className="ad-photoq__info">
               <b>{j.productName || "Product"}</b>
-              <span className={`sh-chip ad-photoq__chip is-${j.status}`}>{LABEL[j.status]}</span>
+              {j.status === "running" ? <JobProgress progress={j.progress} step={j.step} startedAt={j.startedAt} /> : <span className={`sh-chip ad-photoq__chip is-${j.status}`}>{LABEL[j.status]}</span>}
               {j.flags.length > 0 && <ul className="ad-imports__flags">{j.flags.map((f) => <li key={f}>{f}</li>)}</ul>}
               {j.error && <div className="ad-imports__flags">{j.error}</div>}
               <div className="ad-imports__actions">
