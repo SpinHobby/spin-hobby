@@ -4,15 +4,9 @@ import { buildTree, indentLabel, type CategoryNode } from "../categoryTree";
 import { useLocalState } from "../hooks";
 import type { ShopCategory } from "../types";
 import type { Ctx } from "./Screens";
+import { SortProductsDialog, StandardTreeDialog } from "./CategorySorting";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
-const STARTER: [string, string[]][] = [
-  ["Figures", ["Scale Figures", "Prize Figures", "Chibi Figures", "Model Kits"]],
-  ["Plushies", []],
-  ["Goods", ["Badges & Acrylics", "Keychains", "Blind Boxes", "Apparel & Posters"]],
-  ["Trading Cards", []],
-  ["Books & Media", ["Books & Doujin", "Video & Music"]],
-];
 
 /** Category tree editor. Everything is saved immediately through the API. */
 export function CategoriesScreen({ ctx }: { ctx: Ctx }) {
@@ -21,6 +15,7 @@ export function CategoriesScreen({ ctx }: { ctx: Ctx }) {
   const [open, setOpen] = useLocalState<string[]>("spinhobby-admin-category-open", []);
   const [adding, setAdding] = useState<string | "root" | null>(null); // parent id being added to
   const [busy, setBusy] = useState(false);
+  const [dialog, setDialog] = useState<"standard" | "sort" | null>(null);
 
   const totals = useMemo(() => {
     const t = new Map<string, number>();
@@ -45,13 +40,6 @@ export function CategoriesScreen({ ctx }: { ctx: Ctx }) {
     if (parentId && !open.includes(parentId)) setOpen([...open, parentId]);
   }, `Added “${name}”`);
 
-  const starter = () => run(async () => {
-    for (const [parent, children] of STARTER) {
-      const { category } = await api<{ category: ShopCategory }>("/admin/categories", { method: "POST", body: JSON.stringify({ name: parent }) });
-      for (const child of children) await api("/admin/categories", { method: "POST", body: JSON.stringify({ name: child, parentId: category.id }) });
-    }
-  }, "Starter categories added");
-
   const toggleAll = () => setOpen(open.length ? [] : tree.flat.filter((n) => n.children.length).map((n) => n.id));
 
   return (
@@ -61,16 +49,20 @@ export function CategoriesScreen({ ctx }: { ctx: Ctx }) {
           Categories and subcategories appear in the storefront sidebar and menu. Put products in them from <b>Products</b> (open a product, or select several and use <b>Move to category</b>).
         </div>
         {tree.flat.some((n) => n.children.length) && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={toggleAll}>{open.length ? "Collapse all" : "Expand all"}</button>}
+        <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setDialog("standard")} disabled={busy} title="A category list laid out like AmiAmi's; adds only the ones you don't have">Standard categories…</button>
+        {tree.roots.length > 0 && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setDialog("sort")} disabled={busy} title="Suggested categories for products, for you to check and apply">Sort products…</button>}
         <button type="button" className="sh-btn ad-add-btn" onClick={() => setAdding("root")} disabled={busy}>+ Add category</button>
       </div>
+      {dialog === "standard" && <StandardTreeDialog ctx={ctx} onClose={() => setDialog(null)} onAdded={() => { void refresh(); setDialog("sort"); }} />}
+      {dialog === "sort" && <SortProductsDialog ctx={ctx} onClose={() => setDialog(null)} onApplied={() => { void refresh(true); }} />}
 
       <section className="ad-card">
         {adding === "root" && <NewCategoryRow depth={0} onCancel={() => setAdding(null)} onSave={(name) => { setAdding(null); create(name, null); }} />}
         {tree.roots.length === 0 && adding !== "root" && (
           <div className="ad-empty">
             <p style={{ margin: "0 0 10px" }}>No categories yet. The storefront uses Square's category names until you add some.</p>
-            <button type="button" className="sh-btn" onClick={starter} disabled={busy}>Add starter categories</button>
-            <span className="ad-muted ad-sm" style={{ display: "block", marginTop: 8 }}>Figures, Plushies, Goods, Trading Cards, Books & Media, with subcategories. You can rename or delete any of them.</span>
+            <button type="button" className="sh-btn" onClick={() => setDialog("standard")} disabled={busy}>Add standard categories</button>
+            <span className="ad-muted ad-sm" style={{ display: "block", marginTop: 8 }}>Figures, Model Kits, Character Goods, Trading Cards, Books & Media, Toys & Puzzles, with subcategories, laid out like AmiAmi’s. You can rename or delete any of them.</span>
           </div>
         )}
         <ul className="ad-cats" role="tree">
