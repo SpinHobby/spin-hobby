@@ -10,9 +10,10 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went
 type Status = "draft" | "added" | "rejected";
 interface Draft {
   id: string; status: Status; title: string; description: string | null; category: string | null; series: string | null;
-  imageUrl: string | null; productId: string | null; rejectReason: string | null; createdAt: string;
+  imageUrl: string | null; productId: string | null; matches?: ProductMatch[]; rejectReason: string | null; createdAt: string;
   details: { official?: { imageUrl: string; pageUrl: string; site: string } | null; market?: Market | null; flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
 }
+interface ProductMatch { id: string; name: string; stockCount: number | null; imageUrl: string | null; hidden: boolean; score: number }
 interface MarketListing { title: string; url: string; site: string; price: number; currency: "CAD" | "USD"; cad: number; condition: "new" | "used" | null; canadian: boolean }
 interface Market { low: number; median: number; high: number; count: number; canadian: number; rate: number; rateIsEstimate: boolean; note: string | null; listings: MarketListing[] }
 const cad = (n: number) => `$${n.toFixed(2)}`;
@@ -159,6 +160,18 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
     } catch (e) { ctx.flash(errMsg(e)); }
     finally { setBusy(false); }
   };
+  const restock = async (m: ProductMatch) => {
+    setTouched(true);
+    if (stockNum === null || stockNum < 1 || errors.stock) { ctx.flash("Type how many you have in “In stock” first"); return; }
+    setBusy(true);
+    try {
+      const r = await api<{ stockCount: number }>(`/admin/imports/${draft.id}/restock`, { method: "POST", body: JSON.stringify({ productId: m.id, quantity: stockNum }) });
+      ctx.flash(`Added ${stockNum} to ${m.name} (now ${r.stockCount} in stock)`);
+      ctx.reload();
+      onDone();
+    } catch (e) { ctx.flash(errMsg(e)); }
+    finally { setBusy(false); }
+  };
   const reject = async () => {
     const reason = window.prompt("Why reject it? (optional)", "") ?? null;
     if (reason === null) return;
@@ -204,6 +217,18 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
                 <button key={s.id} type="button" className="sh-chip" onClick={() => setSeriesName(s.name)}>Use “{s.name}”</button>
               ))}</span></span>
             )}
+          </div>
+        )}
+        {(draft.matches?.length ?? 0) > 0 && (
+          <div className="ad-imports__dupes" role="status">
+            <b>Already in the shop?</b> This looks like a product you already list. If it is the same item, add these to its stock instead of making a second listing.
+            {draft.matches!.map((m) => (
+              <div key={m.id} className="ad-imports__dupe">
+                {m.imageUrl ? <img src={m.imageUrl} alt="" /> : <span className="ad-imports__dupe-noimg" />}
+                <span className="ad-imports__dupe-name">{m.name}<small className="ad-muted"> · {m.stockCount ?? 0} in stock{m.hidden ? " · hidden" : ""}</small></span>
+                <button type="button" className="sh-btn ad-btn-sm" disabled={busy} onClick={() => restock(m)}>Add {stockNum && stockNum > 0 ? stockNum : ""} to its stock</button>
+              </div>
+            ))}
           </div>
         )}
         <Evidence d={draft} />

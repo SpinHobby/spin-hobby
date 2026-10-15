@@ -7,7 +7,7 @@ import type { Ctx } from "./Screens";
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 type JobStatus = "queued" | "running" | "done" | "failed" | "cancelled";
-interface Job { id: string; fileName: string; status: JobStatus; draftId: string | null; draftTitle: string | null; draftStatus: string | null; flags: string[]; error: string | null; createdAt: string; progress: number | null; step: string | null; startedAt: string | null }
+interface Job { id: string; fileName: string; status: JobStatus; draftId: string | null; draftTitle: string | null; draftStatus: string | null; flags: string[]; error: string | null; createdAt: string; progress: number | null; step: string | null; startedAt: string | null; alreadyInShop: string | null }
 interface Worker { id: string; label: string; lastSeen: string | null; online: boolean; canCreateListings: boolean; working: number }
 interface Listing { jobs: Job[]; counts: Record<JobStatus, number>; workers: Worker[] }
 
@@ -150,6 +150,7 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
               <span className="ad-uploads__name">{j.draftTitle ?? j.fileName}</span>
               {j.status === "running" ? <JobProgress progress={j.progress} step={j.step} startedAt={j.startedAt} /> : <span className={`sh-chip ad-photoq__chip is-${j.status === "done" ? "done" : j.status === "failed" ? "failed" : ""}`}>{LABEL[j.status]}</span>}
               {j.status === "done" && j.draftStatus && j.draftStatus !== "draft" && <span className="ad-muted ad-sm">{j.draftStatus === "added" ? "added to the shop" : "rejected"}</span>}
+              {j.status === "done" && j.alreadyInShop && <span className="sh-chip ad-photoq__chip is-running" title={j.alreadyInShop}>Already in the shop?</span>}
               {j.status === "failed" && <span className="ad-sm" style={{ color: "var(--red)" }}>{j.error}</span>}
               {j.status === "queued" && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => act(j.id, "cancel")}>Cancel</button>}
               {j.status === "failed" && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => act(j.id, "retry")}>Try again</button>}

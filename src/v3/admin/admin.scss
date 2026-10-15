@@ -513,3 +513,6 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-jobprogress__text { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes ad-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ad-jobprogress__spinner { animation-duration: 2.4s; } }
+.ad-imports__dupes { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: #fff4d6; color: #5c4600; display: flex; flex-direction: column; gap: 8px; }
+.ad-imports__dupe { display: flex; align-items: center; gap: 10px; img, .ad-imports__dupe-noimg { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; background: #fff; flex: none; } }
+.ad-imports__dupe-name { flex: 1; min-width: 0; }
