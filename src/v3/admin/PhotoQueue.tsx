@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { useEscape } from "../hooks";
+import { BackgroundChoice, BackgroundPreview, BackgroundsLibrary } from "./Backgrounds";
+import { useBackgrounds, type Background } from "./photoBackgrounds";
 import { JobProgress } from "./JobProgress";
 import type { Ctx } from "./Screens";
 
@@ -10,7 +12,7 @@ type JobStatus = "queued" | "running" | "done" | "failed" | "applied" | "rejecte
 interface Options { mode: "product" | "character"; stickers: boolean; enlarge: boolean; look: boolean }
 interface Batch { id: string; createdAt: string; scope: "main" | "all"; options: Options; counts: Record<JobStatus, number> }
 interface Worker { id: string; label: string; lastSeen: string | null; online: boolean; canImprovePhotos: boolean; working: number }
-interface Job { id: string; productId: string; productName: string; status: JobStatus; before: string; after: string | null; flags: string[]; notes: string[]; seconds: number | null; error: string | null; progress: number | null; step: string | null; startedAt: string | null }
+interface Job { id: string; productId: string; productName: string; status: JobStatus; before: string; after: string | null; cutout: string | null; flags: string[]; notes: string[]; seconds: number | null; error: string | null; progress: number | null; step: string | null; startedAt: string | null }
 
 /** The products that were left out, one line per reason, in words an admin can act on. */
 function groupSkipped(skipped: { name: string; reason: string }[]) {
@@ -113,6 +115,8 @@ export function PhotosScreen({ ctx }: { ctx: Ctx }) {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [help, setHelp] = useState(false);
+  const [library, setLibrary] = useState(false);
+  const backgrounds = useBackgrounds();
 
   const load = useCallback(async () => {
     try {
@@ -133,7 +137,7 @@ export function PhotosScreen({ ctx }: { ctx: Ctx }) {
   const online = workers.filter((w) => w.online && w.canImprovePhotos);
   const waiting = batches.reduce((n, b) => n + b.counts.queued, 0);
 
-  if (open) return <ReviewScreen batchId={open} ctx={ctx} onBack={() => { setOpen(null); void load(); }} />;
+  if (open) return <ReviewScreen batchId={open} ctx={ctx} backgrounds={backgrounds.list} onBack={() => { setOpen(null); void load(); }} />;
 
   return (
     <>
@@ -141,8 +145,10 @@ export function PhotosScreen({ ctx }: { ctx: Ctx }) {
         <div className="ad-muted ad-sm" style={{ flex: "1 1 320px" }}>
           Better photos for many products at once. In <b>Products</b>, tick the products and press <b>Improve photos</b>. The photo computer works through them one by one (leave it running overnight), and you check the results here before anything changes.
         </div>
+        <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setLibrary((v) => !v)}>{library ? "Hide backgrounds" : `Backgrounds${backgrounds.list.length ? ` · ${backgrounds.list.length}` : ""}`}</button>
         <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setHelp((v) => !v)}>{help ? "Hide set-up" : "Set-up help"}</button>
       </div>
+      {library && <BackgroundsLibrary ctx={ctx} backgrounds={backgrounds} />}
 
       <section className={`ad-card ad-photoq__status ${online.length ? "is-on" : "is-off"}`}>
         <span className="ad-dot" style={{ background: online.length ? "#3fbf92" : "var(--gold)" }} />
@@ -196,7 +202,12 @@ function BatchCard({ batch: b, onOpen }: { batch: Batch; onOpen: () => void }) {
   );
 }
 
-function ReviewScreen({ batchId, ctx, onBack }: { batchId: string; ctx: Ctx; onBack: () => void }) {
+function ReviewScreen({ batchId, ctx, backgrounds, onBack }: { batchId: string; ctx: Ctx; backgrounds: Background[]; onBack: () => void }) {
+  // the background each photo goes on (a background's id, or null for white); the shop's default until someone picks another
+  const defaultId = backgrounds.find((b) => b.isDefault)?.id ?? null;
+  const [chosen, setChosen] = useState<Record<string, string | null>>({});
+  const backgroundOf = (j: Job) => (j.cutout ? (j.id in chosen ? chosen[j.id]! : defaultId) : null);
+  const byId = (id: string | null) => backgrounds.find((b) => b.id === id) ?? null;
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [onlyLook, setOnlyLook] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -223,16 +234,24 @@ function ReviewScreen({ batchId, ctx, onBack }: { batchId: string; ctx: Ctx; onB
   const act = async (job: Job, what: "apply" | "reject" | "retry") => {
     setBusy(job.id);
     try {
-      await api(`/admin/photo-batches/photos/${job.id}/${what}`, { method: "POST" });
+      await api(`/admin/photo-batches/photos/${job.id}/${what}`, { method: "POST", body: JSON.stringify(what === "apply" && job.cutout ? { backgroundId: backgroundOf(job) } : {}) });
       if (what === "apply") { ctx.flash(`${job.productName}: new photo is now in use`); ctx.reload(); }
     } catch (e) { ctx.flash(errMsg(e)); }
     finally { setBusy(null); void load(); }
   };
   const applyAll = async () => {
-    if (!window.confirm(`Use ${ready.length} new photo${ready.length === 1 ? "" : "s"}? Each one takes the place of the product's old photo. The old photos are kept and can be brought back from the product's photos.`)) return;
+    const onDefault = ready.some((j) => j.cutout) && defaultId ? ` Photos with a cut-out go on the background picked under each one (${byId(defaultId)?.name} unless you changed it).` : "";
+    if (!window.confirm(`Use ${ready.length} new photo${ready.length === 1 ? "" : "s"}? Each one takes the place of the product's old photo. The old photos are kept and can be brought back from the product's photos.${onDefault}`)) return;
     setBusy("all");
     try {
-      const r = await api<{ applied: number; failed: { product: string; error: string }[] }>(`/admin/photo-batches/${batchId}/apply`, { method: "POST", body: JSON.stringify({}) });
+      // photos whose background was changed by hand go one by one with it; the rest together on the default
+      const picked = ready.filter((j) => j.cutout && j.id in chosen && chosen[j.id] !== defaultId);
+      for (const j of picked) await api(`/admin/photo-batches/photos/${j.id}/apply`, { method: "POST", body: JSON.stringify({ backgroundId: chosen[j.id] }) });
+      const rest = ready.filter((j) => !picked.includes(j)).map((j) => j.id);
+      const r = rest.length
+        ? await api<{ applied: number; failed: { product: string; error: string }[] }>(`/admin/photo-batches/${batchId}/apply`, { method: "POST", body: JSON.stringify({ jobIds: rest, backgroundId: defaultId }) })
+        : { applied: 0, failed: [] };
+      r.applied += picked.length;
       ctx.flash(r.failed.length ? `${r.applied} used, ${r.failed.length} could not be used: ${r.failed[0]!.product}: ${r.failed[0]!.error}` : `${r.applied} new photo${r.applied === 1 ? "" : "s"} in use`);
       ctx.reload();
     } catch (e) { ctx.flash(errMsg(e)); }
@@ -259,11 +278,16 @@ function ReviewScreen({ batchId, ctx, onBack }: { batchId: string; ctx: Ctx; onB
           <section key={j.id} className={`ad-card ad-photoq__job is-${j.status}`}>
             <div className="ad-photoq__pair">
               <figure><img src={j.before} alt={`${j.productName}, before`} loading="lazy" onClick={() => setZoom(j.before)} /><figcaption>Before</figcaption></figure>
-              <figure>{j.after ? <img src={j.after} alt={`${j.productName}, after`} loading="lazy" onClick={() => setZoom(j.after)} /> : <div className="ad-photoq__none">{j.status === "applied" ? "In use" : LABEL[j.status]}</div>}<figcaption>After</figcaption></figure>
+              <figure>{j.after
+                ? <BackgroundPreview cutoutUrl={j.cutout} background={byId(backgroundOf(j))} fallbackUrl={j.after} alt={`${j.productName}, after`} onClick={() => setZoom(j.after)} />
+                : <div className="ad-photoq__none">{j.status === "applied" ? "In use" : LABEL[j.status]}</div>}<figcaption>After</figcaption></figure>
             </div>
             <div className="ad-photoq__info">
               <b>{j.productName || "Product"}</b>
               {j.status === "running" ? <JobProgress progress={j.progress} step={j.step} startedAt={j.startedAt} /> : <span className={`sh-chip ad-photoq__chip is-${j.status}`}>{LABEL[j.status]}</span>}
+              {j.status === "done" && j.cutout && backgrounds.length > 0 && (
+                <BackgroundChoice backgrounds={backgrounds} value={backgroundOf(j)} onChange={(id) => setChosen((c) => ({ ...c, [j.id]: id }))} disabled={busy !== null} label={`Background for ${j.productName}`} />
+              )}
               {j.flags.length > 0 && <ul className="ad-imports__flags">{j.flags.map((f) => <li key={f}>{f}</li>)}</ul>}
               {j.error && <div className="ad-imports__flags">{j.error}</div>}
               <div className="ad-imports__actions">

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { BackgroundChoice, BackgroundPreview } from "./Backgrounds";
+import { useBackgrounds, type Background } from "./photoBackgrounds";
 import { ListingUploads } from "./ListingUploads";
 import { SeriesSelect } from "./SeriesSelect";
 import { findSeries, similarSeries, useSeriesList } from "./seriesList";
@@ -10,7 +12,7 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went
 type Status = "draft" | "added" | "rejected";
 interface Draft {
   id: string; status: Status; title: string; description: string | null; category: string | null; series: string | null;
-  imageUrl: string | null; productId: string | null; matches?: ProductMatch[]; rejectReason: string | null; createdAt: string;
+  imageUrl: string | null; cutoutUrl?: string | null; productId: string | null; matches?: ProductMatch[]; rejectReason: string | null; createdAt: string;
   details: { official?: { imageUrl: string; pageUrl: string; site: string } | null; market?: Market | null; flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
 }
 interface ProductMatch { id: string; name: string; stockCount: number | null; imageUrl: string | null; hidden: boolean; score: number }
@@ -34,6 +36,7 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   const [connect, setConnect] = useState(false);
   const [upload, setUpload] = useState(false);
   const series = useSeriesList();
+  const backgrounds = useBackgrounds();
 
   const load = useCallback(async () => {
     try {
@@ -71,7 +74,7 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
       <div className="ad-imports">
         {drafts.map((d) => (
           d.status === "draft"
-            ? <DraftCard key={d.id} draft={d} categories={categories} series={series.list} ctx={ctx} onDone={() => { void load(); series.reload(); }} />
+            ? <DraftCard key={d.id} draft={d} categories={categories} series={series.list} backgrounds={backgrounds.list} ctx={ctx} onDone={() => { void load(); series.reload(); }} />
             : <DoneCard key={d.id} draft={d} />
         ))}
       </div>
@@ -124,7 +127,7 @@ function Evidence({ d }: { d: Draft }) {
   );
 }
 
-function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; categories: string[]; series: ReturnType<typeof useSeriesList>["list"]; ctx: Ctx; onDone: () => void }) {
+function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { draft: Draft; categories: string[]; series: ReturnType<typeof useSeriesList>["list"]; backgrounds: Background[]; ctx: Ctx; onDone: () => void }) {
   const [title, setTitle] = useState(draft.title);
   const [description, setDescription] = useState(draft.description ?? "");
   const [category, setCategory] = useState(draft.category ?? "");
@@ -135,6 +138,10 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
   // which photo goes on the product: the shop's own (the default), the maker's official one, or both; the official one is never used without a click
   const [photo, setPhoto] = useState<"own" | "official" | "both">("own");
   const official = draft.details.official ?? null;
+  // the background the shop's own photo goes on (null: white, as the photo computer made it); the shop's default until someone picks another
+  const [picked, setPicked] = useState<string | null | undefined>(undefined);
+  const background = draft.cutoutUrl ? (picked !== undefined ? picked : (backgrounds.find((b) => b.isDefault)?.id ?? null)) : null;
+  const backgroundRow = backgrounds.find((b) => b.id === background) ?? null;
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -152,7 +159,7 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
     try {
       await api(`/admin/imports/${draft.id}/add`, { method: "POST", body: JSON.stringify({
         name: title.trim(), description: description.trim() || null, category: category.trim() || null, series: seriesName.trim() || null,
-        priceCents: cents, stockCount: stockNum, hidden, imageUrls: [], photo: official ? photo : "own",
+        priceCents: cents, stockCount: stockNum, hidden, imageUrls: [], photo: official ? photo : "own", ...(draft.cutoutUrl ? { backgroundId: background } : {}),
       }) });
       ctx.flash(`${title.trim()} added${hidden ? " (hidden from the website)" : ""}`);
       ctx.reload();
@@ -185,7 +192,12 @@ function DraftCard({ draft, categories, series, ctx, onDone }: { draft: Draft; c
   return (
     <section className="ad-card ad-imports__card">
       <div className="ad-imports__photo">
-        {draft.imageUrl ? <img src={draft.imageUrl} alt={draft.title} className={official && photo === "official" ? "is-unused" : ""} /> : <div className="ad-empty">No photo</div>}
+        {draft.imageUrl
+          ? <div className={official && photo === "official" ? "is-unused" : ""}><BackgroundPreview cutoutUrl={draft.cutoutUrl ?? null} background={backgroundRow} fallbackUrl={draft.imageUrl} alt={draft.title} /></div>
+          : <div className="ad-empty">No photo</div>}
+        {draft.cutoutUrl && backgrounds.length > 0 && photo !== "official" && (
+          <BackgroundChoice backgrounds={backgrounds} value={background} onChange={setPicked} disabled={busy} label="Background for our photo" />
+        )}
         {official && (
           <div className="ad-imports__official">
             <img src={official.imageUrl} alt={`Official photo of ${draft.title}`} className={photo === "own" ? "is-unused" : ""} />
