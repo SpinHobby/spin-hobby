@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import { BackgroundChoice, BackgroundPreview } from "./Backgrounds";
+import { DraftPhotos } from "./DraftPhotos";
+import { defaultPicks, type OfferedPhoto, type PhotoPick } from "./photoPicks";
 import { useBackgrounds, type Background } from "./photoBackgrounds";
 import { ListingUploads } from "./ListingUploads";
 import { SeriesSelect } from "./SeriesSelect";
@@ -12,7 +13,7 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went
 type Status = "draft" | "added" | "rejected";
 interface Draft {
   id: string; status: Status; title: string; description: string | null; category: string | null; series: string | null;
-  imageUrl: string | null; cutoutUrl?: string | null; productId: string | null; matches?: ProductMatch[]; rejectReason: string | null; createdAt: string;
+  imageUrl: string | null; cutoutUrl?: string | null; photos?: OfferedPhoto[]; productId: string | null; matches?: ProductMatch[]; rejectReason: string | null; createdAt: string;
   details: { official?: { imageUrl: string; pageUrl: string; site: string } | null; market?: Market | null; flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
 }
 interface ProductMatch { id: string; name: string; stockCount: number | null; imageUrl: string | null; hidden: boolean; score: number }
@@ -135,13 +136,17 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { dr
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("1");
   const [hidden, setHidden] = useState(true);
-  // which photo goes on the product: the shop's own (the default), the maker's official one, or both; the official one is never used without a click
-  const [photo, setPhoto] = useState<"own" | "official" | "both">("own");
   const official = draft.details.official ?? null;
-  // the background the shop's own photo goes on (null: white, as the photo computer made it); the shop's default until someone picks another
+  // every photo the draft offers (an older draft: its own photo and the official one), and where each goes; the official one is never used without a click
+  const offered: OfferedPhoto[] = draft.photos?.length
+    ? draft.photos
+    : ([draft.imageUrl ? { key: "studio", url: draft.imageUrl } : null, official ? { key: "official", url: official.imageUrl } : null] as (OfferedPhoto | null)[]).filter((p): p is OfferedPhoto => !!p);
+  const defaultBackground = backgrounds.find((b) => b.isDefault)?.id ?? null;
+  const [picks, setPicks] = useState<PhotoPick[] | null>(null);
+  const currentPicks = picks ?? defaultPicks(offered, defaultBackground);
+  // the background the cut-out goes on: the shop's default until someone picks another (null: white)
   const [picked, setPicked] = useState<string | null | undefined>(undefined);
-  const background = draft.cutoutUrl ? (picked !== undefined ? picked : (backgrounds.find((b) => b.isDefault)?.id ?? null)) : null;
-  const backgroundRow = backgrounds.find((b) => b.id === background) ?? null;
+  const background = picked !== undefined ? picked : defaultBackground;
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -151,6 +156,7 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { dr
   if (!title.trim()) errors.title = "Required";
   if (!price || !Number.isFinite(cents) || cents <= 0) errors.price = "Enter a price";
   if (stockNum !== null && (!Number.isInteger(stockNum) || stockNum < 0)) errors.stock = "Whole number";
+  if (!currentPicks.some((p) => p.square)) errors.photos = "Pick at least one photo for the website";
 
   const add = async () => {
     setTouched(true);
@@ -159,7 +165,9 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { dr
     try {
       await api(`/admin/imports/${draft.id}/add`, { method: "POST", body: JSON.stringify({
         name: title.trim(), description: description.trim() || null, category: category.trim() || null, series: seriesName.trim() || null,
-        priceCents: cents, stockCount: stockNum, hidden, imageUrls: [], photo: official ? photo : "own", ...(draft.cutoutUrl ? { backgroundId: background } : {}),
+        priceCents: cents, stockCount: stockNum, hidden, imageUrls: [],
+        photos: currentPicks.filter((p) => p.square || p.ebay),
+        ...(currentPicks.some((p) => p.key === "background" && (p.square || p.ebay)) ? { backgroundId: background } : {}),
       }) });
       ctx.flash(`${title.trim()} added${hidden ? " (hidden from the website)" : ""}`);
       ctx.reload();
@@ -192,23 +200,11 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { dr
   return (
     <section className="ad-card ad-imports__card">
       <div className="ad-imports__photo">
-        {draft.imageUrl
-          ? <div className={official && photo === "official" ? "is-unused" : ""}><BackgroundPreview cutoutUrl={draft.cutoutUrl ?? null} background={backgroundRow} fallbackUrl={draft.imageUrl} alt={draft.title} /></div>
+        {offered.length
+          ? <DraftPhotos offered={offered} picks={currentPicks} onPicks={setPicks} backgrounds={backgrounds} background={background} onBackground={setPicked}
+              official={official ? { pageUrl: official.pageUrl, site: official.site } : null} title={draft.title} busy={busy} />
           : <div className="ad-empty">No photo</div>}
-        {draft.cutoutUrl && backgrounds.length > 0 && photo !== "official" && (
-          <BackgroundChoice backgrounds={backgrounds} value={background} onChange={setPicked} disabled={busy} label="Background for our photo" />
-        )}
-        {official && (
-          <div className="ad-imports__official">
-            <img src={official.imageUrl} alt={`Official photo of ${draft.title}`} className={photo === "own" ? "is-unused" : ""} />
-            <div className="ad-muted ad-sm">Official photo from <a href={official.pageUrl} target="_blank" rel="noreferrer">{official.site}</a>. It belongs to the maker: use it only if that is OK for your shop.</div>
-            <div className="ad-imports__photochoice" role="radiogroup" aria-label="Photo to use">
-              {([["own", "Our photo"], ["official", "Official photo"], ["both", "Both"]] as const).map(([value, label]) => (
-                <label key={value} className="ad-check"><input type="radio" name={`photo-${draft.id}`} checked={photo === value} onChange={() => setPhoto(value)} /> {label}</label>
-              ))}
-            </div>
-          </div>
-        )}
+        {shown("photos") && <span className="ad-error" role="alert">{errors.photos}</span>}
       </div>
       <div className="ad-imports__form">
         <label className={`ad-field ${shown("title") ? "has-error" : ""}`}><span className="ad-field__top">Title {shown("title") && <small>{errors.title}</small>}</span>

@@ -34,13 +34,15 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [choice, setChoice] = useState<PolishChoice>({ removeBackground: true, removeStickers: false, text: false });
   const [cutouts, setCutouts] = useState<Cutout[]>([]);
+  // the photos picked for eBay, in order (eBay is not connected yet: they are kept for when it is)
+  const [ebay, setEbay] = useState<string[]>([]);
   const [bgFor, setBgFor] = useState<{ imageId: string; pick: string | null } | null>(null);
   const backgrounds = useBackgrounds();
 
   const apply = useCallback((next: PhotoLists) => { setLists({ shown: next.shown, hidden: next.hidden }); onChanged(next.shown.map((x) => x.url)); }, [onChanged]);
   useEffect(() => {
     let current = true;
-    api<PhotoLists & { cutouts?: Cutout[] }>(base).then((r) => { if (current) { setLists({ shown: r.shown, hidden: r.hidden }); setCutouts(r.cutouts ?? []); } }).catch((e) => { if (current) setError(errMsg(e)); });
+    api<PhotoLists & { cutouts?: Cutout[]; ebay?: string[] }>(base).then((r) => { if (current) { setLists({ shown: r.shown, hidden: r.hidden }); setCutouts(r.cutouts ?? []); setEbay(r.ebay ?? []); } }).catch((e) => { if (current) setError(errMsg(e)); });
     return () => { current = false; };
   }, [base]);
 
@@ -94,6 +96,12 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
     ctx.flash("Background changed.");
   };
   const cutoutOf = (id: string) => cutouts.find((c) => c.imageId === id) ?? null;
+  const toggleEbay = async (url: string) => {
+    const next = ebay.includes(url) ? ebay.filter((u) => u !== url) : [...ebay, url];
+    setBusy("Saving eBay photos…"); setError("");
+    try { setEbay((await api<{ ebay: string[] }>(`/admin/products/${encodeURIComponent(p.id)}/channel-photos/ebay`, { method: "PUT", body: JSON.stringify({ urls: next }) })).ebay); }
+    catch (e) { setError(errMsg(e)); } finally { setBusy(""); }
+  };
 
   /**
    * Tidies the selected photos (the main photo when none is selected). Each result is saved as a NEW photo in the
@@ -156,6 +164,8 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
                 </label>
               )}
               {i === 0 && <span className="ad-photos__cover">Main</span>}
+              <button type="button" className={`ad-photos__ebay ${ebay.includes(photo.url) ? "is-on" : ""}`} onClick={() => void toggleEbay(photo.url)} disabled={!!busy}
+                title={ebay.includes(photo.url) ? "Picked for eBay (click to unpick)" : "Pick for eBay (not connected yet: kept for when it is)"} aria-pressed={ebay.includes(photo.url)}>eBay{ebay.includes(photo.url) ? ` ${ebay.indexOf(photo.url) + 1}` : ""}</button>
               <div className="ad-photos__actions">
                 <button type="button" onClick={() => openEditor(photo)} disabled={!!busy} title="Edit (saved as a new photo; the original is kept)" aria-label="Edit photo">✎</button>
                 {cutoutOf(photo.id) && <button type="button" onClick={() => setBgFor(bgFor?.imageId === photo.id ? null : { imageId: photo.id, pick: cutoutOf(photo.id)!.backgroundId })} disabled={!!busy} title="Change the background" aria-label="Change background">🖼</button>}
@@ -166,6 +176,16 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {(ebay.length > 0 || shown.length > 0) && (
+        <div className="ad-muted ad-sm">
+          <b>eBay</b> · not connected yet. {ebay.length ? `${ebay.length} photo${ebay.length === 1 ? "" : "s"} picked, kept for when it is.` : "Tap “eBay” on a photo to pick it for eBay."}
+          {ebay.filter((u) => !shown.some((x) => x.url === u) && !hidden.some((x) => x.url === u)).length > 0 && (
+            <span className="ad-photos__ebayonly">{ebay.filter((u) => !shown.some((x) => x.url === u) && !hidden.some((x) => x.url === u)).map((u) => (
+              <span key={u} className="ad-photos__ebaythumb"><img src={u} alt="" /><button type="button" onClick={() => void toggleEbay(u)} disabled={!!busy} aria-label="Unpick for eBay">×</button></span>
+            ))} <span>for eBay only</span></span>
+          )}
         </div>
       )}
       {bgFor && cutoutOf(bgFor.imageId) && (() => {
