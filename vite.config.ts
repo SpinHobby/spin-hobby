@@ -1,16 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import netlify from "@netlify/vite-plugin";
 import { resolve } from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    // This site has no Netlify edge functions or database. Leaving them on makes
-    // `npm run dev` try to boot Deno + a local Postgres, which crashes on most machines.
-    netlify({ edgeFunctions: { enabled: false }, database: { enabled: false } }),
-  ],
+  // No Netlify dev plugin: the site has no functions, edge functions or database, and the plugin's only use was emulating
+  // the image service (/.netlify/images) locally. Without it a local page shows Square's original photo instead (src/v3/photo.ts
+  // falls back on error); the live site is unchanged. It pulled in 12 high-severity advisories, some with no fixed release.
+  plugins: [react()],
   root: ".",
   publicDir: "public",
   resolve: {
