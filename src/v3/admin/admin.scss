@@ -562,3 +562,4 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-bgpreview { position: relative; width: 100%; aspect-ratio: 1 / 1; background: #fff center / cover no-repeat; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: zoom-in;
   img { position: absolute; inset: 8%; width: 84% !important; height: 84% !important; aspect-ratio: auto !important; object-fit: contain; border: 0 !important; background: transparent !important; border-radius: 0 !important; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .22)); } }
 .ad-photos__bg { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px dashed var(--border); border-radius: 10px; }
+.ad-uploads__status.is-down { background: rgba(229, 104, 122, .14); border: 1px solid rgba(229, 104, 122, .45); }

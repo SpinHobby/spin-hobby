@@ -2,6 +2,7 @@
 // Set VITE_API_URL at build time to override; see DEFAULT_API below.
 
 import type { AppUser } from "../v3/types";
+import { watchedFetch } from "./serverStatus";
 
 // Production builds default to the Render service; override with VITE_API_URL (e.g. a custom api.spinhobby.com).
 const DEFAULT_API = import.meta.env.PROD ? "https://spin-hobby-server.onrender.com" : "http://localhost:8080";
@@ -68,9 +69,10 @@ async function request<T>(path: string, init: ApiRequest, token: string | null):
   if (token) headers.set("Authorization", `Bearer ${token}`);
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, { ...init, headers });
+    // watched: a sleeping or booting server shows the "waking up" banner, and reads wait for it (see serverStatus.ts)
+    response = await watchedFetch(API_URL, `${API_URL}${path}`, { ...init, headers });
   } catch {
-    throw Object.assign(new Error("Can't reach the shop server. Check your connection and try again."), { status: 0 });
+    throw Object.assign(new Error("Can't reach the shop server. It may be starting up: wait a moment and try again."), { status: 0 });
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload.success === false) {

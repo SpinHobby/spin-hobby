@@ -7,12 +7,19 @@ import type { Ctx } from "./Screens";
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 type JobStatus = "queued" | "running" | "done" | "failed" | "cancelled";
-interface Job { id: string; fileName: string; status: JobStatus; draftId: string | null; draftTitle: string | null; draftStatus: string | null; flags: string[]; error: string | null; createdAt: string; progress: number | null; step: string | null; startedAt: string | null; alreadyInShop: string | null }
-interface Worker { id: string; label: string; lastSeen: string | null; online: boolean; canCreateListings: boolean; working: number }
+interface Job { id: string; fileName: string; status: JobStatus; draftId: string | null; draftTitle: string | null; draftStatus: string | null; flags: string[]; error: string | null; createdAt: string; progress: number | null; step: string | null; startedAt: string | null; heardAt?: string | null; alreadyInShop: string | null }
+interface Worker { id: string; label: string; lastSeen: string | null; online: boolean; canCreateListings: boolean; note?: string | null; working: number }
 interface Listing { jobs: Job[]; counts: Record<JobStatus, number>; workers: Worker[] }
 
 const LABEL: Record<JobStatus, string> = { queued: "Waiting", running: "Being worked on", done: "Draft ready", failed: "Problem", cancelled: "Cancelled" };
 const MAX_PHOTOS = 40;
+/** A photo being worked on with no report for this long: the photo computer may have stopped. */
+const QUIET_MS = 3 * 60_000;
+const ago = (iso: string | null) => {
+  if (!iso) return "never";
+  const min = Math.floor((Date.now() - Date.parse(iso)) / 60_000);
+  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : min < 1440 ? `${Math.floor(min / 60)} h ago` : `${Math.floor(min / 1440)} days ago`;
+};
 const MAX_BYTES = 4.8 * 1024 * 1024;
 
 /** A photo as a JPEG that is small enough to send: phone photos are big, and iPhone ones are HEIC, which is converted here. Null if it cannot be read. */
@@ -50,10 +57,13 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   const [mode, setMode] = useState<"product" | "character">("product");
   const [enlarge, setEnlarge] = useState(true);
   const [state, setState] = useState<Listing | null>(null);
+  // the shop server could not be reached on the last look: said on screen (not just flashed once), and looked at again until it answers
+  const [unreachable, setUnreachable] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    try { setState(await api<Listing>("/admin/listing-jobs")); } catch (e) { ctx.flash(errMsg(e)); }
+    try { setState(await api<Listing>("/admin/listing-jobs")); setUnreachable(false); }
+    catch (e) { if ((e as { status?: number }).status === 0) setUnreachable(true); else ctx.flash(errMsg(e)); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [load]);
   const active = !!state && state.counts.queued + state.counts.running > 0;
@@ -65,11 +75,11 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
     if (finished !== lastFinished.current) { lastFinished.current = finished; onChanged(); }
   }, [finished]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!active) return;
-    // a photo being worked on: look every 5 seconds, so its progress bar moves; otherwise every 20
+    if (!active && !unreachable) return;
+    // a photo being worked on: look every 5 seconds, so its progress bar moves; otherwise (and while the server is not answering) every 20
     const t = setInterval(() => { void load(); }, runningNow ? 5_000 : 20_000);
     return () => clearInterval(t);
-  }, [active, runningNow, load]);
+  }, [active, runningNow, unreachable, load]);
 
   const pick = async (list: FileList | null) => {
     if (!list?.length) return;
@@ -93,7 +103,9 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
       for (const f of files) form.append("photos", f, f.name);
       form.append("options", JSON.stringify({ mode, enlarge }));
       const r = await api<{ queued: number }>("/admin/listing-jobs", { method: "POST", body: form });
-      ctx.flash(`${r.queued} photo${r.queued === 1 ? "" : "s"} sent to the photo computer`);
+      ctx.flash(worker
+        ? `${r.queued} photo${r.queued === 1 ? "" : "s"} sent to the photo computer`
+        : `${r.queued} photo${r.queued === 1 ? "" : "s"} saved, but no photo computer can write drafts right now: they wait in line until one can (see the note above)`);
       setFiles([]); setUnreadable([]);
       await load();
     } catch (e) { ctx.flash(errMsg(e)); }
@@ -104,6 +116,17 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   };
 
   const worker = state?.workers.find((w) => w.online && w.canCreateListings);
+  // connected, but cannot write drafts right now (web search down, no vision model): it says why
+  const limited = !worker ? state?.workers.find((w) => w.online) : undefined;
+  const lastSeen = state?.workers[0] ?? null;
+  // place in line of each waiting photo (oldest first)
+  const line = new Map((state?.jobs ?? []).filter((j) => j.status === "queued").sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map((j, i) => [j.id, i]));
+  const waitingLabel = (j: Job) => {
+    if (!worker) return limited ? "Waiting: photo computer can't write drafts" : "Waiting: no photo computer";
+    const ahead = line.get(j.id) ?? 0;
+    return ahead ? `Waiting · ${ahead} ahead` : "Next in line";
+  };
+  const quietFor = (j: Job) => (j.status === "running" && j.heardAt ? Date.now() - Date.parse(j.heardAt) : 0);
   const recent = (state?.jobs ?? []).filter((j) => j.status !== "cancelled" || Date.now() - Date.parse(j.createdAt) < 86_400_000).slice(0, 40);
   return (
     <section className="ad-card ad-uploads">
@@ -112,11 +135,19 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
         <span className="ad-muted ad-sm">Pick photos of products that are not in the shop yet. Each becomes a draft below, with a cleaned photo, title, description, category and series. You type the price and stock.</span>
       </div>
 
-      <div className={`ad-uploads__status ${worker ? "is-on" : "is-off"}`}>
-        <span className="ad-dot" style={{ background: worker ? "#3fbf92" : "#d9a400" }} />
+      {unreachable && (
+        <div className="ad-uploads__status is-down" role="alert">
+          <span className="ad-dot" style={{ background: "var(--red)" }} />
+          <span><b>Can't reach the shop server.</b> It may be starting up or down. This list is checked again every 20 seconds and updates by itself when it answers.</span>
+        </div>
+      )}
+      <div className={`ad-uploads__status ${worker ? "is-on" : "is-off"}`} role="status">
+        <span className="ad-dot" style={{ background: worker ? "#3fbf92" : limited ? "#d9a400" : "var(--red)" }} />
         {worker
           ? <span><b>{worker.label}</b> is connected and can write drafts{worker.working ? ` (working on ${worker.working} now)` : ""}.</span>
-          : <span>No photo computer that can write drafts is connected right now. Photos you send wait in line until one is: on the shop's photo computer, run <code>npm run worker</code> in the Gleamshelf folder and leave it open.</span>}
+          : limited
+            ? <span><b>{limited.label}</b> is connected but cannot write drafts right now{limited.note ? `: ${limited.note}` : " (it only improves photos)"}. Photos you send wait in line until it can.</span>
+            : <span><b>The photo computer is off or not connected</b>{lastSeen ? ` (last seen ${ago(lastSeen.lastSeen)}, ${lastSeen.label})` : ""}. Photos you send wait in line until it is on: on the shop's photo computer, run <code>npm run worker</code> in the Gleamshelf folder and leave it open.</span>}
       </div>
 
       <div className="ad-uploads__pick">
@@ -148,7 +179,8 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
           {recent.map((j) => (
             <div key={j.id} className={`ad-uploads__job is-${j.status}`}>
               <span className="ad-uploads__name">{j.draftTitle ?? j.fileName}</span>
-              {j.status === "running" ? <JobProgress progress={j.progress} step={j.step} startedAt={j.startedAt} /> : <span className={`sh-chip ad-photoq__chip is-${j.status === "done" ? "done" : j.status === "failed" ? "failed" : ""}`}>{LABEL[j.status]}</span>}
+              {j.status === "running" ? <JobProgress progress={j.progress} step={j.step} startedAt={j.startedAt} /> : <span className={`sh-chip ad-photoq__chip is-${j.status === "done" ? "done" : j.status === "failed" ? "failed" : j.status === "queued" && !worker ? "failed" : ""}`}>{j.status === "queued" ? waitingLabel(j) : LABEL[j.status]}</span>}
+              {quietFor(j) > QUIET_MS && <span className="ad-sm" style={{ color: "var(--gold)" }}>No word from the photo computer for {Math.round(quietFor(j) / 60_000)} min. If it stopped, this photo goes back in line within an hour.</span>}
               {j.status === "done" && j.draftStatus && j.draftStatus !== "draft" && <span className="ad-muted ad-sm">{j.draftStatus === "added" ? "added to the shop" : "rejected"}</span>}
               {j.status === "done" && j.alreadyInShop && <span className="sh-chip ad-photoq__chip is-running" title={j.alreadyInShop}>Already in the shop?</span>}
               {j.status === "failed" && <span className="ad-sm" style={{ color: "var(--red)" }}>{j.error}</span>}
