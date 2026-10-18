@@ -51,7 +51,10 @@ export function ProductPage({ id, initial, a, tree, cartQty, onAddQty, onViewCar
     let live = true;
     setMissing(false);
     setP((cur) => (cur?.id === id ? cur : initial?.id === id ? initial : null));
-    api<{ item: Product }>(`/square/catalog/${encodeURIComponent(id)}`)
+    const load = (key: string) => api<{ item: Product }>(`/square/catalog/${encodeURIComponent(key)}`);
+    // a link whose id was lowercased on the way (the host once redirected /product/BZJ6… to /product/bzj6…/): Square's ids are upper case
+    load(id)
+      .catch((e) => (id !== id.toUpperCase() ? load(id.toUpperCase()) : Promise.reject(e)))
       .then((res) => live && setP((cur) => ({ ...(cur ?? {}), ...res.item })))
       .catch(() => live && setMissing(true));
     return () => { live = false; };
@@ -90,6 +93,10 @@ export function ProductPage({ id, initial, a, tree, cartQty, onAddQty, onViewCar
   // A canonical-looking URL (with the name slug) once the name is known.
   const navigate = useNavigate();
   const location = useLocation();
+  // found under its real (upper case) id: the address bar gets the product's own link
+  useEffect(() => {
+    if (p && p.id !== id && p.id.toLowerCase() === id.toLowerCase()) navigate(productPath(p), { replace: true });
+  }, [p, id, navigate]);
   useEffect(() => {
     if (!p) return;
     const path = productPath(p);
