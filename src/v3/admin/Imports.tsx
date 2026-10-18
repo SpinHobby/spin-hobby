@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
+import { buildTree, indentLabel } from "../categoryTree";
+import type { ShopCategory } from "../types";
 import { DraftPhotos } from "./DraftPhotos";
 import { defaultPicks, type OfferedPhoto, type PhotoPick } from "./photoPicks";
 import { useBackgrounds, type Background } from "./photoBackgrounds";
@@ -13,7 +15,9 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went
 type Status = "draft" | "added" | "rejected";
 interface Draft {
   id: string; status: Status; title: string; description: string | null; category: string | null; series: string | null;
-  imageUrl: string | null; cutoutUrl?: string | null; photos?: OfferedPhoto[]; productId: string | null; matches?: ProductMatch[]; rejectReason: string | null; createdAt: string;
+  /** The shop category the draft names; when it fits none of them, the new one Gleamshelf suggests and the category it would go under (null: top level). */
+  categoryId?: string | null; suggestedCategory?: { name: string; parentId: string | null } | null;
+  imageUrl: string | null; cutoutUrl?: string | null; photos?: OfferedPhoto[]; productId: string | null; matches?: ProductMatch[]; rejectReason: string | null; createdAt: string; receivedAt?: string;
   details: { official?: { imageUrl: string; pageUrl: string; site: string } | null; market?: Market | null; flags?: string[]; highlights?: string[]; unsupported?: string[]; sources?: string[]; lookup?: { state: string; read: string | null; detail: string } | null };
 }
 interface ProductMatch { id: string; name: string; stockCount: number | null; imageUrl: string | null; hidden: boolean; score: number }
@@ -32,7 +36,6 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   const [status, setStatus] = useState<Status>("draft");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [counts, setCounts] = useState<Record<Status, number>>({ draft: 0, added: 0, rejected: 0 });
-  const [categories, setCategories] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [connect, setConnect] = useState(false);
   const [upload, setUpload] = useState(false);
@@ -41,8 +44,8 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
 
   const load = useCallback(async () => {
     try {
-      const r = await api<{ imports: Draft[]; counts: Record<Status, number>; categories: string[] }>(`/admin/imports?status=${status}`);
-      setDrafts(r.imports); setCounts(r.counts); setCategories(r.categories);
+      const r = await api<{ imports: Draft[]; counts: Record<Status, number> }>(`/admin/imports?status=${status}`);
+      setDrafts(r.imports); setCounts(r.counts);
     } catch (e) { ctx.flash(errMsg(e)); }
     finally { setLoaded(true); }
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -75,7 +78,8 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
       <div className="ad-imports">
         {drafts.map((d) => (
           d.status === "draft"
-            ? <DraftCard key={d.id} draft={d} categories={categories} series={series.list} backgrounds={backgrounds.list} ctx={ctx} onDone={() => { void load(); series.reload(); }}
+            // a draft the app sent again (same photo) is a new draft: its card starts over rather than keeping the old one's title and category
+            ? <DraftCard key={`${d.id}:${d.receivedAt ?? ""}`} draft={d} series={series.list} backgrounds={backgrounds.list} ctx={ctx} onDone={() => { void load(); series.reload(); }}
                 onEdited={(next) => setDrafts((list) => list.map((x) => (x.id === next.id ? { ...x, ...next, matches: x.matches } : x)))} />
             : <DoneCard key={d.id} draft={d} />
         ))}
@@ -129,10 +133,47 @@ function Evidence({ d }: { d: Draft }) {
   );
 }
 
-function DraftCard({ draft, categories, series, backgrounds, ctx, onDone, onEdited }: { draft: Draft; categories: string[]; series: ReturnType<typeof useSeriesList>["list"]; backgrounds: Background[]; ctx: Ctx; onDone: () => void; onEdited: (draft: Draft) => void }) {
+/**
+ * Shown when the draft has no category: Gleamshelf found none of the shop's that fits and suggests a new one (its name and where it would go, both
+ * editable), or it suggested nothing and a person chooses. Creating it adds it to the shop's tree (Admin → Categories) and files the draft under it.
+ */
+function NewCategory({ suggested, tree, ctx, onCreated, busy }: { suggested: Draft["suggestedCategory"] | null; tree: ReturnType<typeof buildTree>; ctx: Ctx; onCreated: (id: string) => void; busy: boolean }) {
+  const [name, setName] = useState(suggested?.name ?? "");
+  const [parentId, setParentId] = useState(suggested?.parentId && tree.byId.has(suggested.parentId) ? suggested.parentId : "");
+  const [saving, setSaving] = useState(false);
+  const create = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const r = await api<{ category: ShopCategory }>("/admin/categories", { method: "POST", body: JSON.stringify({ name: name.trim(), parentId: parentId || null }) });
+      const list = await api<{ categories: ShopCategory[] }>("/admin/categories");
+      ctx.setData((d) => ({ ...d, categories: list.categories }));
+      onCreated(r.category.id);
+      ctx.flash(`Category “${[...tree.path(parentId || null), name.trim()].join(" › ")}” created`);
+    } catch (e) { ctx.flash(errMsg(e)); }
+    finally { setSaving(false); }
+  };
+  if (!suggested) return <div className="ad-muted ad-sm">No category chosen: it will be uncategorised on the website. Choose one above, or create one in Categories.</div>;
+  return (
+    <div className="ad-imports__newcat" role="status">
+      <b>Doesn't fit any of your categories.</b> Gleamshelf suggests a new one:
+      <div className="ad-imports__newcat-row">
+        <input className="sh-input" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} aria-label="New category name" />
+        <select className="sh-input" value={parentId} onChange={(e) => setParentId(e.target.value)} aria-label="Put the new category under">
+          <option value="">At the top level</option>
+          {tree.flat.map((n) => <option key={n.id} value={n.id}>Under {tree.path(n.id).join(" › ")}</option>)}
+        </select>
+        <button type="button" className="sh-btn ad-btn-sm" onClick={() => void create()} disabled={saving || busy || !name.trim()}>{saving ? "Creating…" : "Create and use it"}</button>
+      </div>
+    </div>
+  );
+}
+
+function DraftCard({ draft, series, backgrounds, ctx, onDone, onEdited }: { draft: Draft; series: ReturnType<typeof useSeriesList>["list"]; backgrounds: Background[]; ctx: Ctx; onDone: () => void; onEdited: (draft: Draft) => void }) {
   const [title, setTitle] = useState(draft.title);
   const [description, setDescription] = useState(draft.description ?? "");
-  const [category, setCategory] = useState(draft.category ?? "");
+  const tree = useMemo(() => buildTree(ctx.data.categories as ShopCategory[]), [ctx.data.categories]);
+  const [categoryId, setCategoryId] = useState(draft.categoryId ?? "");
   const [seriesName, setSeriesName] = useState(draft.series ?? "");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("1");
@@ -165,7 +206,8 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone, onEdit
     setBusy(true);
     try {
       await api(`/admin/imports/${draft.id}/add`, { method: "POST", body: JSON.stringify({
-        name: title.trim(), description: description.trim() || null, category: category.trim() || null, series: seriesName.trim() || null,
+        // the website category, and a Square category of the same name so the till files it the same way
+        name: title.trim(), description: description.trim() || null, categoryId: categoryId || null, category: tree.byId.get(categoryId)?.name ?? null, series: seriesName.trim() || null,
         priceCents: cents, stockCount: stockNum, hidden, imageUrls: [],
         photos: currentPicks.filter((p) => p.square || p.ebay),
         ...(currentPicks.some((p) => p.key === "background" && (p.square || p.ebay)) ? { backgroundId: background } : {}),
@@ -214,10 +256,13 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone, onEdit
           <textarea className="sh-input" rows={4} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} /></label>
         <div className="ad-imports__row">
           <label className="ad-field"><span className="ad-field__top">Category</span>
-            <input className="sh-input" list={`cat-${draft.id}`} value={category} maxLength={120} onChange={(e) => setCategory(e.target.value)} />
-            <datalist id={`cat-${draft.id}`}>{categories.map((c) => <option key={c} value={c} />)}</datalist></label>
+            <select className="sh-input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <option value="">No category</option>
+              {tree.flat.map((n) => <option key={n.id} value={n.id}>{indentLabel(n)}</option>)}
+            </select></label>
           <SeriesSelect value={seriesName} onChange={setSeriesName} list={series} />
         </div>
+        {!categoryId && <NewCategory key={draft.suggestedCategory?.name ?? ""} suggested={draft.suggestedCategory ?? null} tree={tree} ctx={ctx} onCreated={setCategoryId} busy={busy} />}
         {seriesName.trim() && !findSeries(seriesName, series) && (
           <div className="ad-imports__newseries" role="status">
             <b>New series: “{seriesName.trim()}”</b> is not in your series list, so adding this product will create it.
