@@ -7,11 +7,11 @@ import type { Background, useBackgrounds } from "./photoBackgrounds";
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 /**
- * What the finished photo will look like: the cut-out on the background, laid out like the server does it (centred inside an 8% margin, a soft
- * shadow). With no background it shows `fallbackUrl`, the photo computer's own white photo.
+ * A transparent product photo as shoppers see it: the cut-out on the shop background (white when there is none), laid out like the server does it
+ * (centred inside an 8% margin). Without a cut-out it shows `fallbackUrl`.
  */
-export function BackgroundPreview({ cutoutUrl, background, fallbackUrl, alt, onClick, onWhite }: { cutoutUrl: string | null; background: Background | null; fallbackUrl: string | null; alt: string; onClick?: () => void; /** With no background, the cut-out on white (as a background change makes it) rather than the fallback photo. */ onWhite?: boolean }) {
-  if (!cutoutUrl || (!background && !onWhite)) return fallbackUrl ? <img src={fallbackUrl} alt={alt} loading="lazy" onClick={onClick} /> : <div className="ad-photoq__none">No photo</div>;
+export function BackgroundPreview({ cutoutUrl, background, fallbackUrl, alt, onClick }: { cutoutUrl: string | null; background: Background | null; fallbackUrl?: string | null; alt: string; onClick?: () => void }) {
+  if (!cutoutUrl) return fallbackUrl ? <img src={fallbackUrl} alt={alt} loading="lazy" onClick={onClick} /> : <div className="ad-photoq__none">No photo</div>;
   return (
     <div className="ad-bgpreview" style={background ? { backgroundImage: `url("${background.imageUrl}")` } : undefined} onClick={onClick} role="img" aria-label={`${alt}, on ${background?.name ?? "white"}`}>
       <img src={cutoutUrl} alt="" loading="lazy" />
@@ -19,32 +19,19 @@ export function BackgroundPreview({ cutoutUrl, background, fallbackUrl, alt, onC
   );
 }
 
-/** The background to put a photo on: white (as the photo computer made it) or one of the shop's backgrounds. `null` is white. */
-export function BackgroundChoice({ backgrounds, value, onChange, disabled, label = "Background" }: { backgrounds: Background[]; value: string | null; onChange: (id: string | null) => void; disabled?: boolean; label?: string }) {
-  return (
-    <div className="ad-bgchoice" role="radiogroup" aria-label={label}>
-      <button type="button" role="radio" aria-checked={value === null} className={`ad-bgchoice__swatch is-white ${value === null ? "is-on" : ""}`} onClick={() => onChange(null)} disabled={disabled} title="White">
-        <span>White</span>
-      </button>
-      {backgrounds.map((b) => (
-        <button key={b.id} type="button" role="radio" aria-checked={value === b.id} className={`ad-bgchoice__swatch ${value === b.id ? "is-on" : ""}`} onClick={() => onChange(b.id)} disabled={disabled} title={b.name}
-          style={{ backgroundImage: `url("${b.imageUrl}")` }}>
-          <span>{b.name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** The library: upload backgrounds, choose the one used by default, rename, delete. Photos already made are never changed by this. */
+/**
+ * The shop background: one setting behind every transparent product photo on the website. Upload backgrounds (a seasonal one for Halloween, snow
+ * for December), switch with one click, rename, delete. Photos are never re-made: they are transparent, and the website draws the background behind
+ * them. Older photos with a background baked in can be made transparent here too.
+ */
 export function BackgroundsLibrary({ ctx, backgrounds, onChanged }: { ctx: Ctx; backgrounds: ReturnType<typeof useBackgrounds>; onChanged?: () => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const run = async (label: string, work: () => Promise<unknown>) => {
+  const run = async (label: string, work: () => Promise<unknown>, done?: string) => {
     setBusy(label);
-    try { await work(); await backgrounds.reload(); onChanged?.(); }
+    try { await work(); await backgrounds.reload(); onChanged?.(); if (done) ctx.flash(done); }
     catch (e) { ctx.flash(errMsg(e)); }
     finally { setBusy(""); }
   };
@@ -62,15 +49,23 @@ export function BackgroundsLibrary({ ctx, backgrounds, onChanged }: { ctx: Ctx; 
     if (name === null || !name.trim() || name.trim() === b.name) return;
     void run("Renaming…", () => api(`/admin/photo-backgrounds/${b.id}`, { method: "PATCH", body: JSON.stringify({ name: name.trim() }) }));
   };
-  const setDefault = (id: string | null) => run("Saving…", () => api("/admin/photo-backgrounds/default", { method: "PUT", body: JSON.stringify({ id }) }));
+  const use = (id: string | null, name: string) =>
+    run("Switching…", () => api("/admin/photo-backgrounds/default", { method: "PUT", body: JSON.stringify({ id }) }), `Every product photo now shows on ${name}`);
+  const makeTransparent = () =>
+    run("Making the older photos transparent…", async () => {
+      const r = await api<{ done: number; failed: number }>("/admin/photo-backgrounds/make-transparent", { method: "POST" });
+      ctx.flash(`${r.done} photo${r.done === 1 ? "" : "s"} made transparent${r.failed ? `, ${r.failed} could not be (try again later)` : ""}`);
+    });
+  const { transparent, older } = backgrounds.photos;
 
   return (
-    <section className="ad-card ad-bglib" aria-label="Photo backgrounds">
+    <section className="ad-card ad-bglib" aria-label="Shop background">
       <div className="ad-between">
         <div>
-          <div className="ad-label" style={{ margin: 0 }}>Photo backgrounds</div>
+          <div className="ad-label" style={{ margin: 0 }}>Shop background</div>
           <p className="ad-muted ad-sm" style={{ margin: "4px 0 0" }}>
-            Your own backgrounds for product photos, kept on our side (not in Square). The photo computer sends each product cut out on a transparent background, so you can put it on any of these when you use a photo, and change it later from the product's photos. The <b>default</b> is picked first.
+            Photos from the photo computer are saved <b>transparent</b> (just the product), and the website shows every one of them on the background <b>in use</b> here. Switch it any time, for example a Halloween one in October: every product changes at once, nothing is re-uploaded.
+            {transparent > 0 && <> {transparent} product photo{transparent === 1 ? "" : "s"} use{transparent === 1 ? "s" : ""} it now.</>}
           </p>
         </div>
         <button type="button" className="sh-btn ad-btn-sm" onClick={() => input.current?.click()} disabled={!!busy}>+ Upload background</button>
@@ -79,25 +74,31 @@ export function BackgroundsLibrary({ ctx, backgrounds, onChanged }: { ctx: Ctx; 
       <div className="ad-bglib__grid">
         <div className={`ad-bglib__item ${backgrounds.defaultId === null ? "is-default" : ""}`}>
           <div className="ad-bglib__thumb is-white">White</div>
-          <div className="ad-bglib__meta"><b>White</b>{backgrounds.defaultId === null ? <span className="sh-chip">Default</span> : <button type="button" className="ad-link" onClick={() => void setDefault(null)} disabled={!!busy}>Make default</button>}</div>
+          <div className="ad-bglib__meta"><b>White</b>{backgrounds.defaultId === null ? <span className="sh-chip">In use</span> : <button type="button" className="ad-link" onClick={() => void use(null, "white")} disabled={!!busy}>Use for all products</button>}</div>
         </div>
         {backgrounds.list.map((b) => (
           <div key={b.id} className={`ad-bglib__item ${b.isDefault ? "is-default" : ""}`}>
             <div className="ad-bglib__thumb" style={{ backgroundImage: `url("${b.imageUrl}")` }} />
             <div className="ad-bglib__meta">
               <b title={b.name}>{b.name}</b>
-              {b.isDefault ? <span className="sh-chip">Default</span> : <button type="button" className="ad-link" onClick={() => void setDefault(b.id)} disabled={!!busy}>Make default</button>}
+              {b.isDefault ? <span className="sh-chip">In use</span> : <button type="button" className="ad-link" onClick={() => void use(b.id, b.name)} disabled={!!busy}>Use for all products</button>}
             </div>
             <div className="ad-bglib__actions">
               <button type="button" className="ad-link" onClick={() => rename(b)} disabled={!!busy}>Rename</button>
               {confirmDelete === b.id
-                ? <button type="button" className="ad-link is-danger" onClick={() => { setConfirmDelete(null); void run("Deleting…", () => api(`/admin/photo-backgrounds/${b.id}`, { method: "DELETE" })); }} disabled={!!busy}>Delete for good?</button>
+                ? <button type="button" className="ad-link is-danger" onClick={() => { setConfirmDelete(null); void run("Deleting…", () => api(`/admin/photo-backgrounds/${b.id}`, { method: "DELETE" })); }} disabled={!!busy}>{b.isDefault ? "Delete it (products go back to white)?" : "Delete for good?"}</button>
                 : <button type="button" className="ad-link" onClick={() => setConfirmDelete(b.id)} disabled={!!busy}>Delete</button>}
             </div>
           </div>
         ))}
       </div>
-      {backgrounds.loaded && backgrounds.list.length === 0 && <span className="ad-muted ad-sm">No backgrounds yet. Upload a photo of a table, a backdrop or a colour you like (at least 600 pixels on each side).</span>}
+      {backgrounds.loaded && backgrounds.list.length === 0 && <span className="ad-muted ad-sm">No backgrounds yet. Upload a photo of a table, a backdrop or a seasonal scene (at least 600 pixels on each side).</span>}
+      {older > 0 && (
+        <div className="ad-bglib__older" role="status">
+          <span><b>{older} older photo{older === 1 ? " has" : "s have"} a background baked in</b>, so {older === 1 ? "it does" : "they do"} not change with the shop background.</span>
+          <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => void makeTransparent()} disabled={!!busy}>Make {older === 1 ? "it" : "them"} transparent</button>
+        </div>
+      )}
       {busy && <span className="ad-muted ad-sm" role="status">{busy}</span>}
     </section>
   );

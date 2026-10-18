@@ -106,7 +106,8 @@ async function main() {
       title: `${p.name} | Spin Hobby`,
       description: (p.description && p.description.slice(0, 160)) || `${p.name} — official anime figures, plushies and goods from Spin Hobby.`,
       path: productPath(p),
-      image: p.images[0] ?? null,
+      // a transparent cut-out is shown on white or black by link previews: they get it on the shop background instead
+      image: p.images[0] ? (p.cutouts?.includes(p.images[0]) ? `${API_URL}/product-photos/on-background?src=${encodeURIComponent(p.images[0])}` : p.images[0]) : null,
       jsonLd,
     });
     await writePage(productPath(p), html);

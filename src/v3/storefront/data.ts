@@ -140,6 +140,8 @@ export interface CartLine {
   itemId: string;
   name: string;
   imageUrl: string | null;
+  /** The photo is a transparent cut-out (shown on the shop background). */
+  imageCutout?: boolean;
   unitPriceCents: number;
   quantity: number;
   isPreorder: boolean;
@@ -173,7 +175,7 @@ export function useCart() {
         return current.map((l) => (l.variationId === p.variationId ? { ...l, quantity: Math.min(l.quantity + qty, cap) } : l));
       }
       return [...current, {
-        variationId: p.variationId, itemId: p.id, name: p.name, imageUrl: p.images[0] ?? null,
+        variationId: p.variationId, itemId: p.id, name: p.name, imageUrl: p.images[0] ?? null, imageCutout: !!p.images[0] && !!p.cutouts?.includes(p.images[0]),
         unitPriceCents: p.priceCents, quantity: Math.min(qty, cap), isPreorder: p.status === "pre", maxPerCustomer: p.maxPerCustomer,
       }];
     });

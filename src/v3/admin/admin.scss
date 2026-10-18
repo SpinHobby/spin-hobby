@@ -552,9 +552,10 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
   &.is-default { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; } }
 .ad-bglib__thumb { aspect-ratio: 1 / 1; border-radius: 8px; background: #fff center / cover no-repeat; border: 1px solid var(--border);
   &.is-white { display: grid; place-items: center; color: var(--muted); font-size: 13px; } }
-.ad-bglib__meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13px; min-width: 0;
+.ad-bglib__meta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 13px; min-width: 0; b { max-width: 100%; }
   b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
 .ad-bglib__actions { display: flex; gap: 12px; font-size: 12px; .is-danger { color: var(--red); font-weight: 700; } }
+.ad-bglib__older { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2, rgba(127,127,127,.1)); }
 .ad-bgchoice { display: flex; flex-wrap: wrap; gap: 6px; }
 .ad-bgchoice__swatch { position: relative; width: 52px; height: 52px; padding: 0; border-radius: 9px; border: 2px solid var(--border); background: #fff center / cover no-repeat; cursor: pointer; overflow: hidden;
   span { position: absolute; left: 0; right: 0; bottom: 0; padding: 1px 3px; font-size: 9px; line-height: 1.3; color: #fff; background: rgba(0, 0, 0, .55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -576,6 +577,7 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
   .ad-bgpreview img { width: 84% !important; height: 84% !important; border: 0 !important; background: transparent !important; } }
 .ad-draftphotos__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13.5px; }
 .ad-draftphotos__where { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; }
+.ad-photos__clear { position: absolute; bottom: 6px; left: 6px; z-index: 2; padding: 1px 7px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font: 700 11px/1.5 system-ui, sans-serif; }
 .ad-photos__ebay { position: absolute; bottom: 6px; right: 6px; z-index: 2; padding: 1px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: rgba(0,0,0,.55); color: #fff; font: 700 11px/1.5 system-ui, sans-serif; cursor: pointer;
   &.is-on { background: #3665f3; border-color: #3665f3; } }
 .ad-photos__ebayonly { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; vertical-align: middle; }

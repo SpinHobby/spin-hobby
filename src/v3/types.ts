@@ -14,6 +14,8 @@ export interface Product {
   category: string | null;
   categoryId?: string | null;
   images: string[];
+  /** Which of `images` are transparent cut-outs: shown on the shop background. */
+  cutouts?: string[];
   priceCents: number;
   compareAtCents: number | null;
   currency: "CAD";

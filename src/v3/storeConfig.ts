@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { storeFormat } from "./format";
+import { setShopBackground } from "./photo";
 
 export interface StoreConfig {
   provider: "paypal" | "square";
@@ -17,6 +18,8 @@ export interface StoreConfig {
   fxCadUsd: number;
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
+  /** The shop background behind every transparent product photo (null: plain white). */
+  productBackground?: { id: string; url: string } | null;
 }
 
 let cached: Promise<StoreConfig | null> | null = null;
@@ -31,6 +34,7 @@ export function loadStoreConfig() {
         handlingDaysMax: c.handlingDaysMax ?? storeFormat.handlingDaysMax,
         freeShippingThresholdCents: c.freeShippingThresholdCents ?? storeFormat.freeShippingThresholdCents,
       });
+      setShopBackground(c.productBackground?.url ?? null);
       return c;
     })
     .catch(() => null);

@@ -79,7 +79,7 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
         {drafts.map((d) => (
           d.status === "draft"
             // a draft the app sent again (same photo) is a new draft: its card starts over rather than keeping the old one's title and category
-            ? <DraftCard key={`${d.id}:${d.receivedAt ?? ""}`} draft={d} series={series.list} backgrounds={backgrounds.list} ctx={ctx} onDone={() => { void load(); series.reload(); }}
+            ? <DraftCard key={`${d.id}:${d.receivedAt ?? ""}`} draft={d} series={series.list} shopBackground={backgrounds.shop} ctx={ctx} onDone={() => { void load(); series.reload(); }}
                 onEdited={(next) => setDrafts((list) => list.map((x) => (x.id === next.id ? { ...x, ...next, matches: x.matches } : x)))} />
             : <DoneCard key={d.id} draft={d} />
         ))}
@@ -169,7 +169,7 @@ function NewCategory({ suggested, tree, ctx, onCreated, busy }: { suggested: Dra
   );
 }
 
-function DraftCard({ draft, series, backgrounds, ctx, onDone, onEdited }: { draft: Draft; series: ReturnType<typeof useSeriesList>["list"]; backgrounds: Background[]; ctx: Ctx; onDone: () => void; onEdited: (draft: Draft) => void }) {
+function DraftCard({ draft, series, shopBackground, ctx, onDone, onEdited }: { draft: Draft; series: ReturnType<typeof useSeriesList>["list"]; shopBackground: Background | null; ctx: Ctx; onDone: () => void; onEdited: (draft: Draft) => void }) {
   const [title, setTitle] = useState(draft.title);
   const [description, setDescription] = useState(draft.description ?? "");
   const tree = useMemo(() => buildTree(ctx.data.categories as ShopCategory[]), [ctx.data.categories]);
@@ -183,12 +183,8 @@ function DraftCard({ draft, series, backgrounds, ctx, onDone, onEdited }: { draf
   const offered: OfferedPhoto[] = draft.photos?.length
     ? draft.photos
     : ([draft.imageUrl ? { key: "studio", url: draft.imageUrl } : null, official ? { key: "official", url: official.imageUrl } : null] as (OfferedPhoto | null)[]).filter((p): p is OfferedPhoto => !!p);
-  const defaultBackground = backgrounds.find((b) => b.isDefault)?.id ?? null;
   const [picks, setPicks] = useState<PhotoPick[] | null>(null);
-  const currentPicks = picks ?? defaultPicks(offered, defaultBackground);
-  // the background the cut-out goes on: the shop's default until someone picks another (null: white)
-  const [picked, setPicked] = useState<string | null | undefined>(undefined);
-  const background = picked !== undefined ? picked : defaultBackground;
+  const currentPicks = picks ?? defaultPicks(offered);
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -210,7 +206,6 @@ function DraftCard({ draft, series, backgrounds, ctx, onDone, onEdited }: { draf
         name: title.trim(), description: description.trim() || null, categoryId: categoryId || null, category: tree.byId.get(categoryId)?.name ?? null, series: seriesName.trim() || null,
         priceCents: cents, stockCount: stockNum, hidden, imageUrls: [],
         photos: currentPicks.filter((p) => p.square || p.ebay),
-        ...(currentPicks.some((p) => p.key === "background" && (p.square || p.ebay)) ? { backgroundId: background } : {}),
       }) });
       ctx.flash(`${title.trim()} added${hidden ? " (hidden from the website)" : ""}`);
       ctx.reload();
@@ -244,7 +239,7 @@ function DraftCard({ draft, series, backgrounds, ctx, onDone, onEdited }: { draf
     <section className="ad-card ad-imports__card" id={`draft-${draft.id}`}>
       <div className="ad-imports__photo">
         {offered.length
-          ? <DraftPhotos draftId={draft.id} onEdited={(d) => onEdited(d as Draft)} offered={offered} picks={currentPicks} onPicks={setPicks} backgrounds={backgrounds} background={background} onBackground={setPicked}
+          ? <DraftPhotos draftId={draft.id} onEdited={(d) => onEdited(d as Draft)} offered={offered} picks={currentPicks} onPicks={setPicks} shopBackground={shopBackground}
               official={official ? { pageUrl: official.pageUrl, site: official.site } : null} title={draft.title} busy={busy} />
           : <div className="ad-empty">No photo</div>}
         {shown("photos") && <span className="ad-error" role="alert">{errors.photos}</span>}

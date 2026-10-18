@@ -10,7 +10,7 @@ import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions } from "./ProductViews";
-import { photo } from "../photo";
+import { isCutout, photo } from "../photo";
 
 function productJsonLd(p: Product) {
   const availability = normalizeStatus(p.status) === "out" ? "https://schema.org/OutOfStock"
@@ -198,7 +198,7 @@ function Gallery({ p }: { p: Product }) {
         <div className="sf-pp__thumbs" role="tablist" aria-label="Photos">
           {images.map((src, n) => (
             <button key={src + n} type="button" role="tab" aria-selected={n === i} className={n === i ? "is-active" : ""} onClick={() => jump(n)} aria-label={`Photo ${n + 1}`}>
-              <img {...photo(src, 160)} alt="" loading="lazy" />
+              <img {...photo(src, 160, isCutout(p, src))} alt="" loading="lazy" />
             </button>
           ))}
         </div>
@@ -207,7 +207,7 @@ function Gallery({ p }: { p: Product }) {
         <div className="sf-pp__main" ref={stripRef} onScroll={onScroll}>
           {images.map((src, n) => (
             <button key={src + n} type="button" className={`sf-pp__slide ${n === i ? "is-active" : ""}`} onClick={() => { setI(n); setZoom(true); }} aria-label={`Enlarge photo ${n + 1}`}>
-              <img {...photo(src, 1000)} alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`} loading={n === 0 ? "eager" : "lazy"} />
+              <img {...photo(src, 1000, isCutout(p, src))} alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`} loading={n === 0 ? "eager" : "lazy"} />
             </button>
           ))}
         </div>
@@ -222,12 +222,12 @@ function Gallery({ p }: { p: Product }) {
         )}
         <span className="sf-pp__zoomhint" aria-hidden>⤢ Click to enlarge</span>
       </div>
-      {zoom && <Lightbox images={images} index={i} name={p.name} onIndex={go} onClose={() => setZoom(false)} />}
+      {zoom && <Lightbox images={images} cutouts={p.cutouts} index={i} name={p.name} onIndex={go} onClose={() => setZoom(false)} />}
     </div>
   );
 }
 
-function Lightbox({ images, index, name, onIndex, onClose }: { images: string[]; index: number; name: string; onIndex: (n: number) => void; onClose: () => void }) {
+function Lightbox({ images, cutouts, index, name, onIndex, onClose }: { images: string[]; cutouts?: string[]; index: number; name: string; onIndex: (n: number) => void; onClose: () => void }) {
   useEscape(onClose);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -240,7 +240,7 @@ function Lightbox({ images, index, name, onIndex, onClose }: { images: string[];
   }, [index, onIndex]);
   return (
     <div className="sf-lightbox" role="dialog" aria-modal="true" aria-label={`${name} photos`} onClick={onClose}>
-      <img {...photo(images[index], 1600)} alt={`${name}, photo ${index + 1} of ${images.length}`} onClick={(e) => e.stopPropagation()} />
+      <img {...photo(images[index], 1600, isCutout({ cutouts }, images[index]))} alt={`${name}, photo ${index + 1} of ${images.length}`} onClick={(e) => e.stopPropagation()} />
       <button ref={closeRef} type="button" className="sf-lightbox__close" onClick={onClose} aria-label="Close">×</button>
       {images.length > 1 && (
         <>

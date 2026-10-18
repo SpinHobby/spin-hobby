@@ -4,7 +4,6 @@ import { api, apiBlob } from "../../lib/api";
 import type { Product } from "../types";
 import { EditorBoundary } from "./EditorBoundary";
 import { prepareImage, preparedFromBlob } from "./image";
-import { BackgroundChoice, BackgroundPreview } from "./Backgrounds";
 import { useBackgrounds } from "./photoBackgrounds";
 import { PolishOptions, type PolishChoice } from "./PolishOptions";
 import { polishPhoto } from "./polish";
@@ -15,8 +14,8 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went
 
 interface Photo { id: string; url: string }
 interface PhotoLists { shown: Photo[]; hidden: Photo[] }
-/** A photo made from a photo-computer cut-out: its background can be changed. */
-interface Cutout { imageId: string; cutoutUrl: string; backgroundId: string | null }
+/** A photo made from a photo-computer cut-out: transparent (shown on the shop background), or older, with a background baked in (it can be made transparent). */
+interface Cutout { imageId: string; cutoutUrl: string; transparent: boolean }
 
 /**
  * The photos of a Square product, edited here and saved to Square (nothing is stored on our side).
@@ -37,7 +36,6 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   const [cutouts, setCutouts] = useState<Cutout[]>([]);
   // the photos picked for eBay, in order (eBay is not connected yet: they are kept for when it is)
   const [ebay, setEbay] = useState<string[]>([]);
-  const [bgFor, setBgFor] = useState<{ imageId: string; pick: string | null } | null>(null);
   const backgrounds = useBackgrounds();
 
   const apply = useCallback((next: PhotoLists) => { setLists({ shown: next.shown, hidden: next.hidden }); onChanged(next.shown.map((x) => x.url)); }, [onChanged]);
@@ -86,15 +84,14 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
     ctx.flash("Saved as a new photo. The original is kept (hidden).");
   };
 
-  /** Puts a photo made from a cut-out on another background: a new photo is made and takes its place (the old one, made from the same cut-out, is deleted). */
-  const changeBackground = async (imageId: string, backgroundId: string | null) => {
-    await run("Putting the photo on the new background…", async () => {
-      const r = await api<PhotoLists & { cutouts: Cutout[] }>(`${base}/${encodeURIComponent(imageId)}/background`, { method: "PUT", body: JSON.stringify({ backgroundId }) });
+  /** Makes an older cut-out photo transparent: a new photo takes its place (the old one, made from the same cut-out, is deleted). */
+  const makeTransparent = async (imageId: string) => {
+    await run("Making the photo transparent…", async () => {
+      const r = await api<PhotoLists & { cutouts: Cutout[] }>(`${base}/${encodeURIComponent(imageId)}/transparent`, { method: "POST" });
       setCutouts(r.cutouts);
-      return r;
+      return { shown: r.shown, hidden: r.hidden };
     });
-    setBgFor(null);
-    ctx.flash("Background changed.");
+    ctx.flash("The photo is transparent: it now shows on the shop background.");
   };
   const cutoutOf = (id: string) => cutouts.find((c) => c.imageId === id) ?? null;
   const toggleEbay = async (url: string) => {
@@ -157,7 +154,9 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
         <div className="ad-photos__grid">
           {shown.map((photo, i) => (
             <div key={photo.id} className="ad-photos__item">
-              <img src={photo.url} alt="" />
+              {/* a transparent photo is shown as shoppers see it, on the shop background */}
+              <img src={photo.url} alt="" style={cutoutOf(photo.id)?.transparent ? { background: `${backgrounds.shop ? `url("${backgrounds.shop.imageUrl}") center / cover no-repeat, ` : ""}#fff` } : undefined} />
+              {cutoutOf(photo.id)?.transparent && <span className="ad-photos__clear" title={`Transparent: shown on the shop background (${backgrounds.shop?.name ?? "white"})`}>Transparent</span>}
               {polishOpen && (
                 <label className="ad-photos__pick" title="Select this photo">
                   <input type="checkbox" checked={selected.has(photo.id)} aria-label={`Select photo ${i + 1}`}
@@ -169,7 +168,7 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
                 title={ebay.includes(photo.url) ? "Picked for eBay (click to unpick)" : "Pick for eBay (not connected yet: kept for when it is)"} aria-pressed={ebay.includes(photo.url)}>eBay{ebay.includes(photo.url) ? ` ${ebay.indexOf(photo.url) + 1}` : ""}</button>
               <div className="ad-photos__actions">
                 <button type="button" onClick={() => openEditor(photo)} disabled={!!busy} title="Edit (saved as a new photo; the original is kept)" aria-label="Edit photo">✎</button>
-                {cutoutOf(photo.id) && <button type="button" onClick={() => setBgFor(bgFor?.imageId === photo.id ? null : { imageId: photo.id, pick: cutoutOf(photo.id)!.backgroundId })} disabled={!!busy} title="Change the background" aria-label="Change background">🖼</button>}
+                {cutoutOf(photo.id) && !cutoutOf(photo.id)!.transparent && <button type="button" onClick={() => void makeTransparent(photo.id)} disabled={!!busy} title="Make transparent: show it on the shop background like the other photos" aria-label="Make transparent">◐</button>}
                 {i > 0 && <button type="button" onClick={() => move(i, 0)} disabled={!!busy} title="Make main photo">★</button>}
                 {i > 0 && <button type="button" onClick={() => move(i, i - 1)} disabled={!!busy} title="Move earlier" aria-label="Move earlier">◀</button>}
                 {i < shown.length - 1 && <button type="button" onClick={() => move(i, i + 1)} disabled={!!busy} title="Move later" aria-label="Move later">▶</button>}
@@ -189,24 +188,6 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
           )}
         </div>
       )}
-      {bgFor && cutoutOf(bgFor.imageId) && (() => {
-        const cut = cutoutOf(bgFor.imageId)!;
-        const current = shown.find((x) => x.id === bgFor.imageId);
-        return (
-          <div className="ad-photos__bg">
-            <div className="ad-label" style={{ margin: 0 }}>Background <span className="ad-muted">· a new photo takes this one's place</span></div>
-            <div style={{ maxWidth: 220 }}>
-              <BackgroundPreview cutoutUrl={cut.cutoutUrl} background={backgrounds.list.find((b) => b.id === bgFor.pick) ?? null} fallbackUrl={current?.url ?? null} alt="Preview" onWhite />
-            </div>
-            <BackgroundChoice backgrounds={backgrounds.list} value={bgFor.pick} onChange={(pick) => setBgFor({ imageId: bgFor.imageId, pick })} disabled={!!busy} />
-            {backgrounds.list.length === 0 && <span className="ad-muted ad-sm">Upload backgrounds in Photos → Backgrounds.</span>}
-            <span style={{ display: "inline-flex", gap: 10 }}>
-              <button type="button" className="sh-btn ad-btn-sm" disabled={!!busy || bgFor.pick === cut.backgroundId} onClick={() => void changeBackground(bgFor.imageId, bgFor.pick)}>Use this background</button>
-              <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setBgFor(null)}>Cancel</button>
-            </span>
-          </div>
-        );
-      })()}
       {polishOpen && (
         <div className="ad-polish-box">
           <div className="ad-label" style={{ margin: 0 }}>Polish photos <span className="ad-muted">· each is saved as a new photo, the original is kept hidden</span></div>

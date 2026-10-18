@@ -67,6 +67,8 @@
 .co-aside__toggle { display: none; }
 .co-summary-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; h2 { margin: 0; font-size: 19px; font-weight: 800; } }
 .co-lines { display: flex; flex-direction: column; }
+/* a transparent cut-out photo sits on white here rather than on the card's own colour */
+.co-line .sh-thumb img { background: #fff; }
 .co-line { display: flex; align-items: center; gap: 14px; font-size: 14px; padding: 12px 0; border-bottom: 1px solid var(--border);
   .sh-thumb { position: relative; flex: none; background: var(--surface); }
   .sh-thumb img { border-radius: 10px; }
