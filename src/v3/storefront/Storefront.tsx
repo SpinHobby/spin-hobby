@@ -302,8 +302,8 @@ export default function Storefront() {
           </div>
           <a className="sf-discord" href={DISCORD_URL} target="_blank" rel="noreferrer">
             <img src={MASCOT} alt="" />
-            <strong>Restock alerts on Discord</strong>
-            <span>Join the server →</span>
+            <strong>Join our Discord community</strong>
+            <span>Chat with fellow fans →</span>
           </a>
         </aside>
 
@@ -380,7 +380,7 @@ export default function Storefront() {
               <div className="sf-empty">
                 <img src={MASCOT} alt="" className="sf-empty__mascot" />
                 <strong>New stock is on its way</strong>
-                <span>Our catalog is syncing from the shop. Join Discord for restock alerts while you wait.</span>
+                <span>Our catalog is syncing from the shop. Come say hi in our Discord community while you wait.</span>
                 <a className="sh-btn sh-btn--gold" href={DISCORD_URL} target="_blank" rel="noreferrer">Join the Discord</a>
               </div>
             ) : results.items.length === 0 ? (
@@ -422,7 +422,7 @@ export default function Storefront() {
       </div>
       )}
 
-      <Footer currency={currency} onCurrency={setCurrency} onNav={setNav} onToast={flash} />
+      <Footer currency={currency} onCurrency={setCurrency} onNav={setNav} />
 
       {cartOpen && <CartDrawer lines={cart.lines} subtotal={cart.subtotal} currency={currency} onQty={cart.setQty} onClose={() => setCartOpen(false)} />}
       {notify && <NotifyDialog product={notify} email={auth.email} onClose={() => setNotify(null)} onDone={(m) => { setNotify(null); flash(m); }} />}
@@ -491,7 +491,7 @@ export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
         ) : (
           <a className="sf-promo sf-promo--gold" href={DISCORD_URL} target="_blank" rel="noreferrer">
             <span className="sf-promo__eyebrow">Community</span>
-            <span className="sf-promo__title sh-display">Restock alerts &amp; drops on Discord →</span>
+            <span className="sf-promo__title sh-display">Join our Discord community →</span>
           </a>
         )}
       </div>
@@ -499,10 +499,9 @@ export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
   );
 }
 
-function Footer({ currency, onCurrency, onNav, onToast }: {
-  currency: Currency; onCurrency: (c: Currency) => void; onNav: (n: NavKey) => void; onToast: (m: string) => void;
+function Footer({ currency, onCurrency, onNav }: {
+  currency: Currency; onCurrency: (c: Currency) => void; onNav: (n: NavKey) => void;
 }) {
-  const [email, setEmail] = useState("");
   const go = (n: NavKey) => (e: React.MouseEvent) => { e.preventDefault(); onNav(n); };
   return (
     <footer className="sf-footer">
@@ -529,13 +528,9 @@ function Footer({ currency, onCurrency, onNav, onToast }: {
           <a href="/legal/privacy">Privacy Policy</a>
         </div>
         <div className="sf-footer__col">
-          <span className="sf-footer__h">Stay in the loop</span>
-          <form className="sf-footer__form" onSubmit={(e) => { e.preventDefault(); onToast("Thanks! Join our Discord for drop alerts."); setEmail(""); }}>
-            <label className="sh-visually-hidden" htmlFor="sf-news">Email</label>
-            <input id="sf-news" type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <button type="submit">Join</button>
-          </form>
-          <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord community</a>
+          <span className="sf-footer__h">Community</span>
+          <a href={DISCORD_URL} target="_blank" rel="noreferrer">Join our Discord community</a>
+          <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a>
         </div>
       </div>
       <div className="sf-wrap sf-footer__bottom">
