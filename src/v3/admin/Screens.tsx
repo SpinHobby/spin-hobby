@@ -17,6 +17,8 @@ import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } 
 import { photo } from "../photo";
 import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
+import { EbayListing } from "./EbayListing";
+import { EbaySettings } from "./EbaySettings";
 import { SeriesSelect } from "./SeriesSelect";
 import { ImprovePhotosDialog } from "./PhotoQueue";
 import { LabelsDialog } from "./Labels";
@@ -629,6 +631,7 @@ function ProductDrawer({ ctx, p, onClose, onSaved, onMove, onToggleVisible, visi
           {!manual && p.state !== "retired" && (
             <SquarePhotos ctx={ctx} p={p} onChanged={(urls) => onSaved({ images: urls })} />
           )}
+          {!manual && p.state !== "retired" && <EbayListing ctx={ctx} productId={p.id} />}
           <section className="ad-where" aria-label="Where this product lives">
             <div className="ad-where__row">
               <span className="ad-label" style={{ margin: 0 }}>Lives in</span>
@@ -1115,6 +1118,7 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
   return (
     <>
       {!ctx.isOwner && <div className="ad-banner">Settings are read-only for staff accounts.</div>}
+      <EbaySettings ctx={ctx} />
       <section className="ad-card ad-pad" style={{ marginBottom: 16, borderColor: s.maintenance_mode ? "var(--red)" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div>
