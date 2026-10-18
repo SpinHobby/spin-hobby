@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react"
 import type { GleamResult } from "@gleamshelf/react";
 import { api, apiBlob } from "../../lib/api";
 import type { Product } from "../types";
+import { EditorBoundary } from "./EditorBoundary";
 import { prepareImage, preparedFromBlob } from "./image";
 import { BackgroundChoice, BackgroundPreview } from "./Backgrounds";
 import { useBackgrounds } from "./photoBackgrounds";
@@ -234,9 +235,11 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
       {busy && <span className="ad-muted ad-sm" role="status">{busy}</span>}
       {error && <span className="ad-error" role="alert">{error}</span>}
       {editing && (
-        <Suspense fallback={null}>
-          <PhotoEditor url={editing.source} folder="products" onCancel={() => { URL.revokeObjectURL(editing.source); setEditing(null); }} onDone={saveEdit} />
-        </Suspense>
+        <EditorBoundary onClose={() => { URL.revokeObjectURL(editing.source); setEditing(null); }}>
+          <Suspense fallback={null}>
+            <PhotoEditor url={editing.source} folder="products" onCancel={() => { URL.revokeObjectURL(editing.source); setEditing(null); }} onDone={saveEdit} />
+          </Suspense>
+        </EditorBoundary>
       )}
     </section>
   );

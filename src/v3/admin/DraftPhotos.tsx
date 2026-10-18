@@ -3,6 +3,7 @@ import type { GleamResult } from "@gleamshelf/react";
 import { api, apiBlob } from "../../lib/api";
 import { BackgroundChoice, BackgroundPreview } from "./Backgrounds";
 import { preparedFromBlob } from "./image";
+import { EditorBoundary } from "./EditorBoundary";
 import type { Background } from "./photoBackgrounds";
 import type { OfferedPhoto, PhotoKey, PhotoPick } from "./photoPicks";
 
@@ -112,9 +113,11 @@ export function DraftPhotos({ draftId, onEdited, offered, picks, onPicks, backgr
       <p className="ad-muted ad-sm" style={{ margin: 0 }}>Click a photo to see it bigger. Photos picked for eBay are kept with the product and used when it is listed there.</p>
       {zoom && <div className="ad-photoq__zoom" onClick={() => setZoom(null)} role="dialog" aria-label="Photo"><img src={zoom} alt="" /></div>}
       {editing && (
-        <Suspense fallback={null}>
-          <PhotoEditor url={editing.source} folder="products" onCancel={() => { URL.revokeObjectURL(editing.source); setEditing(null); }} onDone={(r) => void saveEdit(r)} />
-        </Suspense>
+        <EditorBoundary onClose={() => { URL.revokeObjectURL(editing.source); setEditing(null); }}>
+          <Suspense fallback={null}>
+            <PhotoEditor url={editing.source} folder="products" onCancel={() => { URL.revokeObjectURL(editing.source); setEditing(null); }} onDone={(r) => void saveEdit(r)} />
+          </Suspense>
+        </EditorBoundary>
       )}
     </div>
   );
