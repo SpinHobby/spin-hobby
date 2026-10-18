@@ -5,7 +5,6 @@ interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
   readonly VITE_DISCORD_URL?: string;
   readonly VITE_EBAY_URL?: string;
-  readonly VITE_SHOW_EBAY_STORE?: string;
   readonly VITE_SUPPORT_EMAIL?: string;
   readonly VITE_PAYPAL_CLIENT_ID?: string;
   /** "staging" on the staging site (shows the STAGING badge); unset in production. */
