@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import type { AtelierResult } from "@atelier/react";
+import type { GleamResult } from "@gleamshelf/react";
 import { api, apiBlob } from "../../lib/api";
 import type { Product } from "../types";
 import { prepareImage, preparedFromBlob } from "./image";
@@ -74,7 +74,7 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
       setEditing({ photo, source: URL.createObjectURL(blob) });
     } catch (e) { setError(errMsg(e)); } finally { setBusy(""); }
   };
-  const saveEdit = async (result: AtelierResult) => {
+  const saveEdit = async (result: GleamResult) => {
     const target = editing; setEditing(null);
     if (!target) return;
     URL.revokeObjectURL(target.source);

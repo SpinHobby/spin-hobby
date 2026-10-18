@@ -75,7 +75,8 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
       <div className="ad-imports">
         {drafts.map((d) => (
           d.status === "draft"
-            ? <DraftCard key={d.id} draft={d} categories={categories} series={series.list} backgrounds={backgrounds.list} ctx={ctx} onDone={() => { void load(); series.reload(); }} />
+            ? <DraftCard key={d.id} draft={d} categories={categories} series={series.list} backgrounds={backgrounds.list} ctx={ctx} onDone={() => { void load(); series.reload(); }}
+                onEdited={(next) => setDrafts((list) => list.map((x) => (x.id === next.id ? { ...x, ...next, matches: x.matches } : x)))} />
             : <DoneCard key={d.id} draft={d} />
         ))}
       </div>
@@ -128,7 +129,7 @@ function Evidence({ d }: { d: Draft }) {
   );
 }
 
-function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { draft: Draft; categories: string[]; series: ReturnType<typeof useSeriesList>["list"]; backgrounds: Background[]; ctx: Ctx; onDone: () => void }) {
+function DraftCard({ draft, categories, series, backgrounds, ctx, onDone, onEdited }: { draft: Draft; categories: string[]; series: ReturnType<typeof useSeriesList>["list"]; backgrounds: Background[]; ctx: Ctx; onDone: () => void; onEdited: (draft: Draft) => void }) {
   const [title, setTitle] = useState(draft.title);
   const [description, setDescription] = useState(draft.description ?? "");
   const [category, setCategory] = useState(draft.category ?? "");
@@ -201,7 +202,7 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { dr
     <section className="ad-card ad-imports__card" id={`draft-${draft.id}`}>
       <div className="ad-imports__photo">
         {offered.length
-          ? <DraftPhotos offered={offered} picks={currentPicks} onPicks={setPicks} backgrounds={backgrounds} background={background} onBackground={setPicked}
+          ? <DraftPhotos draftId={draft.id} onEdited={(d) => onEdited(d as Draft)} offered={offered} picks={currentPicks} onPicks={setPicks} backgrounds={backgrounds} background={background} onBackground={setPicked}
               official={official ? { pageUrl: official.pageUrl, site: official.site } : null} title={draft.title} busy={busy} />
           : <div className="ad-empty">No photo</div>}
         {shown("photos") && <span className="ad-error" role="alert">{errors.photos}</span>}

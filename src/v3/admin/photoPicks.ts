@@ -1,5 +1,5 @@
 export type PhotoKey = "studio" | "background" | "original" | "cropped" | "official";
-export interface OfferedPhoto { key: PhotoKey; url: string }
+export interface OfferedPhoto { key: PhotoKey; url: string; /** A person edited it in the photo editor. */ edited?: boolean }
 export interface PhotoPick { key: PhotoKey; square: boolean; ebay: boolean }
 
 /** The photos a draft starts with picked: the cleaned photo for the website (on the default background when the shop has one); nothing for eBay. */

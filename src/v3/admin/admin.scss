@@ -597,3 +597,4 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-ebaybox__form { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; border-top: 1px solid var(--border); }
 .ad-ebaybox__cat { display: block; width: 100%; text-align: left; padding: 6px 8px; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: inherit; font-size: 13px; cursor: pointer; &:hover { border-color: var(--gold); } }
 .ad-ebaybox__aspects { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; > .ad-field__top { grid-column: 1 / -1; } }
+.ad-draftphotos__edited { position: absolute; top: 4px; left: 4px; padding: 0 6px; border-radius: 999px; background: #3fbf92; color: #0b1a14; font: 800 10px/1.6 system-ui, sans-serif; }

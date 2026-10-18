@@ -1,5 +1,5 @@
 import { DragEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
-import type { AtelierResult } from "@atelier/react";
+import type { GleamResult } from "@gleamshelf/react";
 import { api } from "../../lib/api";
 import { money, statusLabel } from "../format";
 import { useEscape } from "../hooks";
@@ -38,7 +38,7 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
   const limit = single ? 1 : max;
 
   /** Uploads the edited photo and puts it in place of the one that was opened. */
-  const saveEdit = async (index: number, result: AtelierResult) => {
+  const saveEdit = async (index: number, result: GleamResult) => {
     setEditing(null);
     setError(""); setNote("");
     setBusy("Uploading edited photo…");
