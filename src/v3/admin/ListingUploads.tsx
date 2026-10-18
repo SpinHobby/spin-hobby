@@ -76,8 +76,8 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   }, [finished]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!active && !unreachable) return;
-    // a photo being worked on: look every 5 seconds, so its progress bar moves; otherwise (and while the server is not answering) every 20
-    const t = setInterval(() => { void load(); }, runningNow ? 5_000 : 20_000);
+    // a photo waiting or being worked on: look every 5 seconds, so a start or a moving progress bar shows at once; while the server is not answering, every 20
+    const t = setInterval(() => { void load(); }, active ? 5_000 : 20_000);
     return () => clearInterval(t);
   }, [active, runningNow, unreachable, load]);
 
@@ -124,8 +124,18 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   const waitingLabel = (j: Job) => {
     if (!worker) return limited ? "Waiting: photo computer can't write drafts" : "Waiting: no photo computer";
     const ahead = line.get(j.id) ?? 0;
-    return ahead ? `Waiting · ${ahead} ahead` : "Next in line";
+    const waited = Math.max(0, Math.floor((Date.now() - Date.parse(j.createdAt)) / 1000));
+    const clock = `${Math.floor(waited / 60)}:${String(waited % 60).padStart(2, "0")}`;
+    return ahead ? `Waiting · ${ahead} ahead · ${clock}` : `Starting in a moment · ${clock}`;
   };
+  const anyWaiting = (state?.jobs ?? []).some((j) => j.status === "queued" || j.status === "running");
+  // the waiting clocks tick every second
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!anyWaiting) return;
+    const t = window.setInterval(() => tick((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [anyWaiting]);
   const quietFor = (j: Job) => (j.status === "running" && j.heardAt ? Date.now() - Date.parse(j.heardAt) : 0);
   const recent = (state?.jobs ?? []).filter((j) => j.status !== "cancelled" || Date.now() - Date.parse(j.createdAt) < 86_400_000).slice(0, 40);
   return (
@@ -176,6 +186,11 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
       {recent.length > 0 && (
         <div className="ad-uploads__jobs">
           <div className="ad-label">Photos sent{active ? " (updates by itself)" : ""}</div>
+          {anyWaiting && worker && (
+            <div className="ad-muted ad-sm" style={{ marginBottom: 6 }}>
+              What happens next: the photo computer takes these one at a time (about 3 minutes each). When one is done, its draft appears under <b>To review</b> below: check it, choose its photos, type the price and stock, then <b>Add to the shop</b>.
+            </div>
+          )}
           {recent.map((j) => (
             <div key={j.id} className={`ad-uploads__job is-${j.status}`}>
               <span className="ad-uploads__name">{j.draftTitle ?? j.fileName}</span>
@@ -183,6 +198,9 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
               {quietFor(j) > QUIET_MS && <span className="ad-sm" style={{ color: "var(--gold)" }}>No word from the photo computer for {Math.round(quietFor(j) / 60_000)} min. If it stopped, this photo goes back in line within an hour.</span>}
               {j.status === "done" && j.draftStatus && j.draftStatus !== "draft" && <span className="ad-muted ad-sm">{j.draftStatus === "added" ? "added to the shop" : "rejected"}</span>}
               {j.status === "done" && j.alreadyInShop && <span className="sh-chip ad-photoq__chip is-running" title={j.alreadyInShop}>Already in the shop?</span>}
+              {j.status === "done" && j.draftId && j.draftStatus === "draft" && (
+                <button type="button" className="sh-btn ad-btn-sm" onClick={() => document.getElementById(`draft-${j.draftId}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>Review draft ↓</button>
+              )}
               {j.status === "failed" && <span className="ad-sm" style={{ color: "var(--red)" }}>{j.error}</span>}
               {j.status === "queued" && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => act(j.id, "cancel")}>Cancel</button>}
               {j.status === "failed" && <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => act(j.id, "retry")}>Try again</button>}

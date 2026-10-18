@@ -198,7 +198,7 @@ function DraftCard({ draft, categories, series, backgrounds, ctx, onDone }: { dr
 
   const shown = (k: string) => (touched ? errors[k] : undefined);
   return (
-    <section className="ad-card ad-imports__card">
+    <section className="ad-card ad-imports__card" id={`draft-${draft.id}`}>
       <div className="ad-imports__photo">
         {offered.length
           ? <DraftPhotos offered={offered} picks={currentPicks} onPicks={setPicks} backgrounds={backgrounds} background={background} onBackground={setPicked}
