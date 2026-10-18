@@ -18,7 +18,7 @@ import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
 import { buildTree, indentLabel } from "../categoryTree";
-import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL } from "../links";
+import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
 
 const LOGO = "/logo/logo%20cropped.png";
@@ -194,9 +194,9 @@ export default function Storefront() {
       <div className="sf-utility">
         <div className="sf-wrap sf-utility__inner">
           <span><span className="sf-gold">●</span> Free shipping on orders {freeShippingLabel()}+ · Canada &amp; US</span>
+          {/* site links only: Discord and Instagram are the icons beside the search */}
           <div className="sf-utility__links">
-            <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a>
-            <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>
+            {SHOW_EBAY_STORE && <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>}
             <Link to="/events">Events</Link>
             <Link to="/support">Support</Link>
           </div>
@@ -516,7 +516,7 @@ function Footer({ currency, onCurrency, onNav, onToast }: {
           <a href="#shop" onClick={go("New Arrivals")}>New arrivals</a>
           <a href="#shop" onClick={go("Pre-Orders")}>Pre-orders</a>
           <a href="#shop" onClick={go("Sale")}>Sale</a>
-          <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store</a>
+          {SHOW_EBAY_STORE && <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store</a>}
           <Link to="/events">Events</Link>
         </div>
         <div className="sf-footer__col">

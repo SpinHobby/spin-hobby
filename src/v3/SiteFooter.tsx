@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import "./siteFooter.scss";
-import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL } from "./links";
+import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "./links";
 
 const LOGO = "/logo/logo%20cropped.png";
 
@@ -17,7 +17,7 @@ export default function SiteFooter() {
           <span className="sh-footer__h">Shop</span>
           <a href="/">Back to the store</a>
           <Link to="/events">Events</Link>
-          <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>
+          {SHOW_EBAY_STORE && <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>}
         </nav>
         <nav className="sh-footer__col" aria-label="Help">
           <span className="sh-footer__h">Help</span>

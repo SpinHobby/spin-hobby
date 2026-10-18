@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import "../tokens.scss";
 import "./support.scss";
 import { handlingLabel, money } from "../format";
-import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SUPPORT_EMAIL } from "../links";
+import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE, SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
 
@@ -64,7 +64,7 @@ export default function Support() {
           <ul className="sp-links">
             <li><a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a><span>Drop alerts and chat with the community</span></li>
             <li><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a><span>New arrivals and convention updates</span></li>
-            <li><a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a><span>Our listings on eBay Canada</span></li>
+            {SHOW_EBAY_STORE && <li><a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a><span>Our listings on eBay Canada</span></li>}
             <li><Link to="/events">Events</Link><span>Conventions where you can meet us in person</span></li>
           </ul>
         </section>
