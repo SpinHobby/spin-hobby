@@ -4,6 +4,7 @@ import { useEscape } from "../hooks";
 import { BackgroundChoice, BackgroundPreview, BackgroundsLibrary } from "./Backgrounds";
 import { useBackgrounds, type Background } from "./photoBackgrounds";
 import { JobProgress } from "./JobProgress";
+import { PhotoViewer } from "./PhotoViewer";
 import type { Ctx } from "./Screens";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
@@ -299,7 +300,7 @@ function ReviewScreen({ batchId, ctx, backgrounds, onBack }: { batchId: string; 
         ))}
         {jobs && shown.length === 0 && <section className="ad-card"><div className="ad-empty">{onlyLook ? "Nothing needs a look." : "No photos."}</div></section>}
       </div>
-      {zoom && <div className="ad-photoq__zoom" onClick={() => setZoom(null)} role="dialog" aria-label="Photo"><img src={zoom} alt="" /></div>}
+      {zoom && <PhotoViewer src={zoom} onClose={() => setZoom(null)} />}
     </>
   );
 }

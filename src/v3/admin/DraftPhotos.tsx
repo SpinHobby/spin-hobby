@@ -4,6 +4,7 @@ import { api, apiBlob } from "../../lib/api";
 import { BackgroundChoice, BackgroundPreview } from "./Backgrounds";
 import { preparedFromBlob } from "./image";
 import { EditorBoundary } from "./EditorBoundary";
+import { PhotoViewer } from "./PhotoViewer";
 import type { Background } from "./photoBackgrounds";
 import type { OfferedPhoto, PhotoKey, PhotoPick } from "./photoPicks";
 
@@ -44,7 +45,8 @@ export function DraftPhotos({ draftId, onEdited, offered, picks, onPicks, backgr
     onPicks([{ ...me, square: true }, ...picks.filter((p) => p.key !== key)]);
   };
   const mainKey = picks.find((p) => p.square)?.key ?? null;
-  const [zoom, setZoom] = useState<string | null>(null);
+  // the photo shown big: its address, and which draft photo it is (to crop it; the background one is only shown)
+  const [zoom, setZoom] = useState<{ url: string; key: PhotoKey } | null>(null);
   const [editing, setEditing] = useState<{ key: PhotoKey; source: string } | null>(null);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -66,6 +68,11 @@ export function DraftPhotos({ draftId, onEdited, offered, picks, onPicks, backgr
       onEdited((await api<{ draft: unknown }>(`/admin/imports/${draftId}/photos/${target.key}`, { method: "PUT", body: JSON.stringify({ data: prepared.dataUrl, contentType: prepared.type }) })).draft);
     } catch (e) { setError(errMsg(e)); } finally { setWorking(""); }
   };
+  /** A crop made in the viewer, kept as the photo's edit (undo brings back the photo as offered). */
+  const saveCrop = async (key: PhotoKey, blob: Blob) => {
+    const prepared = await preparedFromBlob(blob, 0, 0);
+    onEdited((await api<{ draft: unknown }>(`/admin/imports/${draftId}/photos/${key}`, { method: "PUT", body: JSON.stringify({ data: prepared.dataUrl, contentType: prepared.type }) })).draft);
+  };
   const undo = async (key: PhotoKey) => {
     setWorking("Undoing the edit…"); setError("");
     try { onEdited((await api<{ draft: unknown }>(`/admin/imports/${draftId}/photos/${key}/edit`, { method: "DELETE" })).draft); }
@@ -82,8 +89,8 @@ export function DraftPhotos({ draftId, onEdited, offered, picks, onPicks, backgr
           <div key={p.key} className={`ad-draftphotos__item ${p.square || p.ebay ? "is-picked" : ""}`}>
             <div className="ad-draftphotos__pic">
               {p.key === "background"
-                ? <BackgroundPreview cutoutUrl={src} background={backgroundRow} fallbackUrl={studio} alt={`${title}, on a background`} onWhite onClick={() => src && setZoom(src)} />
-                : src ? <img src={src} alt={`${title}: ${label.title}`} loading="lazy" onClick={() => setZoom(src)} title="Click to see it bigger" style={{ cursor: "zoom-in" }} /> : null}
+                ? <BackgroundPreview cutoutUrl={src} background={backgroundRow} fallbackUrl={studio} alt={`${title}, on a background`} onWhite onClick={() => src && setZoom({ url: src, key: p.key })} />
+                : src ? <img src={src} alt={`${title}: ${label.title}`} loading="lazy" onClick={() => setZoom({ url: src, key: p.key })} title="Click to see it bigger and crop" style={{ cursor: "zoom-in" }} /> : null}
               {mainKey === p.key && <span className="ad-photos__cover">Main</span>}
               {isEdited(p.key) && <span className="ad-draftphotos__edited">Edited</span>}
             </div>
@@ -110,8 +117,16 @@ export function DraftPhotos({ draftId, onEdited, offered, picks, onPicks, backgr
       })}
       {working && <span className="ad-muted ad-sm" role="status">{working}</span>}
       {error && <span className="ad-error" role="alert">{error}</span>}
-      <p className="ad-muted ad-sm" style={{ margin: 0 }}>Click a photo to see it bigger. Photos picked for eBay are kept with the product and used when it is listed there.</p>
-      {zoom && <div className="ad-photoq__zoom" onClick={() => setZoom(null)} role="dialog" aria-label="Photo"><img src={zoom} alt="" /></div>}
+      <p className="ad-muted ad-sm" style={{ margin: 0 }}>Click a photo to see it bigger and crop it. Photos picked for eBay are kept with the product and used when it is listed there.</p>
+      {zoom && (
+        <PhotoViewer
+          src={zoom.url}
+          alt={title}
+          load={zoom.key === "background" ? undefined : () => apiBlob(`/admin/imports/${draftId}/photos/${zoom.key}/file`)}
+          onSave={zoom.key === "background" ? undefined : (blob) => saveCrop(zoom.key, blob)}
+          onClose={() => setZoom(null)}
+        />
+      )}
       {editing && (
         <EditorBoundary onClose={() => { URL.revokeObjectURL(editing.source); setEditing(null); }}>
           <Suspense fallback={null}>

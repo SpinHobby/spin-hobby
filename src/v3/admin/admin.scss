@@ -598,3 +598,12 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
 .ad-ebaybox__cat { display: block; width: 100%; text-align: left; padding: 6px 8px; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: inherit; font-size: 13px; cursor: pointer; &:hover { border-color: var(--gold); } }
 .ad-ebaybox__aspects { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; > .ad-field__top { grid-column: 1 / -1; } }
 .ad-draftphotos__edited { position: absolute; top: 4px; left: 4px; padding: 0 6px; border-radius: 999px; background: #3fbf92; color: #0b1a14; font: 800 10px/1.6 system-ui, sans-serif; }
+
+/* The photo viewer: a photo big and at its own shape (object-fit, auto sizes), with a simple crop (drag a box, apply, undo/redo) */
+.ad-viewer { position: fixed; inset: 0; z-index: 10001; background: rgba(0, 0, 0, .85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; }
+.ad-viewer__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: min(960px, 100%); }
+.ad-viewer__stage { position: relative; display: inline-block; line-height: 0; max-width: 100%;
+  img { display: block; width: auto !important; height: auto !important; max-width: min(94vw, 1400px); max-height: calc(100vh - 150px); object-fit: contain; background: #fff; border-radius: 8px; user-select: none; }
+  &.is-cropping { cursor: crosshair; touch-action: none; } }
+.ad-viewer__box { position: absolute; border: 2px solid var(--gold); box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55); pointer-events: none; }
+.ad-viewer__note { color: #fff; font-size: 13px; opacity: .85; }
