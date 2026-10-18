@@ -607,3 +607,4 @@ html[data-theme="dark"] .ad { --block: #161c2f; }
   &.is-cropping { cursor: crosshair; touch-action: none; } }
 .ad-viewer__box { position: absolute; border: 2px solid var(--gold); box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55); pointer-events: none; }
 .ad-viewer__note { color: #fff; font-size: 13px; opacity: .85; }
+.ad-chips .ad-chip--todo:not(.is-active) { border-style: dashed; }

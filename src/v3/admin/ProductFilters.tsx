@@ -21,7 +21,7 @@ interface Props {
 }
 
 /** How many of the folded-away filters are on (the search box and status chips are always visible). */
-const hiddenFilterCount = (f: CatalogFilters) => [f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim(), f.changedWithin].filter(Boolean).length;
+const hiddenFilterCount = (f: CatalogFilters) => [f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.min.trim() || f.max.trim(), f.changedWithin].filter(Boolean).length;
 
 const CHANGED_OPTIONS: [CatalogFilters["changedWithin"], string][] = [["", "Added or changed: any time"], ["24", "Added or changed in the last 24 hours"], ["168", "Added or changed in the last 7 days"]];
 
@@ -61,7 +61,6 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
   if (filters.changedWithin) tags.push({ key: "changed", label: filters.changedWithin === "24" ? "Last 24 hours" : "Last 7 days", clear: { changedWithin: "" } });
   if (filters.featured) tags.push({ key: "feat", label: "Featured", clear: { featured: false } });
   if (filters.alerts) tags.push({ key: "alerts", label: "Restock alerts", clear: { alerts: false } });
-  if (filters.noPhoto) tags.push({ key: "photo", label: "No photo", clear: { noPhoto: false } });
 
   const secondary = (
     <div className={`ad-filterbar ${compact ? "is-compact" : ""}`}>
@@ -98,7 +97,6 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
       <div className="ad-checks">
         <label className="ad-check"><input type="checkbox" checked={filters.featured} onChange={(e) => onFilters({ featured: e.target.checked })} /> Featured{counts ? ` · ${counts.featured}` : ""}</label>
         <label className="ad-check"><input type="checkbox" checked={filters.alerts} onChange={(e) => onFilters({ alerts: e.target.checked })} /> Restock alerts{counts ? ` · ${counts.alerts}` : ""}</label>
-        <label className="ad-check"><input type="checkbox" checked={filters.noPhoto} onChange={(e) => onFilters({ noPhoto: e.target.checked })} /> No photo{counts ? ` · ${counts.noPhoto}` : ""}</label>
       </div>
       {!compact && active > 0 && <button type="button" className="ad-link" onClick={() => onFilters(EMPTY_FILTERS)}>Clear filters ({active})</button>}
     </div>
@@ -127,6 +125,12 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
         <button type="button" className={`sh-chip ${filters.status.length === 0 ? "is-active" : ""}`} onClick={() => onFilters({ status: [] })}>
           All{counts ? ` · ${counts.total}` : ""}
         </button>
+        {/* Products that still need a photo: a to-do list, so it sits up front with the status chips (and works with them; on a phone this row scrolls, so it comes first) rather than among the folded-away filters. */}
+        {(filters.noPhoto || (counts?.noPhoto ?? 0) > 0) && (
+          <button type="button" className={`sh-chip ad-chip--todo ${filters.noPhoto ? "is-active" : ""}`} aria-pressed={filters.noPhoto} title="Products with no photo yet (on the website or in Square)" onClick={() => onFilters({ noPhoto: !filters.noPhoto })}>
+            No photo{counts ? ` · ${counts.noPhoto}` : ""}
+          </button>
+        )}
         {STATE_ORDER.map((s) => {
           const n = counts?.states[s] ?? 0;
           const on = filters.status.includes(s);
