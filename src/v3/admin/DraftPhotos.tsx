@@ -11,12 +11,17 @@ import type { OfferedPhoto, PhotoKey, PhotoPick } from "./photoPicks";
 const PhotoEditor = lazy(() => import("./PhotoEditor"));
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
-const LABEL: Record<PhotoKey, { title: string; hint: string }> = {
+const LABELS: Record<"studio" | "background" | "cropped" | "original" | "official", { title: string; hint: string }> = {
   studio: { title: "Cleaned photo", hint: "made by the photo computer: background removed, stickers off, sharpened" },
   background: { title: "On a background", hint: "the cut-out product on one of your backgrounds" },
   cropped: { title: "Cropped", hint: "your photo cropped to the product, nothing else changed (no AI)" },
   original: { title: "As taken", hint: "your photo exactly as it was uploaded" },
   official: { title: "Official photo", hint: "" },
+};
+/** The name a photo is shown with; the maker's extra photos are numbered ("Official photo 2"). */
+const labelOf = (key: PhotoKey) => {
+  const n = /^official(\d+)$/.exec(key)?.[1];
+  return n ? { title: `Official photo ${n}`, hint: "" } : LABELS[key as keyof typeof LABELS];
 };
 
 /**
@@ -83,7 +88,7 @@ export function DraftPhotos({ draftId, onEdited, offered, picks, onPicks, backgr
   return (
     <div className="ad-draftphotos">
       {picks.map((p) => {
-        const label = LABEL[p.key];
+        const label = labelOf(p.key);
         const src = url(p.key);
         return (
           <div key={p.key} className={`ad-draftphotos__item ${p.square || p.ebay ? "is-picked" : ""}`}>
@@ -97,7 +102,7 @@ export function DraftPhotos({ draftId, onEdited, offered, picks, onPicks, backgr
             <div className="ad-draftphotos__text">
               <b>{label.title}</b>
               <span className="ad-muted ad-sm">
-                {p.key === "official" && official
+                {p.key.startsWith("official") && official
                   ? <>from <a href={official.pageUrl} target="_blank" rel="noreferrer">{official.site}</a>. It belongs to the maker: use it only if that is OK for your shop.</>
                   : label.hint}
               </span>
