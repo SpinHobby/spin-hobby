@@ -179,7 +179,9 @@ const toCents = (v: string) => (v.trim() ? Math.round(Number(v) * 100) : null);
 
 export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
   useEscape(onClose);
-  const [d, setD] = useState<Draft>(EMPTY);
+  // without Square (a local copy of the shop with no keys) a product is kept in our database only
+  const squareConnected = !!ctx.data.readiness?.appAndLocationConnected;
+  const [d, setD] = useState<Draft>({ ...EMPTY, inSquare: squareConnected });
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -274,7 +276,7 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
       const r = await api<{ stockCount: number }>(`/admin/products/${encodeURIComponent(existing.id)}/add-stock`, { method: "POST", body: JSON.stringify({ quantity: Math.max(1, d.stock ?? 1) }) });
       ctx.reload();
       ctx.flash(`${existing.name}: stock is now ${r.stockCount}`);
-      setD({ ...EMPTY, categoryId: d.categoryId }); setAi({ state: "idle", note: "" }); setTouched(false);
+      setD({ ...EMPTY, categoryId: d.categoryId, inSquare: squareConnected }); setAi({ state: "idle", note: "" }); setTouched(false);
     } catch (e) { ctx.flash(errMsg(e)); } finally { setSaving(false); }
   };
 
@@ -442,7 +444,9 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
                 </div>
                 <label className="ad-check-inline"><input type="checkbox" checked={d.featured} onChange={(e) => set("featured", e.target.checked)} />Feature on the homepage and at the top of the catalog</label>
                 {d.inSquare && <label className="ad-check-inline"><input type="checkbox" checked={d.hidden} onChange={(e) => set("hidden", e.target.checked)} />Keep it off the website for now (it is still created in Square)</label>}
-                <label className="ad-check-inline"><input type="checkbox" checked={!d.inSquare} onChange={(e) => { set("inSquare", !e.target.checked); if (e.target.checked) setAi({ state: "idle", note: "" }); }} />Keep it only in our database (don't create it in Square)</label>
+                {squareConnected
+                  ? <label className="ad-check-inline"><input type="checkbox" checked={!d.inSquare} onChange={(e) => { set("inSquare", !e.target.checked); if (e.target.checked) setAi({ state: "idle", note: "" }); }} />Keep it only in our database (don't create it in Square)</label>
+                  : <span className="ad-muted ad-sm">Square isn't connected here, so the product is kept in our database only.</span>}
               </section>
             )}
           </div>

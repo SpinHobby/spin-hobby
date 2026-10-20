@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 export interface CheckoutConfig {
-  provider: "paypal" | "square";
+  /** `test`: a local copy of the shop with no payment keys (a test payment, no money). */
+  provider: "paypal" | "square" | "test";
   paypalClientId: string | null;
   paypalEnv: "live" | "sandbox";
   squareApplicationId: string | null;

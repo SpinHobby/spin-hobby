@@ -125,7 +125,7 @@ export default function Checkout() {
     setPayError("");
     setTouched(true);
     if (!canPay) throw new Error("Complete your details first.");
-    const res = await api<{ orderId: number; provider: "paypal" | "square"; paypalOrderId?: string; amountCents?: number }>("/checkout/intent", {
+    const res = await api<{ orderId: number; provider: "paypal" | "square" | "test"; paypalOrderId?: string; amountCents?: number }>("/checkout/intent", {
       method: "POST",
       body: JSON.stringify({ quote: quoteInput, email: email.trim(), shipping: toServerAddress(ship), billing: toServerAddress(billingSame ? ship : bill) }),
     });
@@ -165,6 +165,17 @@ export default function Checkout() {
       });
       finish(res.orderId, res.status);
     } catch (e) { setPayError(e instanceof Error ? e.message : "Payment failed."); }
+  };
+
+  /** A local copy of the shop with no payment keys: the order completes as a paid one would, with no money involved. */
+  const onTestPay = async () => {
+    setTouched(true);
+    if (!canPay) { setPayError("Complete your details first."); return; }
+    try {
+      const intent = await createIntent();
+      const res = await api<{ orderId: number; status: string }>("/checkout/test-payment", { method: "POST", body: JSON.stringify({ orderId: intent.orderId, email: email.trim() }) });
+      finish(res.orderId, res.status);
+    } catch (e) { setPayError(e instanceof Error ? e.message : "The test payment failed."); }
   };
 
   if (done) return <Success orderId={done.orderId} preorder={done.status === "preorder_reserved"} email={email} />;
@@ -252,7 +263,7 @@ export default function Checkout() {
             <section className="co-section" aria-labelledby="co-h-pay">
               <h2 id="co-h-pay"><i>3</i>Payment</h2>
               <div className="co-accepted" aria-label="Accepted payment methods">
-                {(config?.provider === "square" ? ["Visa", "Mastercard", "Amex", "Debit"] : ["PayPal", "Visa", "Mastercard", "Amex"]).map((m) => <span key={m}>{m}</span>)}
+                {(config?.provider === "test" ? ["Test payment"] : config?.provider === "square" ? ["Visa", "Mastercard", "Amex", "Debit"] : ["PayPal", "Visa", "Mastercard", "Amex"]).map((m) => <span key={m}>{m}</span>)}
                 <span className="co-accepted__note">All transactions are encrypted.</span>
               </div>
               {configError ? (
@@ -264,13 +275,18 @@ export default function Checkout() {
                   {!formValid && touched && <div className="co-alert">Check the highlighted fields above.</div>}
                   {config.provider === "paypal" && config.paypalClientId ? (
                     <PayPalPay clientId={config.paypalClientId} disabled={!canPay} createOrder={onPayPalCreate} onApprove={onPayPalApprove} onError={setPayError} />
+                  ) : config.provider === "test" ? (
+                    <div className="co-testpay">
+                      <p className="co-note"><b>Test payment.</b> This is a local copy of the shop with no payment keys, so no card is asked for and no money moves. The order is completed like a paid one.</p>
+                      <button type="button" className="sh-btn co-testpay__btn" disabled={!canPay} onClick={() => void onTestPay()}>Place order: {totalLabel} (test, no money)</button>
+                    </div>
                   ) : config.provider === "square" ? (
                     <SquarePay config={config} disabled={!quoteOk || quoting} amountLabel={totalLabel} pay={onSquarePay} onError={setPayError}
                       billing={{ givenName: ship.firstName, familyName: ship.lastName, email, countryCode: ship.country, city: ship.city, postalCode: ship.postalCode, addressLines: [ship.address1, ship.address2].filter(Boolean) }} />
                   ) : (
                     <div className="co-alert">Online payment isn't available right now. Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</div>
                   )}
-                  {!canPay && hint && ((config.provider === "paypal" && config.paypalClientId) || config.provider === "square") && <p className="co-note co-hint" aria-live="polite">{hint}</p>}
+                  {!canPay && hint && ((config.provider === "paypal" && config.paypalClientId) || config.provider === "square" || config.provider === "test") && <p className="co-note co-hint" aria-live="polite">{hint}</p>}
                   {payError && <div className="co-alert co-alert--error" role="alert">{payError}</div>}
                 </div>
               )}

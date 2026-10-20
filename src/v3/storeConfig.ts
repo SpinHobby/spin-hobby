@@ -4,7 +4,8 @@ import { storeFormat } from "./format";
 import { setShopBackground } from "./photo";
 
 export interface StoreConfig {
-  provider: "paypal" | "square";
+  /** `test`: a local copy of the shop with no payment keys; checkout completes with a test payment, no money involved. */
+  provider: "paypal" | "square" | "test";
   paypalClientId: string | null;
   paypalEnv: "live" | "sandbox";
   squareApplicationId: string | null;

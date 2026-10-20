@@ -15,6 +15,7 @@ function syncAgo(iso: string | null | undefined) {
 }
 import { useAuth, useTheme, useToast } from "../hooks";
 import { useDocumentHead } from "../seo";
+import { useStoreConfig } from "../storeConfig";
 import { SCREENS, useAdminData, type Screen } from "./data";
 import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
@@ -25,6 +26,8 @@ const LOGO = "/logo/logo%20cropped.png";
 
 export default function Admin() {
   useDocumentHead({ title: "Admin | Spin Hobby", description: "Admin", path: "/admin", noindex: true });
+  // what checkout really uses: on a local copy with no payment keys that is a test payment, whatever the setting says
+  const checkoutProvider = useStoreConfig()?.provider;
   const auth = useAuth();
   const { theme, toggle } = useTheme();
   const { toast, flash } = useToast();
@@ -105,7 +108,7 @@ export default function Admin() {
           </div>
           <div className="ad-side__status">
             <span className="ad-dot" style={{ background: "var(--gold)" }} />
-            <span>Payments: {data.settings.payment_provider === "square" ? "Square" : "PayPal"}</span>
+            <span>Payments: {checkoutProvider === "test" ? "test payments (no money)" : data.settings.payment_provider === "square" ? "Square" : "PayPal"}</span>
           </div>
           <button type="button" className="ad-side__sync" onClick={syncNow} disabled={syncing}>{syncing ? "Syncing…" : "Sync with Square"}</button>
         </div>
