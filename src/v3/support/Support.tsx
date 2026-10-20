@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import "../tokens.scss";
 import "./support.scss";
 import { handlingLabel, money } from "../format";
-import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SUPPORT_EMAIL } from "../links";
+import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE, SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
 
@@ -62,9 +62,9 @@ export default function Support() {
         <section className="sp-card" aria-labelledby="sp-elsewhere">
           <h2 id="sp-elsewhere">Find us elsewhere</h2>
           <ul className="sp-links">
-            <li><a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a><span>Drop alerts and chat with the community</span></li>
+            <li><a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a><span>Join our community and chat with fellow fans</span></li>
             <li><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a><span>New arrivals and convention updates</span></li>
-            <li><a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a><span>Our listings on eBay Canada</span></li>
+            {SHOW_EBAY_STORE && <li><a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a><span>Our listings on eBay Canada</span></li>}
             <li><Link to="/events">Events</Link><span>Conventions where you can meet us in person</span></li>
           </ul>
         </section>
@@ -88,7 +88,7 @@ export default function Support() {
           </details>
           <details id="restock">
             <summary>An item is sold out. Will it come back?</summary>
-            <p>Open the product and choose <b>Notify me</b>. Enter your email and we&apos;ll let you know when it&apos;s back in stock. You can also join our <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a> for drop alerts.</p>
+            <p>Open the product and choose <b>Notify me</b>. Enter your email and we&apos;ll let you know when it&apos;s back in stock.</p>
           </details>
           <details id="returns">
             <summary>My item arrived damaged or isn&apos;t what I ordered</summary>

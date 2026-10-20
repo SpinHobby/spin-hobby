@@ -1,10 +1,10 @@
 // Post-build step: writes dist/sitemap.xml and, for crawlers/link-unfurlers that don't execute
-// JS (Discord, Twitter/X, Facebook, and non-Google search engines), a static dist/<route>/index.html
+// JS (Discord, Twitter/X, Facebook, and non-Google search engines), a static dist/<route>.html
 // per product and legal page with the real <title>/description/OG tags/JSON-LD baked in. The <body>
 // is untouched, so the SPA still mounts and hydrates normally for everyone else. See
 // src/v3/seo.ts (the client-side equivalent) and PLAN.md's "lightweight prerendering" decision.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const DIST = join(process.cwd(), "dist");
 const API_URL = (process.env.VITE_API_URL || "https://spin-hobby-server.onrender.com").replace(/\/$/, "");
@@ -47,10 +47,12 @@ function withHead(template, { title, description, path, image, jsonLd }) {
   return html.replace("</head>", `  ${extra}\n  </head>`);
 }
 
+// A page is written as a file (dist/support.html), never as a folder (dist/support/index.html): Netlify serves /support from support.html as it is,
+// but answers /support with a redirect to the folder, /support/, lowercased on the way, which broke every product link (Square's ids are upper case).
 async function writePage(path, html) {
-  const dir = join(DIST, path);
-  await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, "index.html"), html, "utf8");
+  const file = join(DIST, `${path}.html`);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, html, "utf8");
 }
 
 async function fetchAllProducts() {

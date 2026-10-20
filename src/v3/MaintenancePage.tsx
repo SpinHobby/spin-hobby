@@ -1,7 +1,7 @@
 import "./tokens.scss";
 import "./maintenance.scss";
 import { useTheme } from "./hooks";
-import { EBAY_URL } from "./links";
+import { EBAY_URL, SHOW_EBAY_STORE } from "./links";
 
 const LOGO = "/logo/logo%20cropped.png";
 
@@ -19,9 +19,11 @@ export default function MaintenancePage({ message }: { message?: string | null }
         <h1>We'll be right back</h1>
         <p>{message?.trim() || "Spin Hobby is currently down for maintenance. We'll be back shortly — thanks for your patience."}</p>
         <button type="button" className="mp-retry" onClick={() => window.location.reload()}>Retry now</button>
-        <a href={EBAY_URL} target="_blank" rel="noopener noreferrer" className="mp-ebay">
-          Or shop our eBay store in the meantime →
-        </a>
+        {SHOW_EBAY_STORE && (
+          <a href={EBAY_URL} target="_blank" rel="noopener noreferrer" className="mp-ebay">
+            Or shop our eBay store in the meantime →
+          </a>
+        )}
       </div>
     </div>
   );

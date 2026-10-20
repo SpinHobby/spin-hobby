@@ -26,4 +26,5 @@ export const EVENTS: EventInfo[] = [
   { name: "Chinatown Street Festival", venue: "Chinatown", city: "Calgary, AB", start: "2026-08-15", link: "https://www.calgarychinatown.com/" },
   { name: "Edmonton Expo", venue: "Edmonton Expo Centre", city: "Edmonton, AB", start: "2026-09-18", end: "2026-09-20", link: "https://fanexpohq.com/edmontonexpo/" },
   { name: "Rakku-Con Fall", venue: "Genesis Centre", city: "Calgary, AB", start: "2026-09-26", link: "https://www.instagram.com/rakkucon/" },
+  { name: "Platfight", venue: "Genesis Centre", city: "Calgary, AB", start: "2026-10-16", end: "2026-10-18", link: "https://www.platfight.com/" },
 ];
