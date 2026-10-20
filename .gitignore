@@ -32,3 +32,6 @@ yarn-error.log*
 
 # Netlify CLI link state (rewritten per developer, includes geolocation)
 /.netlify
+
+# local settings (keys): never committed
+.env
