@@ -1,7 +1,10 @@
 import { useCallback, useState } from "react";
 import "../tokens.scss";
 import "../storefront/storefront.scss"; // previews render real storefront components
+// the shared panel styles load before the admin's own, which refine a few of them
+import "../ui/ui.scss";
 import "./admin.scss";
+import { Banner, PanelLayout, PanelStatus } from "../ui";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
 import { initials, relativeAge } from "../format";
@@ -42,13 +45,11 @@ export default function Admin() {
   const [productFilter, setProductFilter] = useState("All");
   const [orderTab, setOrderTab] = useState("All");
   const [syncing, setSyncing] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
 
   const go = useCallback((next: Screen, extra?: { productFilter?: string; orderTab?: string }) => {
     setScreenState(next);
     if (extra?.productFilter) setProductFilter(extra.productFilter);
     if (extra?.orderTab) setOrderTab(extra.orderTab);
-    setNavOpen(false);
     window.history.replaceState(null, "", `#${next}`);
     window.scrollTo({ top: 0 });
   }, []);
@@ -83,70 +84,43 @@ export default function Admin() {
   const connected = !!data.readiness?.appAndLocationConnected;
 
   return (
-    <div className="sh ad">
-      {navOpen && <div className="sh-overlay ad-nav-overlay" onClick={() => setNavOpen(false)} />}
-      <aside className={`ad-side ${navOpen ? "is-open" : ""}`}>
-        <div className="ad-side__brand">
-          <a href="/"><img src={LOGO} alt="Spin Hobby" /></a>
-          <span className="ad-tag">ADMIN</span>
+    <PanelLayout
+      tag="ADMIN"
+      navLabel="Admin"
+      tabs={SCREENS.map((n) => ({ key: n, label: n, badge: n === "Orders" ? toShipCount : n === "Products" ? lowCount : 0 }))}
+      active={screen}
+      onSelect={(n) => go(n)}
+      title={screen}
+      footer={<>
+        <PanelStatus color={connected ? "#3fbf92" : "#f06a6e"}>
+          {connected ? (lastSync ? `Square connected · synced ${syncAgo(lastSync)}` : "Square connected · not synced yet") : "Square not connected"}
+        </PanelStatus>
+        <PanelStatus color="var(--gold)">
+          Payments: {checkoutProvider === "test" ? "test payments (no money)" : data.settings.payment_provider === "square" ? "Square" : "PayPal"}
+        </PanelStatus>
+        <button type="button" className="ui-side__sync" onClick={syncNow} disabled={syncing}>{syncing ? "Syncing…" : "Sync with Square"}</button>
+      </>}
+      topActions={<>
+        <button type="button" className="ui-theme" onClick={toggle} aria-label="Toggle dark mode">{theme === "dark" ? "☀" : "☾"}</button>
+        <a href="/" target="_blank" rel="noreferrer" className="ui-top__store">View store ↗</a>
+        <div className="ui-user" title={auth.email ?? "Demo"}>
+          <span className="ui-avatar">{initials(auth.email)}</span>
+          <span className="ui-user__role">{auth.user?.role === "owner" ? "Owner" : "Staff"}</span>
+          <button type="button" className="ui-user__out" onClick={auth.signOut}>Sign out</button>
         </div>
-        <nav className="ad-side__nav" aria-label="Admin">
-          {SCREENS.map((n) => {
-            const badge = n === "Orders" ? toShipCount : n === "Products" ? lowCount : 0;
-            return (
-              <button key={n} type="button" className={screen === n ? "is-active" : ""} aria-current={screen === n ? "page" : undefined} onClick={() => go(n)}>
-                <span className="ad-side__item"><span className="ad-side__dot" />{n}</span>
-                {badge > 0 && <span className="ad-side__badge">{badge}</span>}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="ad-side__foot">
-          <div className="ad-side__status">
-            <span className="ad-dot" style={{ background: connected ? "#3fbf92" : "#f06a6e" }} />
-            <span>{connected ? (lastSync ? `Square connected · synced ${syncAgo(lastSync)}` : "Square connected · not synced yet") : "Square not connected"}</span>
-          </div>
-          <div className="ad-side__status">
-            <span className="ad-dot" style={{ background: "var(--gold)" }} />
-            <span>Payments: {checkoutProvider === "test" ? "test payments (no money)" : data.settings.payment_provider === "square" ? "Square" : "PayPal"}</span>
-          </div>
-          <button type="button" className="ad-side__sync" onClick={syncNow} disabled={syncing}>{syncing ? "Syncing…" : "Sync with Square"}</button>
-        </div>
-      </aside>
-
-      <div className="ad-main">
-        <header className="ad-top">
-          <button type="button" className="sh-icon-btn ad-burger" onClick={() => setNavOpen(true)} aria-label="Open menu">☰</button>
-          <h1 className="sh-display">{screen}</h1>
-          <button type="button" className="ad-theme" onClick={toggle} aria-label="Toggle dark mode">{theme === "dark" ? "☀" : "☾"}</button>
-          <a href="/" target="_blank" rel="noreferrer" className="ad-top__store">View store ↗</a>
-          <div className="ad-user" title={auth.email ?? "Demo"}>
-            <span className="ad-avatar">{initials(auth.email)}</span>
-            <span className="ad-user__role">{auth.user?.role === "owner" ? "Owner" : "Staff"}</span>
-            <button type="button" className="ad-user__out" onClick={auth.signOut}>Sign out</button>
-          </div>
-        </header>
-
-        <main className="ad-content">
-          {data.errors.length > 0 && (
-            <div className="ad-banner ad-banner--error" role="alert">
-              <span>Some data couldn't load: {data.errors.join(" · ")}</span>
-              <button type="button" onClick={reload}>Retry</button>
-            </div>
-          )}
-          {screen === "Dashboard" && <DashboardScreen ctx={ctx} />}
-          {screen === "Products" && <ProductsScreen ctx={ctx} />}
-          {screen === "Imports" && <ImportsScreen ctx={ctx} />}
-          {screen === "Photos" && <PhotosScreen ctx={ctx} />}
-          {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
-          {screen === "Orders" && <OrdersScreen ctx={ctx} />}
-          {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
-          {screen === "Settings" && <SettingsScreen ctx={ctx} />}
-        </main>
-      </div>
-
-      {toast && <div className="sh-toast" role="status" aria-live="polite">{toast}</div>}
-    </div>
+      </>}
+      banner={data.errors.length > 0 && <Banner tone="error" action={{ label: "Retry", onClick: reload }}>Some data couldn't load: {data.errors.join(" · ")}</Banner>}
+      toast={toast}
+    >
+      {screen === "Dashboard" && <DashboardScreen ctx={ctx} />}
+      {screen === "Products" && <ProductsScreen ctx={ctx} />}
+      {screen === "Imports" && <ImportsScreen ctx={ctx} />}
+      {screen === "Photos" && <PhotosScreen ctx={ctx} />}
+      {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
+      {screen === "Orders" && <OrdersScreen ctx={ctx} />}
+      {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
+      {screen === "Settings" && <SettingsScreen ctx={ctx} />}
+    </PanelLayout>
   );
 }
 

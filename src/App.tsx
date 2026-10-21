@@ -5,6 +5,7 @@ import MaintenancePage from "./v3/MaintenancePage";
 import { loadStoreConfig, type StoreConfig } from "./v3/storeConfig";
 import SiteLayout from "./v3/SiteLayout";
 import { isRecoveryLink } from "./lib/api";
+import { isOn } from "./features";
 
 // The admin bundle is only downloaded by staff visiting /admin.
 const Admin = lazy(() => import("./v3/admin/Admin"));
@@ -13,6 +14,8 @@ const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
 const Events = lazy(() => import("./v3/events/Events"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
+// the shared building blocks shown live (local and staging only)
+const UiKit = lazy(() => import("./v3/ui/UiKitPage"));
 
 // A password-reset email can only point at one address (Supabase's Site URL unless the redirect is
 // allow-listed), so wherever its link lands, finish on the reset page before anything else runs.
@@ -25,6 +28,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
+        {isOn("uiKit") && <Route path="/ui-kit" element={<Suspense fallback={null}><UiKit /></Suspense>} />}
         {/* Plain content pages share one header + footer; everything else brings its own chrome. */}
         <Route element={<SiteLayout />}>
           <Route path="/legal/*" element={<Legal />} />

@@ -12,6 +12,8 @@ export const ENVIRONMENT: Environment = import.meta.env.DEV ? "local" : IS_STAGI
 const FEATURES = {
   /** "eBay store" links across the storefront: off on the live site until the eBay store is connected and kept in step with the shop. */
   ebayStore: { local: true, staging: true, production: false },
+  /** /ui-kit: the shared building blocks (src/v3/ui) shown live, for whoever builds a new page. Not for shoppers. */
+  uiKit: { local: true, staging: true, production: false },
 } satisfies Record<string, Record<Environment, boolean>>;
 
 /** Whether a feature is on where this copy of the site is running. */

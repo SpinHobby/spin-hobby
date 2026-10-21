@@ -15,6 +15,7 @@ import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 import { photo } from "../photo";
+import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Toolbar, type Column } from "../ui";
 import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
 import { EbayListing } from "./EbayListing";
@@ -41,18 +42,8 @@ export interface Ctx {
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
-function Card({ title, action, children, className = "" }: { title: React.ReactNode; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
-  return (
-    <section className={`ad-card ${className}`}>
-      <div className="ad-card__head"><span>{title}</span>{action}</div>
-      {children}
-    </section>
-  );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="ad-empty">{children}</div>;
-}
+// cards and empty states are the shared ones (../ui), so every panel page looks the same
+const Empty = EmptyState;
 
 function Thumb({ src, size = 44 }: { src?: string | null; size?: number }) {
   return (
@@ -745,36 +736,26 @@ export function OrdersScreen({ ctx }: { ctx: Ctx }) {
   const rows = orders.filter(ORDER_TABS[ctx.orderTab] ?? (() => true))
     .filter((o) => !q || String(o.id).includes(q) || o.billing_email.includes(q) || customerName(o).toLowerCase().includes(q));
   const open = orders.find((o) => o.id === openId) ?? null;
+  const columns: Column<Order>[] = [
+    { key: "id", header: "Order", width: "80px", render: (o) => <span style={{ fontWeight: 800 }}>#{o.id}</span> },
+    { key: "customer", header: "Customer", width: "1.6fr", render: (o) => <><div className="ui-ellipsis" style={{ fontWeight: 600 }}>{customerName(o)}</div><div className="ui-muted ui-sm ui-ellipsis">{o.billing_email}</div></> },
+    { key: "items", header: "Items", width: "1.4fr", render: (o) => <span className="ui-text2 ui-ellipsis" style={{ display: "block" }}>{(o.order_items ?? []).map((i) => i.name).join(", ") || "—"}</span> },
+    { key: "placed", header: "Placed", width: "110px", render: (o) => <span className="ui-text2">{shortDate(o.created_at)}</span> },
+    { key: "pay", header: "Pay", width: "80px", render: (o) => <span className="ui-text2 ui-sm">{o.provider === "square" ? "Square" : "PayPal"}</span> },
+    { key: "status", header: "Status", width: "110px", render: (o) => { const st = ORDER_STATUS[o.status] ?? ORDER_STATUS.pending; return <span className="sh-badge" style={{ background: st.bg, color: st.fg }}>{st.label}</span>; } },
+    { key: "total", header: "Total", width: "100px", align: "right", render: (o) => <span style={{ fontWeight: 800 }}>{money(o.total_cents)}</span> },
+  ];
 
   return (
     <>
-      <div className="ad-toolbar">
-        <input className="ad-search" type="search" placeholder="Search order #, email or name…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search orders" />
-        <div className="ad-chips">
-          {Object.keys(ORDER_TABS).map((n) => (
-            <button key={n} type="button" className={`sh-chip ${ctx.orderTab === n ? "is-active" : ""}`} onClick={() => ctx.setOrderTab(n)}>{n} · {orders.filter(ORDER_TABS[n]).length}</button>
-          ))}
-        </div>
-      </div>
-      <div className="ad-table-wrap">
-        <div className="ad-table ad-table--orders" role="table" aria-label="Orders">
-          <div className="ad-tr ad-th" role="row"><span>Order</span><span>Customer</span><span>Items</span><span>Placed</span><span>Pay</span><span>Status</span><span className="ad-right">Total</span></div>
-          {ctx.data.loading ? <Empty>Loading orders…</Empty> : rows.length === 0 ? <Empty>{orders.length ? "No orders in this view." : "No orders yet. Paid web orders appear here automatically."}</Empty> : rows.map((o) => {
-            const st = ORDER_STATUS[o.status] ?? ORDER_STATUS.pending;
-            return (
-              <div key={o.id} role="row" tabIndex={0} className={`ad-tr ad-tr--click ${openId === o.id ? "is-selected" : ""}`} onClick={() => setOpenId(o.id)} onKeyDown={(e) => { if (e.key === "Enter") setOpenId(o.id); }}>
-                <span className="ad-strong" style={{ fontWeight: 800 }}>#{o.id}</span>
-                <div className="ad-cell-main"><div className="ad-ellipsis" style={{ fontWeight: 600 }}>{customerName(o)}</div><div className="ad-muted ad-sm ad-ellipsis">{o.billing_email}</div></div>
-                <span className="ad-text2 ad-ellipsis">{(o.order_items ?? []).map((i) => i.name).join(", ") || "—"}</span>
-                <span className="ad-text2">{shortDate(o.created_at)}</span>
-                <span className="ad-text2 ad-sm">{o.provider === "square" ? "Square" : "PayPal"}</span>
-                <span><span className="sh-badge" style={{ background: st.bg, color: st.fg }}>{st.label}</span></span>
-                <span className="ad-right" style={{ fontWeight: 800 }}>{money(o.total_cents)}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <Toolbar>
+        <SearchInput label="Search orders" placeholder="Search order #, email or name…" value={query} onChange={setQuery} />
+        <FilterChips label="Order status" value={ctx.orderTab} onChange={ctx.setOrderTab}
+          options={Object.keys(ORDER_TABS).map((n) => ({ key: n, label: n, count: orders.filter(ORDER_TABS[n]).length }))} />
+      </Toolbar>
+      <DataTable label="Orders" columns={columns} rows={rows} rowKey={(o) => o.id} onRowClick={(o) => setOpenId(o.id)} selectedKey={openId}
+        loading={ctx.data.loading} minWidth={780} roomy
+        empty={orders.length ? "No orders in this view." : "No orders yet. Paid web orders appear here automatically."} />
       {open && <OrderDrawer key={open.id} ctx={ctx} o={open} onClose={() => setOpenId(null)} />}
     </>
   );
@@ -783,7 +764,6 @@ export function OrdersScreen({ ctx }: { ctx: Ctx }) {
 const CARRIERS = ["Canada Post", "UPS", "Purolator", "FedEx", "USPS", "Other"];
 
 function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => void }) {
-  useEscape(onClose);
   const [tracking, setTracking] = useState(o.tracking_number ?? "");
   const [carrier, setCarrier] = useState(o.carrier ?? "Canada Post");
   const [busy, setBusy] = useState<"" | "ship" | "refund" | "slip">("");
@@ -828,11 +808,16 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
   };
 
   return (
-    <>
-      <div className="sh-overlay" onClick={onClose} />
-      <aside className="sh-drawer" role="dialog" aria-modal="true" aria-label={`Order ${o.id}`}>
-        <div className="sh-drawer__head"><span>Order #{o.id}</span><button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close">×</button></div>
-        <div className="sh-drawer__body" style={{ gap: 16 }}>
+    <Drawer title={`Order #${o.id}`} onClose={onClose} footerSpread footer={<>
+          <button type="button" className="sh-btn sh-btn--danger" onClick={refund} disabled={!canRefund || !ctx.isOwner || busy !== ""}
+            title={!ctx.isOwner ? "Only the owner can issue refunds" : undefined}>
+            {busy === "refund" ? "Refunding…" : confirmRefund ? `Confirm refund ${money(o.total_cents)}` : "Refund"}
+          </button>
+          <div className="ad-row-gap">
+            <button type="button" className="sh-btn sh-btn--ghost" onClick={packingSlip} disabled={busy !== ""}>Packing slip</button>
+            <button type="button" className="sh-btn" onClick={ship} disabled={!canShip || busy !== ""}>{busy === "ship" ? "Saving…" : "Mark shipped"}</button>
+          </div>
+        </>}>
           <div className="ad-between">
             <span className="sh-badge" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
             <span className="ad-muted" style={{ fontSize: 13 }}>{shortDate(o.created_at)} · via {provider}</span>
@@ -873,19 +858,7 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
               </label>
             </div>
           )}
-        </div>
-        <div className="sh-drawer__foot" style={{ justifyContent: "space-between" }}>
-          <button type="button" className="sh-btn sh-btn--danger" onClick={refund} disabled={!canRefund || !ctx.isOwner || busy !== ""}
-            title={!ctx.isOwner ? "Only the owner can issue refunds" : undefined}>
-            {busy === "refund" ? "Refunding…" : confirmRefund ? `Confirm refund ${money(o.total_cents)}` : "Refund"}
-          </button>
-          <div className="ad-row-gap">
-            <button type="button" className="sh-btn sh-btn--ghost" onClick={packingSlip} disabled={busy !== ""}>Packing slip</button>
-            <button type="button" className="sh-btn" onClick={ship} disabled={!canShip || busy !== ""}>{busy === "ship" ? "Saving…" : "Mark shipped"}</button>
-          </div>
-        </div>
-      </aside>
-    </>
+    </Drawer>
   );
 }
 
