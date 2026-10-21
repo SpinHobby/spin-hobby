@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./tokens.scss";
+import "../components/styles/tokens.scss";
 import "./legal/legal.scss";
 import { completeOAuthRedirect, updatePassword } from "../lib/api";
 import { useTheme } from "./hooks";

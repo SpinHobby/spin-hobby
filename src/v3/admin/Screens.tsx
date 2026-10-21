@@ -15,7 +15,7 @@ import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 import { photo } from "../photo";
-import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Toolbar, type Column } from "../ui";
+import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Toolbar, type Column } from "../../components";
 import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
 import { EbayListing } from "./EbayListing";

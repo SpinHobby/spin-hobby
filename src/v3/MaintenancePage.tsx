@@ -1,4 +1,4 @@
-import "./tokens.scss";
+import "../components/styles/tokens.scss";
 import "./maintenance.scss";
 import { useTheme } from "./hooks";
 import { EBAY_URL, SHOW_EBAY_STORE } from "./links";

@@ -15,7 +15,7 @@ const Support = lazy(() => import("./v3/support/Support"));
 const Events = lazy(() => import("./v3/events/Events"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 // the shared building blocks shown live (local and staging only)
-const UiKit = lazy(() => import("./v3/ui/UiKitPage"));
+const UiKit = lazy(() => import("./components/showcase/ComponentsPage"));
 
 // A password-reset email can only point at one address (Supabase's Site URL unless the redirect is
 // allow-listed), so wherever its link lands, finish on the reset page before anything else runs.

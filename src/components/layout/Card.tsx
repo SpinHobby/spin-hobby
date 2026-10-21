@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import "./ui.scss";
+import "../styles/components.scss";
 
 /**
  * A white (or dark) box with rounded corners. With a `title` it gets a header row, with an optional `action` on its right ("See all",

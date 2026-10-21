@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
-import "../tokens.scss";
-import "./ui.scss";
+import "../styles/tokens.scss";
+import "../styles/components.scss";
 
 export interface PanelTab<K extends string = string> {
   key: K;

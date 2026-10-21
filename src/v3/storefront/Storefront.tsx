@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import "../tokens.scss";
+import "../../components/styles/tokens.scss";
 import "./storefront.scss";
 import { normalizeStatus, type Currency } from "../format";
 import { EVENTS } from "../events/data";

@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
-import "../tokens.scss";
+import "../../components/styles/tokens.scss";
 import "../storefront/storefront.scss"; // previews render real storefront components
 // the shared panel styles load before the admin's own, which refine a few of them
-import "../ui/ui.scss";
+import "../../components/styles/components.scss";
 import "./admin.scss";
-import { Banner, PanelLayout, PanelStatus } from "../ui";
+import { Banner, PanelLayout, PanelStatus } from "../../components";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
 import { initials, relativeAge } from "../format";

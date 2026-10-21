@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import "../tokens.scss";
+import "../../components/styles/tokens.scss";
 import "./support.scss";
 import { handlingLabel, money } from "../format";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE, SUPPORT_EMAIL } from "../links";

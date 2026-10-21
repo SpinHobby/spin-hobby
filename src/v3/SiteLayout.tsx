@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
-import "./tokens.scss";
+import "../components/styles/tokens.scss";
 import "./siteLayout.scss";
 import { useTheme } from "./hooks";
 import SiteFooter from "./SiteFooter";

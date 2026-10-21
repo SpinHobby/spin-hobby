@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import "../tokens.scss";
+import "../../components/styles/tokens.scss";
 import "./checkout.scss";
 import { api } from "../../lib/api";
 import { money } from "../format";
