@@ -164,6 +164,7 @@ export function AccountMenu({ email, user, onSignOut }: {
                 <div><b>{name}</b><span>{email}</span></div>
               </div>
               {isStaff && <a role="menuitem" href="/admin">Store admin ↗</a>}
+              <a role="menuitem" href="/account">Your Account</a>
               <button role="menuitem" type="button" onClick={() => { setOpen(false); onSignOut(); }}>Sign out</button>
             </>
           ) : (
