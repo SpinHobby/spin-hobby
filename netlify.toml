@@ -9,9 +9,11 @@
 [images]
   remote_images = ["https://items-images-[a-z]+\\.s3\\.[a-z0-9-]+\\.amazonaws\\.com/.*"]
 
+# Addresses with a page written at build time (scripts/generate-seo.mjs: the home page, sections, categories, series, products)
+# are served from it; everything else gets the plain app. index.html is the home page, so it can't be the fallback.
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/app.html"
   status = 200
 
 # Staging: the `staging` branch is deployed as its own Netlify site, https://spin-hobby-staging.netlify.app

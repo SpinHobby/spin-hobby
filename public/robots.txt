@@ -2,5 +2,8 @@
 User-agent: *
 Disallow: /admin
 Disallow: /checkout
+Disallow: /account
+Disallow: /reset-password
+Disallow: /ui-kit
 
 Sitemap: https://spinhobby.com/sitemap.xml

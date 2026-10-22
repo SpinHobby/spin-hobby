@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import type { CategoryTree } from "../categoryTree";
 import { dayLabel, discountPct, handlingLabel, money, monthLabel, normalizeStatus, STATUS_META, statusLabel, type Currency } from "../format";
@@ -12,27 +12,40 @@ import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions } from "./ProductViews";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
+import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
 
+// Keep in sync with productJsonLd() in scripts/generate-seo.mjs.
 function productJsonLd(p: Product) {
   const availability = normalizeStatus(p.status) === "out" ? "https://schema.org/OutOfStock"
     : normalizeStatus(p.status) === "pre" ? "https://schema.org/PreOrder"
     : "https://schema.org/InStock";
+  // a JAN code is a 13-digit EAN barcode: Google matches it to the same product elsewhere (GTIN)
+  const gtin = p.janCode && /^\d{13}$/.test(p.janCode) ? p.janCode : null;
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     name: p.name,
     image: p.images,
     ...(p.description ? { description: p.description } : {}),
-    ...(p.janCode ? { sku: p.janCode } : {}),
-    ...(p.series ? { brand: { "@type": "Brand", name: p.series } } : {}),
+    sku: p.id,
+    ...(gtin ? { gtin13: gtin } : {}),
+    ...(p.category ? { category: p.category } : {}),
     offers: {
       "@type": "Offer",
       priceCurrency: p.currency,
       price: (p.priceCents / 100).toFixed(2),
       availability,
+      itemCondition: "https://schema.org/NewCondition",
       url: `${SITE_URL}${productPath(p)}`,
+      seller: { "@type": "Organization", name: "Spin Hobby" },
     },
   };
+}
+
+/** "Buy Rem 1/7 Scale Figure (Re:Zero) at Spin Hobby…": the description Google shows when the product has none of its own. */
+function productDescription(p: Product) {
+  if (p.description) return p.description.replace(/\s+/g, " ").slice(0, 160);
+  return `Buy ${p.name}${p.series ? ` (${p.series})` : ""} at Spin Hobby: authentic, officially licensed anime merch, shipped across Canada & the US.`;
 }
 
 const RELATED = 8;
@@ -104,13 +117,15 @@ export function ProductPage({ id, initial, a, tree, cartQty, cartSubtotal, onAdd
     if (location.pathname !== path) navigate(path + location.search, { replace: true, state: location.state });
   }, [p, location.pathname, location.search, location.state, navigate]);
 
+  const crumbTrail = p?.categoryId && tree.byId.has(p.categoryId)
+    ? tree.path(p.categoryId).map((name, i, all) => ({ name, path: categoryPath(tree, ancestorId(tree, p.categoryId!, all.length - 1 - i)) }))
+    : [];
   useDocumentHead({
-    title: p ? `${p.name} | Spin Hobby` : "Spin Hobby",
-    description: (p?.description && p.description.slice(0, 160))
-      || (p ? `${p.name} — official anime figures, plushies and goods from Spin Hobby.` : "Official anime figures, plushies and goods, shipped across Canada and the US."),
+    title: p ? `${p.name} | Spin Hobby Canada` : "Spin Hobby",
+    description: p ? productDescription(p) : "Authentic anime figures, plushies and goods, shipped across Canada and the US.",
     path: p ? productPath(p) : location.pathname,
     image: p?.images[0] ?? null,
-    jsonLd: p ? productJsonLd(p) : null,
+    jsonLd: p ? [productJsonLd(p), breadcrumbJsonLd([...crumbTrail, { name: p.name, path: productPath(p) }])] : null,
   });
 
   if (missing && !p) {
@@ -133,7 +148,7 @@ export function ProductPage({ id, initial, a, tree, cartQty, cartSubtotal, onAdd
       <nav className="sf-crumbs" aria-label="Breadcrumb">
         <a href="/" onClick={(e) => { e.preventDefault(); onHome(); }}>Shop</a>
         {crumbs.map((c) => (
-          <span key={c.id}><span aria-hidden>›</span><a href="/" onClick={(e) => { e.preventDefault(); onCategory(c.id); }}>{c.name}</a></span>
+          <span key={c.id}><span aria-hidden>›</span><Link to={categoryPath(tree, c.id)}>{c.name}</Link></span>
         ))}
         <span><span aria-hidden>›</span><span aria-current="page">{p.name}</span></span>
       </nav>
@@ -310,7 +325,7 @@ function BuyBox({ p, a, inCartQty, cartSubtotal, onAddQty, onViewCart, onToast, 
   return (
     <div className="sf-pp__buy">
       <div className="sf-pp__eyebrow">
-        {p.series && <span>{p.series}</span>}
+        {p.series && <Link className="sf-link" to={seriesPath(p.series)}>{p.series}</Link>}
         {p.category && (onCategory
           ? <button type="button" className="sf-link" onClick={onCategory}>{p.category}</button>
           : <span>{p.category}</span>)}

@@ -50,6 +50,8 @@ export interface Filters {
   price: PriceName;
   sort: ShopSort;
   query: string;
+  /** A series by its address form ("re-zero"), from a /series/<slug> page. */
+  series: string | null;
 }
 
 export const ALL = "All categories";
@@ -69,6 +71,7 @@ function toQuery(f: Filters, wishlistIds: string[] | null) {
   if (price.min !== null) q.set("min", String(price.min));
   if (price.max !== null) q.set("max", String(price.max));
   if (f.query.trim()) q.set("q", f.query.trim());
+  if (f.series) q.set("series", f.series);
   if (wishlistIds) q.set("ids", wishlistIds.join(","));
   return q;
 }
@@ -150,8 +153,14 @@ export interface CartLine {
 
 // ---------------------------------------------------------------- product pages
 /** /product/<id>/<name-slug>. Only the id matters; the slug is for people reading the link. */
+/** Lower-case words joined by dashes, accents dropped, for addresses ("Re:Zero" → "re-zero", "Pokémon" → "pokemon"). Keep in sync with
+ * scripts/generate-seo.mjs and the API's slugify (src/modules/catalog/slug.ts), which matches /series/<slug> the same way. */
+export function slugify(text: string) {
+  return text.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+}
+
 export function productPath(p: Pick<Product, "id" | "name">) {
-  const slug = p.name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  const slug = slugify(p.name);
   return `/product/${encodeURIComponent(p.id)}${slug ? `/${slug}` : ""}`;
 }
 export function productIdFromPath(pathname: string): string | null {

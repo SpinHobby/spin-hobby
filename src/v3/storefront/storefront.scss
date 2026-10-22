@@ -123,8 +123,8 @@
 .sf-nav {
   display: flex; gap: 2px; font-size: 14px; font-weight: 600; overflow-x: auto; white-space: nowrap; scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
-  button {
-    border: 0; background: none; padding: 11px 14px; border-bottom: 3px solid transparent; color: var(--text2); border-radius: 0;
+  button, a {
+    border: 0; background: none; padding: 11px 14px; text-decoration: none; border-bottom: 3px solid transparent; color: var(--text2); border-radius: 0;
     &:hover { color: var(--text); }
     &.is-active { border-bottom-color: var(--gold); color: var(--text); }
   }
@@ -221,7 +221,8 @@
 }
 .sf-hero__copy { position: relative; padding: 28px 32px; max-width: 62%; }
 .sf-hero__eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-.sf-hero h1 { font-size: clamp(26px, 3.2vw, 38px); line-height: 1.08; margin: 0 0 8px; text-wrap: balance; color: #fff; }
+.sf-hero__text h2 { font-size: clamp(26px, 3.2vw, 38px); line-height: 1.08; margin: 0 0 8px; text-wrap: balance; color: #fff; }
+h1.sf-hero__eyebrow { margin: 0 0 10px; line-height: 1.3; font-family: inherit; }
 .sf-hero p { margin: 0 0 18px; color: #d6dae7; font-size: 15px; line-height: 1.45; }
 .sf-hero__dots {
   display: flex; align-items: center; gap: 8px;
@@ -727,3 +728,17 @@ $sf-ease: cubic-bezier(.2, .8, .2, 1);
   .sf-cart-btn__label { display: none; }
   .sf-trust { gap: 8px; li { padding: 10px; align-items: flex-start; } b { white-space: normal; font-size: 12.5px; } div { font-size: 11.5px; } }
 }
+
+// ------------------------------------------------------------ landing pages (/figures, /category/…, /series/…) and the home "about" block
+.sf-landing { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 6px; animation: sf-rise .35s $sf-ease;
+  h1 { font-size: clamp(26px, 3vw, 34px); margin: 2px 0 0; line-height: 1.1; }
+  p { margin: 0; max-width: 72ch; color: var(--text2); font-size: 14.5px; line-height: 1.55; }
+  .sf-crumbs { margin: 0; } }
+.sf-about { border-radius: 18px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px;
+  h2 { font-size: 20px; margin: 0; }
+  p { margin: 0; max-width: 80ch; color: var(--text2); font-size: 14px; line-height: 1.6; } }
+.sf-about__links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+  .sh-eyebrow { width: 100%; margin-top: 4px; }
+  a { padding: 6px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 700; text-decoration: none;
+    transition: border-color .15s, color .15s; &:hover { border-color: var(--primary); color: var(--text); } } }
+.sf-tree__name { text-decoration: none; }

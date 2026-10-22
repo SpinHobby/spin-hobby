@@ -21,6 +21,11 @@ import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
 import { addedMessage, shippingGap } from "./nudges";
+import {
+  SECTIONS, breadcrumbJsonLd, categoryBySlug, categoryCopy, categoryPath, homeCopy, landingFromPath, sectionCopy, sectionPath, seriesCopy,
+  seriesPath, titleFromSlug,
+} from "./landing";
+import { slugify } from "./data";
 
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
@@ -36,7 +41,7 @@ export default function Storefront() {
   const [currency, setCurrency] = useLocalState<Currency>("spinhobby-currency", "CAD");
   useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
 
-  const [filters, setFilters] = useState<Filters>({ nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", sort: "featured", query: "" });
+  const [filters, setFilters] = useState<Filters>({ nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", sort: "featured", query: "", series: null });
   const [draftQuery, setDraftQuery] = useState("");
   // How the shop lists products: cards, smaller cards (more per screen), or rows.
   const [view, setView] = useLocalState<"grid" | "compact" | "list">("spinhobby-view", "grid");
@@ -97,24 +102,62 @@ export default function Storefront() {
     if (!productId) return;
     navigate("/");
   };
-
-  useDocumentHead({
-    enabled: !productId,
-    title: "Spin Hobby | Official Anime Merchandise – Canada & US",
-    description: "Authentic, officially licensed anime figures, plushies, trading cards and goods, shipped across Canada and the US. Pre-orders, weekly new arrivals and restock alerts.",
-    path: "/",
-  });
+  /** Go to a shop address (a section, category or series page), remembering where we were for Back. */
+  const go = (path: string) => {
+    if (location.pathname === path) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    scrollMemory.set(location.key, window.scrollY);
+    navigate(path);
+  };
 
   const home = store.home;
+  // Category tree + counts come from the server (counts include subcategories).
+  const tree = useMemo(() => buildTree(home?.categories ?? []), [home?.categories]);
+
+  // The address decides which section, category or series the shop shows (each has its own page for search engines).
+  const landing = useMemo(() => (productId ? null : landingFromPath(location.pathname)), [productId, location.pathname]);
+  const landingCategory = landing?.kind === "category" ? categoryBySlug(tree, landing.slug) : null;
+  // a search typed on a landing page goes back to the main shop with it
+  const pendingQuery = useRef<string | null>(null);
+  useEffect(() => {
+    if (productId) return;
+    setWishOnly(false);
+    if (landing?.kind === "section") setFilters((f) => ({ ...f, nav: landing.nav, category: ALL, categoryId: null, query: "", series: null }));
+    else if (landing?.kind === "series") setFilters((f) => ({ ...f, nav: "Home", category: ALL, categoryId: null, query: "", series: landing.slug }));
+    else if (landing?.kind === "category") {
+      if (landingCategory) setFilters((f) => ({ ...f, nav: "Category", category: ALL, categoryId: landingCategory.id, query: "", series: null }));
+    } else {
+      const q = pendingQuery.current ?? "";
+      pendingQuery.current = null;
+      setDraftQuery(q);
+      setFilters((f) => ({ ...f, nav: "Home", category: f.categoryId ? ALL : f.category, categoryId: null, query: q, series: null }));
+    }
+  }, [productId, landing, landingCategory]);
+
+  const facets = store.facets;
+  const results = useProducts(filters, wishOnly ? wishlist.list : null);
+
+  const seriesName = landing?.kind === "series"
+    ? results.items.find((p) => p.series && slugify(p.series) === landing.slug)?.series ?? titleFromSlug(landing.slug)
+    : null;
+  const page = landing?.kind === "section" ? sectionCopy(landing.nav)
+    : landing?.kind === "category" ? (landingCategory ? categoryCopy(tree, landingCategory.id) : null)
+    : landing?.kind === "series" ? seriesCopy(seriesName!, landing.slug)
+    : null;
+  const intro = homeCopy();
+  useDocumentHead({
+    enabled: !productId,
+    title: page?.title ?? intro.title,
+    description: page?.description ?? intro.description,
+    path: page ? page.canonical ?? page.crumbs[page.crumbs.length - 1].path : "/",
+    jsonLd: page ? breadcrumbJsonLd(page.crumbs) : null,
+  });
+
   // Same split as the Events page. With nothing upcoming, show the latest events (newest first) so the strip isn't empty.
   const { stripEvents, stripIsPast } = useMemo(() => {
     const upcoming = EVENTS.filter((e) => !isPastEvent(e));
     if (upcoming.length) return { stripEvents: upcoming.slice(0, 8), stripIsPast: false };
     return { stripEvents: EVENTS.filter((e) => isPastEvent(e)).reverse().slice(0, 6), stripIsPast: true };
   }, []);
-  const facets = store.facets;
-  const results = useProducts(filters, wishOnly ? wishlist.list : null);
-
   // Arriving from another page at /#events: the section only exists once the data has loaded, so the
   // browser's own jump finds nothing. Scroll to it once, when the page has its final shape.
   const hashScrolled = useRef(false);
@@ -134,42 +177,41 @@ export default function Storefront() {
   }, []);
 
   const setNav = (nav: NavKey) => {
-    leaveProduct();
     setWishOnly(false);
-    setFilters((f) => ({ ...f, nav, category: ALL, categoryId: null }));
-    if (nav === "Home") window.scrollTo({ top: 0, behavior: "smooth" });
-    else scrollShop();
+    go(sectionPath(nav));
   };
   /** value: ALL, "id:<shop category id>", or a Square category name (flat fallback). */
   const setCategory = (value: string) => {
-    leaveProduct();
     setWishOnly(false);
-    const id = value.startsWith("id:") ? value.slice(3) : null;
-    setFilters((f) => ({ ...f, category: id ? ALL : value, categoryId: id, nav: value === ALL ? "Home" : "Category" }));
     setFiltersOpen(false);
+    const id = value.startsWith("id:") ? value.slice(3) : null;
+    if (id) { go(categoryPath(tree, id)); return; }
+    if (value === ALL) { go("/"); return; }
+    leaveProduct();
+    setFilters((f) => ({ ...f, category: value, categoryId: null, nav: "Category" }));
     scrollShop();
   };
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
-    leaveProduct();
-    setFilters((f) => ({ ...f, query: draftQuery }));
+    if (productId || landing) {
+      pendingQuery.current = draftQuery;
+      go("/");
+    } else setFilters((f) => ({ ...f, query: draftQuery }));
     if (draftQuery.trim()) scrollShop();
   };
   const clearFilters = () => {
-    leaveProduct();
     setWishOnly(false);
     setDraftQuery("");
-    setFilters((f) => ({ ...f, nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", query: "" }));
+    setFilters((f) => ({ ...f, nav: "Home", category: ALL, categoryId: null, avail: DEFAULT_AVAIL, price: "Any", query: "", series: null }));
+    if (location.pathname !== "/") go("/");
   };
 
-  // Category tree + counts come from the server (counts include subcategories).
-  const tree = useMemo(() => buildTree(home?.categories ?? []), [home?.categories]);
   const hasTree = tree.flat.length > 0;
   const categoryTotals = useMemo(() => new Map((facets?.shopCategories ?? []).map((c) => [c.id, c.total])), [facets]);
   const categories = useMemo(() => (facets?.categories ?? []).map((c) => [c.name, c.count] as [string, number]), [facets]);
   const availCounts: Record<string, number> = { "In stock": facets?.status.in ?? 0, "Pre-order": facets?.status.pre ?? 0, "Sold out": facets?.status.out ?? 0 };
 
-  const isHome = filters.nav === "Home" && filters.category === ALL && !filters.categoryId && !filters.query.trim() && !wishOnly;
+  const isHome = filters.nav === "Home" && filters.category === ALL && !filters.categoryId && !filters.query.trim() && !filters.series && !wishOnly;
   const hasFilters = filters.price !== "Any" || AVAIL.some((a) => filters.avail[a.name] !== DEFAULT_AVAIL[a.name]) || filters.category !== ALL || !!filters.categoryId;
 
   const preorders = home?.preorders ?? [];
@@ -192,6 +234,14 @@ export default function Storefront() {
     onWish: wishlist.toggle,
     onOpen: openProduct,
   };
+
+  const popularSeries = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const p of [...(home?.ranking ?? []), ...(home?.preorders ?? []), ...(home?.newInStock ?? []), ...(home?.featuredItems ?? [])]) {
+      if (p.series) seen.set(p.series, (seen.get(p.series) ?? 0) + 1);
+    }
+    return [...seen.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14).map(([name]) => name);
+  }, [home]);
 
   const shopTitle = wishOnly ? "Your wishlist" : filters.categoryId ? tree.path(filters.categoryId).join(" › ") : filters.category !== ALL ? filters.category
     : filters.query.trim() ? `Results for “${filters.query.trim()}”` : filters.nav === "Home" ? "All products" : filters.nav;
@@ -264,7 +314,8 @@ export default function Storefront() {
         </div>
         <nav className="sf-wrap sf-nav" aria-label="Shop sections">
           {NAV.map((n) => (
-            <button key={n} type="button" className={filters.nav === n && !wishOnly && !productId ? "is-active" : ""} aria-current={filters.nav === n && !productId ? "page" : undefined} onClick={() => setNav(n)}>{n}</button>
+            <a key={n} href={sectionPath(n)} className={filters.nav === n && !wishOnly && !productId && !filters.query && !filters.series ? "is-active" : ""} aria-current={filters.nav === n && !productId ? "page" : undefined}
+              onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); setNav(n); }}>{n}</a>
           ))}
         </nav>
       </header>
@@ -288,7 +339,7 @@ export default function Storefront() {
           </div>
           {hasTree ? (
             <CategoryNav tree={tree} totals={categoryTotals} allCount={facets?.total ?? 0} selectedId={filters.categoryId}
-              onSelect={(id) => setCategory(id ? `id:${id}` : ALL)} />
+              hrefFor={(id) => (id ? categoryPath(tree, id) : "/")} onSelect={(id) => setCategory(id ? `id:${id}` : ALL)} />
           ) : (
             <div className="sf-panel sf-cats">
               <div className="sh-eyebrow sf-cats__label">Categories</div>
@@ -334,7 +385,7 @@ export default function Storefront() {
 
           {isHome && home && (
             <>
-              <HeroRow slides={home.slides} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => setNav("Pre-Orders")} onSale={() => setNav("Sale")} />
+              <HeroRow heading={intro.h1} slides={home.slides} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => setNav("Pre-Orders")} onSale={() => setNav("Sale")} />
               <TrustStrip />
 
               {preorders.length > 0 && (
@@ -366,9 +417,27 @@ export default function Storefront() {
             </>
           )}
 
+          {page && !wishOnly && (
+            <header className="sf-landing">
+              <nav className="sf-crumbs" aria-label="Breadcrumb">
+                <a href="/" onClick={(e) => { e.preventDefault(); clearFilters(); }}>Shop</a>
+                {page.crumbs.map((c, i) => (
+                  <span key={c.path}><span aria-hidden>›</span>
+                    {i === page.crumbs.length - 1 ? <span aria-current="page">{c.name}</span> : <a href={c.path} onClick={(e) => { e.preventDefault(); go(c.path); }}>{c.name}</a>}
+                  </span>
+                ))}
+              </nav>
+              <h1 className="sh-display">{page.h1}</h1>
+              <p>{page.intro}</p>
+            </header>
+          )}
+
           <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
             <div className="sf-shop__head">
-              <h2 id="shop-title" className="sh-display">{shopTitle} <span className="sf-count">{results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}</span></h2>
+              <h2 id="shop-title" className="sh-display">
+                <span className={page && !wishOnly && !filters.query ? "sh-visually-hidden" : ""}>{page && !wishOnly ? `Shop ${page.h1.toLowerCase()}` : shopTitle}</span>{" "}
+                <span className="sf-count">{results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}</span>
+              </h2>
               <div className="sf-shop__tools">
                 <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>Filters{hasFilters ? " •" : ""}</button>
                 <label className="sf-muted sf-sort-label" htmlFor="sf-sort">Sort</label>
@@ -421,6 +490,23 @@ export default function Storefront() {
             )}
           </section>
 
+          {isHome && (
+            <section className="sf-panel sf-about" aria-labelledby="about-shop-title">
+              <h2 id="about-shop-title" className="sh-display">Your Canadian shop for authentic anime merch</h2>
+              <p>{intro.intro}</p>
+              <div className="sf-about__links">
+                <span className="sh-eyebrow">Shop by type</span>
+                {SECTIONS.map((sct) => <a key={sct.path} href={sct.path} onClick={(e) => { e.preventDefault(); setNav(sct.nav); }}>{sct.h1}</a>)}
+              </div>
+              {popularSeries.length > 0 && (
+                <div className="sf-about__links">
+                  <span className="sh-eyebrow">Popular series</span>
+                  {popularSeries.map((name) => <a key={name} href={seriesPath(name)} onClick={(e) => { e.preventDefault(); go(seriesPath(name)); }}>{name}</a>)}
+                </div>
+              )}
+            </section>
+          )}
+
           <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
             <div className="sf-events__head">
               <h2 id="events-title" className="sh-display">Meet us at the con</h2>
@@ -466,7 +552,8 @@ function TrustStrip() {
   );
 }
 
-export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
+export function HeroRow({ heading = homeCopy().h1, slides, closingSoon, maxOff, onPreorders, onSale }: {
+  heading?: string;
   slides: { id: string; headline: string; subheading: string | null; image_url: string | null; link_url: string | null }[];
   closingSoon: number; maxOff: number; onPreorders: () => void; onSale: () => void;
 }) {
@@ -499,9 +586,10 @@ export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
           </>
         )}
         <div className="sf-hero__copy" aria-live="polite">
-          <div className="sf-hero__eyebrow">Welcome to Spin Hobby</div>
+          {/* the page's one h1: what the shop is, for people and search engines; the slide headline changes */}
+          <h1 className="sf-hero__eyebrow">{heading}</h1>
           <div key={slide.id} className="sf-hero__text">
-            <h1 className="sh-display">{slide.headline}</h1>
+            <h2 className="sh-display">{slide.headline}</h2>
             {slide.subheading && <p>{slide.subheading}</p>}
           </div>
           {count > 1 && (
@@ -548,9 +636,7 @@ function Footer({ currency, onCurrency, onNav }: {
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Shop</span>
-          <a href="#shop" onClick={go("New Arrivals")}>New arrivals</a>
-          <a href="#shop" onClick={go("Pre-Orders")}>Pre-orders</a>
-          <a href="#shop" onClick={go("Sale")}>Sale</a>
+          {SECTIONS.map((sct) => <a key={sct.path} href={sct.path} onClick={go(sct.nav)}>{sct.h1}</a>)}
           {SHOW_EBAY_STORE && <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store</a>}
           <Link to="/events">Events</Link>
         </div>

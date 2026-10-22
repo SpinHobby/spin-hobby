@@ -1,0 +1,75 @@
+{
+  "_comment": "The shop's section pages (/figures, /plushies...): their address, heading, Google title and description, and the intro shoppers read. Used by the storefront (src/v3/storefront/landing.ts) and by the build (scripts/generate-seo.mjs). {freeShipping} becomes the store's free-shipping amount. Keep titles under ~60 characters and descriptions under ~155.",
+  "home": {
+    "h1": "Authentic anime merch, shipped across Canada",
+    "title": "Spin Hobby | Authentic Anime Merch & Figures in Canada",
+    "description": "Canada's shop for authentic, officially licensed anime figures, plushies, trading cards and goods. Pre-orders, weekly new arrivals, free shipping over {freeShipping}.",
+    "intro": "Spin Hobby is a Canadian shop for authentic, officially licensed anime merchandise: scale and prize figures, plushies, trading cards, acrylic stands, keychains and more. Every item is genuine, priced in Canadian dollars, packed with care for collectors and shipped with tracking across Canada and the US. Reserve upcoming releases with pre-orders, catch new arrivals every week, and meet us at anime conventions across the country."
+  },
+  "sections": [
+    {
+      "nav": "Figures",
+      "path": "/figures",
+      "h1": "Anime figures",
+      "title": "Anime Figures in Canada | Scale & Prize Figures | Spin Hobby",
+      "description": "Authentic anime figures shipped from a Canadian shop: scale figures, prize figures, chibi figures and model kits. Officially licensed, free shipping over {freeShipping}.",
+      "intro": "Officially licensed anime figures for every shelf and budget: detailed scale figures, prize figures, chibi figures and model kits from your favourite series. Every figure is authentic and new, priced in Canadian dollars and shipped with tracking across Canada and the US."
+    },
+    {
+      "nav": "Plushies",
+      "path": "/plushies",
+      "h1": "Anime plushies",
+      "title": "Anime Plushies in Canada | Official Plush | Spin Hobby",
+      "description": "Soft, official anime plushies from a Canadian shop: character plush, big plush and keychain plush. Authentic and licensed, free shipping over {freeShipping}.",
+      "intro": "Official anime plushies, from palm-sized mascots to big cuddly plush. Every plush is authentic and licensed, priced in Canadian dollars and shipped with tracking across Canada and the US."
+    },
+    {
+      "nav": "Trading Cards",
+      "path": "/trading-cards",
+      "h1": "Anime trading cards",
+      "title": "Anime Trading Cards in Canada | Booster Boxes & Packs | Spin Hobby",
+      "description": "Authentic anime trading card games from a Canadian shop: booster packs, booster boxes and starter decks. Sealed and genuine, free shipping over {freeShipping}.",
+      "intro": "Sealed, authentic anime trading card games: booster packs, booster boxes and starter decks. Priced in Canadian dollars and shipped with tracking across Canada and the US."
+    },
+    {
+      "nav": "Goods",
+      "path": "/goods",
+      "h1": "Anime goods",
+      "title": "Anime Goods in Canada | Acrylic Stands, Keychains & Badges | Spin Hobby",
+      "description": "Official anime goods from a Canadian shop: acrylic stands, keychains, badges, posters, apparel and blind boxes. Authentic, free shipping over {freeShipping}.",
+      "intro": "Everyday ways to show what you love: acrylic stands, keychains, can badges, posters, tapestries, apparel and blind boxes. All official and authentic, priced in Canadian dollars and shipped across Canada and the US."
+    },
+    {
+      "nav": "Books & Media",
+      "path": "/books-media",
+      "h1": "Anime books & media",
+      "title": "Anime Blu-rays, Soundtracks & Books in Canada | Spin Hobby",
+      "description": "Anime Blu-rays, DVDs, soundtracks, art books and manga from a Canadian shop. Authentic releases, free shipping over {freeShipping}.",
+      "intro": "Anime on your shelf and in your ears: Blu-rays and DVDs, soundtracks, art books and manga. Authentic releases, priced in Canadian dollars and shipped across Canada and the US."
+    },
+    {
+      "nav": "New Arrivals",
+      "path": "/new-arrivals",
+      "h1": "New arrivals",
+      "title": "New Anime Merch Arrivals | In Stock in Canada | Spin Hobby",
+      "description": "The newest anime figures, plushies and goods in stock at Spin Hobby, ready to ship across Canada and the US. New arrivals every week.",
+      "intro": "Fresh in and ready to ship: the latest anime figures, plushies and goods to land at Spin Hobby. New stock arrives every week, so check back often or join our Discord for restock alerts."
+    },
+    {
+      "nav": "Pre-Orders",
+      "path": "/pre-orders",
+      "h1": "Anime pre-orders",
+      "title": "Anime Figure Pre-Orders in Canada | Spin Hobby",
+      "description": "Pre-order upcoming anime figures and goods from a Canadian shop. Reserve before the order-by date; we ship as soon as they arrive.",
+      "intro": "Reserve upcoming anime figures and goods before they sell out. Order before each item's order-by date and we'll ship it as soon as it arrives from the maker. Release dates are set by manufacturers and can move; we'll keep you posted by email."
+    },
+    {
+      "nav": "Sale",
+      "path": "/sale",
+      "h1": "Anime merch on sale",
+      "title": "Anime Merch Sale | Discounted Figures & Goods in Canada | Spin Hobby",
+      "description": "Discounted anime figures, plushies and goods at Spin Hobby. Authentic and officially licensed, shipped across Canada and the US.",
+      "intro": "Authentic anime merch at reduced prices, while stock lasts. Every item is genuine and officially licensed, shipped with tracking across Canada and the US."
+    }
+  ]
+}
