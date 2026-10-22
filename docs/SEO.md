@@ -44,12 +44,14 @@ Do these once, in this order. Each needs the shop owner's Google account.
 
 ## Things to fix in the content
 
-- **Terms of Service, section 6** still has placeholders (`[14]` days and others in `src/v3/legal/content.ts`). Google
-  and Merchant Center expect a clear returns policy; finish it, then use the same rules in Merchant Center.
+- **Returns policy** (Terms of Service, section 6): 14 days to report a damaged, defective or wrong item; no returns for
+  a change of mind. Enter exactly this in Merchant Center.
+- **Product information.** On 2026-10-21 the live shop had 1,112 products, but only 2 with a real description, none with
+  a JAN code and none with a series. Series pages, barcodes and brands only appear once those are filled in.
 - **Product descriptions.** Products with their own description (a few sentences: what it is, size, maker, series,
   character) rank far better than the generic fallback. Gleamshelf can draft them.
-- **Maker (brand).** Google Shopping asks for a brand on most products. The public product data has no maker yet; adding
-  the manufacturer to `/products/feed` and to the feed's `<g:brand>` is a small follow-up.
+- **Maker (brand).** Google Shopping asks for a brand on most products. The maker entered in the admin goes to the feed
+  (`<g:brand>`) and each product page's structured data; fill it in for every product.
 
 ## When you change things
 

@@ -92,7 +92,7 @@ export default function Support() {
           </details>
           <details id="returns">
             <summary>My item arrived damaged or isn&apos;t what I ordered</summary>
-            <p>We&apos;re sorry about that! <a href={mailto("Problem with my order", TOPICS[3].body)}>Email us</a> with your order number and photos of the item and packaging, and we&apos;ll work out a replacement or refund. Our full returns terms are in section 6 of the <Link to="/legal/terms">Terms of Service</Link>.</p>
+            <p>We&apos;re sorry about that! <a href={mailto("Problem with my order", TOPICS[3].body)}>Email us</a> within 14 days of delivery with your order number and photos of the item and packaging, and we&apos;ll work out a replacement or refund. We don&apos;t take returns for a change of mind. Our full returns terms are in section 6 of the <Link to="/legal/terms">Terms of Service</Link>.</p>
           </details>
           <details id="payment">
             <summary>Is paying on the site safe?</summary>

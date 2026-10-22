@@ -115,6 +115,7 @@ function productJsonLd(p) {
     ...(p.description ? { description: p.description } : {}),
     sku: p.id,
     ...(gtin ? { gtin13: gtin } : {}),
+    ...(p.manufacturer ? { brand: { "@type": "Brand", name: p.manufacturer } } : {}),
     ...(p.category ? { category: p.category } : {}),
     offers: {
       "@type": "Offer",
@@ -160,6 +161,7 @@ function merchantFeed(products) {
       `<g:price>${((onSale ? p.compareAtCents : p.priceCents) / 100).toFixed(2)} CAD</g:price>`,
       onSale ? `<g:sale_price>${(p.priceCents / 100).toFixed(2)} CAD</g:sale_price>` : "",
       "<g:condition>new</g:condition>",
+      p.manufacturer ? `<g:brand>${x(p.manufacturer.slice(0, 70))}</g:brand>` : "",
       gtin ? `<g:gtin>${gtin}</g:gtin>` : "<g:identifier_exists>no</g:identifier_exists>",
       p.categoryPath || p.category ? `<g:product_type>${x((p.categoryPath || p.category).replace(/ › /g, " > "))}</g:product_type>` : "",
       p.series ? `<g:custom_label_0>${x(p.series.slice(0, 100))}</g:custom_label_0>` : "",

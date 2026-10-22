@@ -29,6 +29,7 @@ function productJsonLd(p: Product) {
     ...(p.description ? { description: p.description } : {}),
     sku: p.id,
     ...(gtin ? { gtin13: gtin } : {}),
+    ...(p.manufacturer ? { brand: { "@type": "Brand", name: p.manufacturer } } : {}),
     ...(p.category ? { category: p.category } : {}),
     offers: {
       "@type": "Offer",

@@ -4,9 +4,10 @@
 // advice. Have a lawyer licensed in Alberta review it before relying on it -
 // in particular the arbitration/dispute clause, since Canadian consumer-
 // protection law in several provinces limits how enforceable a mandatory
-// arbitration or class-action waiver is against a consumer. Update the
-// bracketed placeholders (legal entity name, return-window days, etc.) to
-// match your actual business details and practices.
+// arbitration or class-action waiver is against a consumer. Keep the details
+// below matching how the shop actually works. Returns: 14 days to report a defect,
+// no change-of-mind returns (set 2026-10-21); Google Merchant Center's return
+// policy must say the same.
 
 import { SUPPORT_EMAIL } from "../links";
 
@@ -17,7 +18,7 @@ export interface LegalSection {
 
 export const LEGAL_ENTITY = "Spin Hobby";
 export const LEGAL_JURISDICTION = "the Province of Alberta, Canada";
-export const LAST_UPDATED = "September 30, 2026";
+export const LAST_UPDATED = "October 21, 2026";
 
 export const TERMS_SECTIONS: LegalSection[] = [
   {
@@ -61,9 +62,9 @@ export const TERMS_SECTIONS: LegalSection[] = [
   {
     heading: "6. Returns, Refunds & Cancellations",
     body: [
-      "If an item arrives defective, damaged, or materially different from what was described, contact us within [14] days of delivery with photos and your order number, and we'll arrange a replacement, refund, or store credit at our discretion.",
+      "If an item arrives defective, damaged, or materially different from what was described, contact us within 14 days of delivery with photos and your order number, and we'll arrange a replacement, refund, or store credit at our discretion.",
       "Because pre-orders are placed with manufacturers/distributors in advance, pre-order cancellations after a payment or deposit has been processed may not be fully refundable once we've committed funds upstream - the applicable cancellation terms will be shown at checkout for that item.",
-      "Sealed collectibles, trading cards, and similar items are not eligible for change-of-mind returns once opened. This section does not limit any return/refund right you have under applicable consumer-protection law that cannot be waived by agreement.",
+      "We don't accept returns for a change of mind, whether or not the item has been opened: only items that arrive defective, damaged, or materially different from their description, as above. This section does not limit any return/refund right you have under applicable consumer-protection law that cannot be waived by agreement.",
     ],
   },
   {

@@ -59,14 +59,24 @@ export default function Admin() {
   const lowCount = data.dashboard?.lowStock ?? 0;
 
   if (!auth.ready) {
-    return <div className="sh ad-gate"><div className="ad-gate__card"><img src={LOGO} alt="Spin Hobby" /><div className="sh-skeleton" style={{ height: 14, width: "70%" }} /></div></div>;
+    return (
+      <div className="sh ad-gate">
+        <div className="ad-gate__card">
+          <img src={LOGO} alt="Spin Hobby" />
+          <div className="sh-skeleton" style={{ height: 14, width: "70%" }} />
+        </div>
+      </div>
+    );
   }
   if (!auth.session || !isStaff) {
     return <Gate signedInAs={auth.session ? auth.email : null} onSignOut={auth.signOut} />;
   }
 
   const syncNow = async () => {
-    if (!isOwner) { flash("Only the owner can run a full Square sync"); return; }
+    if (!isOwner) {
+      flash("Only the owner can run a full Square sync");
+      return;
+    }
     setSyncing(true);
     try {
       await api("/admin/square/sync", { method: "POST" });
@@ -91,25 +101,48 @@ export default function Admin() {
       active={screen}
       onSelect={(n) => go(n)}
       title={screen}
-      footer={<>
-        <PanelStatus color={connected ? "#3fbf92" : "#f06a6e"}>
-          {connected ? (lastSync ? `Square connected · synced ${syncAgo(lastSync)}` : "Square connected · not synced yet") : "Square not connected"}
-        </PanelStatus>
-        <PanelStatus color="var(--gold)">
-          Payments: {checkoutProvider === "test" ? "test payments (no money)" : data.settings.payment_provider === "square" ? "Square" : "PayPal"}
-        </PanelStatus>
-        <button type="button" className="ui-side__sync" onClick={syncNow} disabled={syncing}>{syncing ? "Syncing…" : "Sync with Square"}</button>
-      </>}
-      topActions={<>
-        <button type="button" className="ui-theme" onClick={toggle} aria-label="Toggle dark mode">{theme === "dark" ? "☀" : "☾"}</button>
-        <a href="/" target="_blank" rel="noreferrer" className="ui-top__store">View store ↗</a>
-        <div className="ui-user" title={auth.email ?? "Demo"}>
-          <span className="ui-avatar">{initials(auth.email)}</span>
-          <span className="ui-user__role">{auth.user?.role === "owner" ? "Owner" : "Staff"}</span>
-          <button type="button" className="ui-user__out" onClick={auth.signOut}>Sign out</button>
-        </div>
-      </>}
-      banner={data.errors.length > 0 && <Banner tone="error" action={{ label: "Retry", onClick: reload }}>Some data couldn't load: {data.errors.join(" · ")}</Banner>}
+      footer={
+        <>
+          <PanelStatus color={connected ? "#3fbf92" : "#f06a6e"}>
+            {connected
+              ? lastSync
+                ? `Square connected · synced ${syncAgo(lastSync)}`
+                : "Square connected · not synced yet"
+              : "Square not connected"}
+          </PanelStatus>
+          <PanelStatus color="var(--gold)">
+            Payments:{" "}
+            {checkoutProvider === "test" ? "test payments (no money)" : data.settings.payment_provider === "square" ? "Square" : "PayPal"}
+          </PanelStatus>
+          <button type="button" className="ui-side__sync" onClick={syncNow} disabled={syncing}>
+            {syncing ? "Syncing…" : "Sync with Square"}
+          </button>
+        </>
+      }
+      topActions={
+        <>
+          <button type="button" className="ui-theme" onClick={toggle} aria-label="Toggle dark mode">
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
+          <a href="/" target="_blank" rel="noreferrer" className="ui-top__store">
+            View store ↗
+          </a>
+          <div className="ui-user" title={auth.email ?? "Demo"}>
+            <span className="ui-avatar">{initials(auth.email)}</span>
+            <span className="ui-user__role">{auth.user?.role === "owner" ? "Owner" : "Staff"}</span>
+            <button type="button" className="ui-user__out" onClick={auth.signOut}>
+              Sign out
+            </button>
+          </div>
+        </>
+      }
+      banner={
+        data.errors.length > 0 && (
+          <Banner tone="error" action={{ label: "Retry", onClick: reload }}>
+            Some data couldn't load: {data.errors.join(" · ")}
+          </Banner>
+        )
+      }
       toast={toast}
     >
       {screen === "Dashboard" && <DashboardScreen ctx={ctx} />}
@@ -128,12 +161,20 @@ function Gate({ signedInAs, onSignOut }: { signedInAs: string | null; onSignOut:
   return (
     <div className="sh ad-gate">
       <div className="ad-gate__card">
-        <div className="ad-gate__brand"><img src={LOGO} alt="Spin Hobby" /><span className="ad-tag">ADMIN</span></div>
+        <div className="ad-gate__brand">
+          <img src={LOGO} alt="Spin Hobby" />
+          <span className="ad-tag">ADMIN</span>
+        </div>
         {signedInAs ? (
           <>
             <h1 className="sh-display">No admin access yet</h1>
-            <p>You're signed in as <b>{signedInAs}</b>, but this account isn't staff or owner. Ask the store owner to add your email to the admin list, then sign in again.</p>
-            <button type="button" className="sh-btn" onClick={onSignOut}>Sign out</button>
+            <p>
+              You're signed in as <b>{signedInAs}</b>, but this account isn't staff or owner. Ask the store owner to add your email to the
+              admin list, then sign in again.
+            </p>
+            <button type="button" className="sh-btn" onClick={onSignOut}>
+              Sign out
+            </button>
           </>
         ) : (
           <>
@@ -142,7 +183,9 @@ function Gate({ signedInAs, onSignOut }: { signedInAs: string | null; onSignOut:
             <SignInPanel returnPath="/admin" />
           </>
         )}
-        <a href="/" className="ad-gate__back">← Back to the store</a>
+        <a href="/" className="ad-gate__back">
+          ← Back to the store
+        </a>
       </div>
     </div>
   );
