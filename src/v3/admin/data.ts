@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import type { Dashboard, HeroSlide, Homepage, Order, Product, ProductPage, Readiness, ShopCategory, StoreEvent, StoreSettings } from "../types";
 
-export type Screen = "Dashboard" | "Products" | "Imports" | "Photos" | "Categories" | "Orders" | "Homepage" | "Settings";
-export const SCREENS: Screen[] = ["Dashboard", "Products", "Imports", "Photos", "Categories", "Orders", "Homepage", "Settings"];
+export type Screen = "Dashboard" | "Products" | "Imports" | "Photos" | "Descriptions" | "Categories" | "Orders" | "Homepage" | "Settings";
+export const SCREENS: Screen[] = ["Dashboard", "Products", "Imports", "Photos", "Descriptions", "Categories", "Orders", "Homepage", "Settings"];
 
 export const DEFAULT_SETTINGS: StoreSettings = {
   payment_provider: "paypal", shipping_standard_cents: 899, shipping_express_cents: 1999, free_shipping_threshold_cents: 7500,

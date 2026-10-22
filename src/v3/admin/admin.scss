@@ -486,3 +486,14 @@
 .ad-viewer__box { position: absolute; border: 2px solid var(--gold); box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55); pointer-events: none; }
 .ad-viewer__note { color: #fff; font-size: 13px; opacity: .85; }
 .ad-chips .ad-chip--todo:not(.is-active) { border-style: dashed; }
+
+// Descriptions: one proposal per card (the product's photo beside the editable proposal)
+.ad-describe { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 18px; align-items: start; }
+.ad-describe__photo { width: 140px; aspect-ratio: 1; border-radius: 12px; background: var(--surface2); overflow: hidden; display: grid; place-items: center;
+  img { width: 100%; height: 100%; object-fit: contain; display: block; } }
+.ad-describe__main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ad-describe__now { margin: 0; color: var(--text2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ad-describe__notes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; color: var(--text2); }
+.ad-describe__sources a { color: var(--blue); }
+.ad-describe__product { display: flex; align-items: center; gap: 10px; min-width: 0; }
+@media (max-width: 700px) { .ad-describe { grid-template-columns: 1fr; } .ad-describe__photo { width: 120px; } }
