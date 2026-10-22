@@ -9,7 +9,15 @@ export function Tag({ children, onRemove, removeLabel }: { children: ReactNode; 
   return (
     <span className="ui-tag-chip">
       {children}
-      {onRemove && <button type="button" onClick={onRemove} aria-label={removeLabel ?? `Remove ${typeof children === "string" ? children : ""}`.trim()}>×</button>}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={removeLabel ?? `Remove ${typeof children === "string" ? children : ""}`.trim()}
+        >
+          ×
+        </button>
+      )}
     </span>
   );
 }

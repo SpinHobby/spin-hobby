@@ -7,13 +7,29 @@ import type { Homepage, Product, ProductPage, ProductStatus, ShopCategory, SortK
 // All filtering, sorting, counting and paging happens on the server (GET /products, /products/facets).
 // This file only turns what the shopper clicked into query parameters.
 
-export const NAV = ["Home", "New Arrivals", "Pre-Orders", "Figures", "Plushies", "Trading Cards", "Goods", "Books & Media", "Sale"] as const;
+export const NAV = [
+  "Home",
+  "New Arrivals",
+  "Pre-Orders",
+  "Figures",
+  "Plushies",
+  "Trading Cards",
+  "Goods",
+  "Books & Media",
+  "Sale",
+] as const;
 export type NavKey = (typeof NAV)[number] | "Category";
 
 /** Storefront menu → server section (see GROUPS in the API's catalog service). */
 const NAV_GROUP: Partial<Record<NavKey, string>> = {
-  "New Arrivals": "new", "Pre-Orders": "preorders", Sale: "sale",
-  Figures: "figures", Plushies: "plushies", "Trading Cards": "cards", Goods: "goods", "Books & Media": "media",
+  "New Arrivals": "new",
+  "Pre-Orders": "preorders",
+  Sale: "sale",
+  Figures: "figures",
+  Plushies: "plushies",
+  "Trading Cards": "cards",
+  Goods: "goods",
+  "Books & Media": "media",
 };
 
 export const PRICES = [
@@ -83,7 +99,10 @@ export interface Facets {
   status: { in: number; pre: number; out: number };
 }
 
-export type HomeData = Omit<Homepage, "success"> & { promos?: { closingSoon: number; maxDiscountPct: number }; freeShippingThresholdCents?: number };
+export type HomeData = Omit<Homepage, "success"> & {
+  promos?: { closingSoon: number; maxDiscountPct: number };
+  freeShippingThresholdCents?: number;
+};
 
 /** Homepage sections + sidebar counts: loaded once per visit. */
 export function useStorefront() {
@@ -95,9 +114,18 @@ export function useStorefront() {
     let on = true;
     setError(null);
     Promise.all([api<HomeData>("/homepage"), api<Facets>("/products/facets")])
-      .then(([h, f]) => { if (on) { setHome(h); setFacets(f); } })
-      .catch((e: Error) => { if (on) setError(e.message); });
-    return () => { on = false; };
+      .then(([h, f]) => {
+        if (on) {
+          setHome(h);
+          setFacets(f);
+        }
+      })
+      .catch((e: Error) => {
+        if (on) setError(e.message);
+      });
+    return () => {
+      on = false;
+    };
   }, [nonce]);
   return { home, facets, error, reload: useCallback(() => setNonce((n) => n + 1), []) };
 }
@@ -105,9 +133,14 @@ export function useStorefront() {
 /** One page of products for the current filters, with "load more". Re-queries when filters change. */
 export function useProducts(filters: Filters, wishlistIds: string[] | null) {
   const query = useMemo(() => toQuery(filters, wishlistIds).toString(), [filters, wishlistIds]);
-  const [state, setState] = useState<{ items: Product[]; total: number; cursor?: string; loading: boolean; loadingMore: boolean; error: string | null }>(
-    { items: [], total: 0, loading: true, loadingMore: false, error: null },
-  );
+  const [state, setState] = useState<{
+    items: Product[];
+    total: number;
+    cursor?: string;
+    loading: boolean;
+    loadingMore: boolean;
+    error: string | null;
+  }>({ items: [], total: 0, loading: true, loadingMore: false, error: null });
   const latest = useRef(query);
   const [attempt, setAttempt] = useState(0);
 
@@ -117,8 +150,13 @@ export function useProducts(filters: Filters, wishlistIds: string[] | null) {
     // Small debounce so typing in search or toggling filters doesn't fire a request per keystroke.
     const timer = window.setTimeout(() => {
       api<ProductPage>(`/products?${query}`)
-        .then((page) => { if (latest.current === query) setState({ items: page.items, total: page.total, cursor: page.cursor, loading: false, loadingMore: false, error: null }); })
-        .catch((e: Error) => { if (latest.current === query) setState((s) => ({ ...s, loading: false, error: e.message })); });
+        .then((page) => {
+          if (latest.current === query)
+            setState({ items: page.items, total: page.total, cursor: page.cursor, loading: false, loadingMore: false, error: null });
+        })
+        .catch((e: Error) => {
+          if (latest.current === query) setState((s) => ({ ...s, loading: false, error: e.message }));
+        });
     }, 150);
     return () => window.clearTimeout(timer);
   }, [query, attempt]);
@@ -129,7 +167,10 @@ export function useProducts(filters: Filters, wishlistIds: string[] | null) {
     q.set("cursor", state.cursor);
     setState((s) => ({ ...s, loadingMore: true }));
     api<ProductPage>(`/products?${q}`)
-      .then((page) => { if (latest.current === query) setState((s) => ({ ...s, items: [...s.items, ...page.items], cursor: page.cursor, loadingMore: false })); })
+      .then((page) => {
+        if (latest.current === query)
+          setState((s) => ({ ...s, items: [...s.items, ...page.items], cursor: page.cursor, loadingMore: false }));
+      })
       .catch((e: Error) => setState((s) => ({ ...s, loadingMore: false, error: e.message })));
   }, [query, state.cursor, state.loadingMore]);
 
@@ -156,7 +197,13 @@ export interface CartLine {
 /** Lower-case words joined by dashes, accents dropped, for addresses ("Re:Zero" → "re-zero", "Pokémon" → "pokemon"). Keep in sync with
  * scripts/generate-seo.mjs and the API's slugify (src/modules/catalog/slug.ts), which matches /series/<slug> the same way. */
 export function slugify(text: string) {
-  return text.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  return text
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
 }
 
 export function productPath(p: Pick<Product, "id" | "name">) {
@@ -176,24 +223,42 @@ export function purchaseCap(p: Product) {
 
 export function useCart() {
   const [lines, setLines] = useLocalState<CartLine[]>("spinhobby-cart-v3", []);
-  const add = useCallback((p: Product, qty = 1) => {
-    setLines((current) => {
-      const existing = current.find((l) => l.variationId === p.variationId);
-      const cap = purchaseCap(p);
-      if (existing) {
-        return current.map((l) => (l.variationId === p.variationId ? { ...l, quantity: Math.min(l.quantity + qty, cap) } : l));
-      }
-      return [...current, {
-        variationId: p.variationId, itemId: p.id, name: p.name, imageUrl: p.images[0] ?? null, imageCutout: !!p.images[0] && !!p.cutouts?.includes(p.images[0]),
-        unitPriceCents: p.priceCents, quantity: Math.min(qty, cap), isPreorder: p.status === "pre", maxPerCustomer: p.maxPerCustomer,
-      }];
-    });
-  }, [setLines]);
-  const setQty = useCallback((variationId: string, quantity: number) => {
-    setLines((current) => (quantity <= 0
-      ? current.filter((l) => l.variationId !== variationId)
-      : current.map((l) => (l.variationId === variationId ? { ...l, quantity: Math.min(quantity, l.maxPerCustomer ?? 99) } : l))));
-  }, [setLines]);
+  const add = useCallback(
+    (p: Product, qty = 1) => {
+      setLines((current) => {
+        const existing = current.find((l) => l.variationId === p.variationId);
+        const cap = purchaseCap(p);
+        if (existing) {
+          return current.map((l) => (l.variationId === p.variationId ? { ...l, quantity: Math.min(l.quantity + qty, cap) } : l));
+        }
+        return [
+          ...current,
+          {
+            variationId: p.variationId,
+            itemId: p.id,
+            name: p.name,
+            imageUrl: p.images[0] ?? null,
+            imageCutout: !!p.images[0] && !!p.cutouts?.includes(p.images[0]),
+            unitPriceCents: p.priceCents,
+            quantity: Math.min(qty, cap),
+            isPreorder: p.status === "pre",
+            maxPerCustomer: p.maxPerCustomer,
+          },
+        ];
+      });
+    },
+    [setLines],
+  );
+  const setQty = useCallback(
+    (variationId: string, quantity: number) => {
+      setLines((current) =>
+        quantity <= 0
+          ? current.filter((l) => l.variationId !== variationId)
+          : current.map((l) => (l.variationId === variationId ? { ...l, quantity: Math.min(quantity, l.maxPerCustomer ?? 99) } : l)),
+      );
+    },
+    [setLines],
+  );
   const count = useMemo(() => lines.reduce((s, l) => s + l.quantity, 0), [lines]);
   const subtotal = useMemo(() => lines.reduce((s, l) => s + l.quantity * l.unitPriceCents, 0), [lines]);
   const has = useCallback((variationId: string) => lines.some((l) => l.variationId === variationId), [lines]);
@@ -210,18 +275,23 @@ export function useWishlist(signedIn: boolean, onError: (message: string) => voi
     if (!signedIn) return;
     api<{ items: Product[] }>("/wishlist")
       .then((res) => setIds((local) => Array.from(new Set([...res.items.map((p) => p.id), ...local]))))
-      .catch(() => { /* keep the local list */ });
+      .catch(() => {
+        /* keep the local list */
+      });
   }, [signedIn, setIds]);
 
-  const toggle = useCallback((p: Product) => {
-    const on = ids.includes(p.id);
-    setIds((current) => (on ? current.filter((id) => id !== p.id) : [...current, p.id]));
-    if (!signedIn) return;
-    const request = on
-      ? api(`/wishlist/${encodeURIComponent(p.id)}`, { method: "DELETE" })
-      : api("/wishlist", { method: "POST", body: JSON.stringify({ squareItemId: p.id }) });
-    request.catch((e: Error) => onError(e.message));
-  }, [ids, setIds, signedIn, onError]);
+  const toggle = useCallback(
+    (p: Product) => {
+      const on = ids.includes(p.id);
+      setIds((current) => (on ? current.filter((id) => id !== p.id) : [...current, p.id]));
+      if (!signedIn) return;
+      const request = on
+        ? api(`/wishlist/${encodeURIComponent(p.id)}`, { method: "DELETE" })
+        : api("/wishlist", { method: "POST", body: JSON.stringify({ squareItemId: p.id }) });
+      request.catch((e: Error) => onError(e.message));
+    },
+    [ids, setIds, signedIn, onError],
+  );
 
   const set = useMemo(() => new Set(ids), [ids]);
   return { ids: set, list: ids, count: ids.length, toggle };

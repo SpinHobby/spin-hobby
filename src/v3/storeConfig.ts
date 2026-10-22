@@ -45,7 +45,13 @@ export function loadStoreConfig() {
 /** Re-renders once settings arrive so money/status copy pick them up. */
 export function useStoreConfig() {
   const [config, setConfig] = useState<StoreConfig | null>(null);
-  useEffect(() => { let on = true; loadStoreConfig().then((c) => on && setConfig(c)); return () => { on = false; }; }, []);
+  useEffect(() => {
+    let on = true;
+    loadStoreConfig().then((c) => on && setConfig(c));
+    return () => {
+      on = false;
+    };
+  }, []);
   return config;
 }
 

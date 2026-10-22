@@ -32,9 +32,7 @@ export function resized(url: string, width: number): string {
 export function photo(url: string, width: number, cutout = false) {
   return {
     src: resized(url, width),
-    ...(cutout
-      ? { style: { background: `${shopBackground ? `url("${shopBackground}") center / cover no-repeat, ` : ""}#fff` } }
-      : {}),
+    ...(cutout ? { style: { background: `${shopBackground ? `url("${shopBackground}") center / cover no-repeat, ` : ""}#fff` } } : {}),
     onError: (e: SyntheticEvent<HTMLImageElement>) => {
       if (e.currentTarget.getAttribute("src") !== url) e.currentTarget.src = url;
     },

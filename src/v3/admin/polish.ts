@@ -3,9 +3,24 @@ import { apiFile } from "../../lib/api";
 /** About what each AI step costs (what the server reports afterwards is the real figure). */
 export const COST_CENTS = { stickers: 1.4, text: 1.9, both: 2.1 } as const;
 
-export interface PolishUsage { inputTokens: number; outputTokens: number; costUsd: number; monthSpendUsd: number; monthStopUsd: number }
-export interface PolishReport { backgroundRemoved: boolean; stickersFilled: number; usage?: PolishUsage }
-export interface StickerBox { x: number; y: number; width: number; height: number }
+export interface PolishUsage {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  monthSpendUsd: number;
+  monthStopUsd: number;
+}
+export interface PolishReport {
+  backgroundRemoved: boolean;
+  stickersFilled: number;
+  usage?: PolishUsage;
+}
+export interface StickerBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 /**
  * Tidies a photo on the server: shop price stickers painted over and/or a green backdrop removed (a transparent
@@ -20,7 +35,11 @@ export async function polishPhoto(photo: Blob, options: { removeBackground: bool
   if (options.stickers) form.append("stickers", JSON.stringify(options.stickers));
   const { blob, headers } = await apiFile("/cashier/polish", { method: "POST", body: form });
   let report: PolishReport = { backgroundRemoved: false, stickersFilled: 0 };
-  try { report = JSON.parse(headers.get("x-polish") ?? "{}") as PolishReport; } catch { /* no report */ }
+  try {
+    report = JSON.parse(headers.get("x-polish") ?? "{}") as PolishReport;
+  } catch {
+    /* no report */
+  }
   return { blob, report };
 }
 

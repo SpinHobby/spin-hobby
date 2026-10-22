@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 
-export interface SeriesOption { id: string; name: string; aliases: string[]; productCount: number }
+export interface SeriesOption {
+  id: string;
+  name: string;
+  aliases: string[];
+  productCount: number;
+}
 
 /** "Re:Zero", "re zero" and "ReZero" are the same series. */
 export const seriesKey = (name: string) => name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
@@ -30,19 +35,38 @@ const distance = (a: string, b: string) => {
 export function similarSeries(name: string, list: SeriesOption[], max = 3): SeriesOption[] {
   const k = seriesKey(name);
   if (k.length < 3 || findSeries(name, list)) return [];
-  const score = (s: SeriesOption) => Math.max(...[s.name, ...s.aliases].map(seriesKey).filter((x) => x.length >= 3).map((x) => {
-    if (x.length >= 4 && k.length >= 4 && (x.includes(k) || k.includes(x))) return 0.9;
-    return 1 - distance(k, x) / Math.max(k.length, x.length);
-  }), 0);
-  return list.map((s) => ({ s, v: score(s) })).filter((x) => x.v >= 0.7).sort((a, b) => b.v - a.v).slice(0, max).map((x) => x.s);
+  const score = (s: SeriesOption) =>
+    Math.max(
+      ...[s.name, ...s.aliases]
+        .map(seriesKey)
+        .filter((x) => x.length >= 3)
+        .map((x) => {
+          if (x.length >= 4 && k.length >= 4 && (x.includes(k) || k.includes(x))) return 0.9;
+          return 1 - distance(k, x) / Math.max(k.length, x.length);
+        }),
+      0,
+    );
+  return list
+    .map((s) => ({ s, v: score(s) }))
+    .filter((x) => x.v >= 0.7)
+    .sort((a, b) => b.v - a.v)
+    .slice(0, max)
+    .map((x) => x.s);
 }
 
 /** The list of series for dropdowns and filters. `reload` re-reads it (after a new one may have been added). */
 export function useSeriesList(refreshOn?: unknown) {
   const [list, setList] = useState<SeriesOption[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const reload = () => api<{ series: SeriesOption[] }>("/admin/series").then((r) => { setList(r.series); setLoaded(true); }).catch(() => setLoaded(true));
-  useEffect(() => { void reload(); }, [refreshOn]);
+  const reload = () =>
+    api<{ series: SeriesOption[] }>("/admin/series")
+      .then((r) => {
+        setList(r.series);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  useEffect(() => {
+    void reload();
+  }, [refreshOn]);
   return { list, loaded, reload };
 }
-

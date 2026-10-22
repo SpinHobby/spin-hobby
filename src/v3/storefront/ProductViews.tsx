@@ -16,22 +16,56 @@ export interface CardActions {
 }
 
 /** A real link to the product page (so new-tab and copy-link work); plain clicks stay in the app. */
-export function ProductLink({ p, a, className = "", label, children }: { p: Product; a: CardActions; className?: string; label?: string; children: ReactNode }) {
+export function ProductLink({
+  p,
+  a,
+  className = "",
+  label,
+  children,
+}: {
+  p: Product;
+  a: CardActions;
+  className?: string;
+  label?: string;
+  children: ReactNode;
+}) {
   const open = (e: MouseEvent) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     a.onOpen(p);
   };
-  return <a href={productPath(p)} className={`sf-open ${className}`} onClick={open} aria-label={label}>{children}</a>;
+  return (
+    <a href={productPath(p)} className={`sf-open ${className}`} onClick={open} aria-label={label}>
+      {children}
+    </a>
+  );
 }
 
 /** The product's first photo. With `hover`, a second photo (if there is one) fades in when a mouse rests on it. */
-export function ProductImage({ p, className = "", label = true, hover = false }: { p: Product; className?: string; label?: boolean; hover?: boolean }) {
+export function ProductImage({
+  p,
+  className = "",
+  label = true,
+  hover = false,
+}: {
+  p: Product;
+  className?: string;
+  label?: boolean;
+  hover?: boolean;
+}) {
   const src = p.images[0];
   const alt = hover ? p.images[1] : undefined;
   return (
     <div className={`sf-img ${src ? "" : "sh-ph"} ${alt ? "has-alt" : ""} ${className}`}>
-      {src ? <img {...photo(src, 480, isCutout(p, src))} alt={p.name} loading="lazy" /> : label && <span className="sf-img__ph" aria-hidden>[ product image ]</span>}
+      {src ? (
+        <img {...photo(src, 480, isCutout(p, src))} alt={p.name} loading="lazy" />
+      ) : (
+        label && (
+          <span className="sf-img__ph" aria-hidden>
+            [ product image ]
+          </span>
+        )
+      )}
       {alt && <img className="sf-img__alt" {...photo(alt, 480, isCutout(p, alt))} alt="" loading="lazy" aria-hidden />}
     </div>
   );
@@ -70,26 +104,43 @@ export function ProductCard({ p, a }: { p: Product; a: CardActions }) {
   return (
     <article className={`sf-card ${s === "out" ? "is-dim" : ""}`}>
       <div className="sf-card__media">
-        <ProductLink p={p} a={a} className="sf-card__open" label={p.name}><ProductImage p={p} hover /></ProductLink>
-        <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>{meta.badge}</span>
+        <ProductLink p={p} a={a} className="sf-card__open" label={p.name}>
+          <ProductImage p={p} hover />
+        </ProductLink>
+        <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
+          {meta.badge}
+        </span>
         {off > 0 && <span className="sf-card__off">-{off}%</span>}
         <Highlight p={p} />
-        <button type="button" className={`sf-card__wish ${wished ? "is-on" : ""}`} onClick={() => a.onWish(p)}
-          aria-pressed={wished} aria-label={wished ? `Remove ${p.name} from wishlist` : `Add ${p.name} to wishlist`}>
+        <button
+          type="button"
+          className={`sf-card__wish ${wished ? "is-on" : ""}`}
+          onClick={() => a.onWish(p)}
+          aria-pressed={wished}
+          aria-label={wished ? `Remove ${p.name} from wishlist` : `Add ${p.name} to wishlist`}
+        >
           {wished ? "♥" : "♡"}
         </button>
       </div>
       <div className="sf-card__body">
         <span className="sf-card__series">{p.series ?? p.category ?? "Spin Hobby"}</span>
-        <h3 className="sf-card__name" title={p.name}><ProductLink p={p} a={a}>{p.name}</ProductLink></h3>
+        <h3 className="sf-card__name" title={p.name}>
+          <ProductLink p={p} a={a}>
+            {p.name}
+          </ProductLink>
+        </h3>
         <div className="sf-card__price">
           <strong>{money(p.priceCents, a.currency)}</strong>
           {off > 0 && <s>{money(p.compareAtCents, a.currency)}</s>}
         </div>
-        <span className="sf-card__status" style={{ color: meta.color }}>{statusLabel(p)}</span>
+        <span className="sf-card__status" style={{ color: meta.color }}>
+          {statusLabel(p)}
+        </span>
       </div>
       <div className="sf-card__foot">
-        <button type="button" className={`sf-buy ${btn.cls}`} onClick={btn.onClick}>{btn.label}</button>
+        <button type="button" className={`sf-buy ${btn.cls}`} onClick={btn.onClick}>
+          {btn.label}
+        </button>
       </div>
     </article>
   );
@@ -102,19 +153,36 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
   const btn = buttonState(p, a);
   return (
     <div className={`sf-row ${s === "out" ? "is-dim" : ""}`}>
-      <ProductLink p={p} a={a} label={p.name}><Thumb p={p} size={72} /></ProductLink>
+      <ProductLink p={p} a={a} label={p.name}>
+        <Thumb p={p} size={72} />
+      </ProductLink>
       <div className="sf-row__main">
         <div className="sf-row__meta">{[p.series, p.category].filter(Boolean).join(" · ")}</div>
-        <div className="sf-row__name"><ProductLink p={p} a={a}>{p.name}</ProductLink></div>
-        <div className="sf-row__status" style={{ color: meta.color }}>{meta.badge} · {statusLabel(p)}</div>
+        <div className="sf-row__name">
+          <ProductLink p={p} a={a}>
+            {p.name}
+          </ProductLink>
+        </div>
+        <div className="sf-row__status" style={{ color: meta.color }}>
+          {meta.badge} · {statusLabel(p)}
+        </div>
       </div>
       <div className="sf-row__price">
         <strong>{money(p.priceCents, a.currency)}</strong>
         {off > 0 && <s>{money(p.compareAtCents, a.currency)}</s>}
       </div>
-      <button type="button" className={`sf-buy sf-buy--inline ${btn.cls}`} onClick={btn.onClick}>{btn.label}</button>
-      <button type="button" className={`sf-row__wish ${a.wished(p) ? "is-on" : ""}`} onClick={() => a.onWish(p)}
-        aria-pressed={a.wished(p)} aria-label="Toggle wishlist">{a.wished(p) ? "♥" : "♡"}</button>
+      <button type="button" className={`sf-buy sf-buy--inline ${btn.cls}`} onClick={btn.onClick}>
+        {btn.label}
+      </button>
+      <button
+        type="button"
+        className={`sf-row__wish ${a.wished(p) ? "is-on" : ""}`}
+        onClick={() => a.onWish(p)}
+        aria-pressed={a.wished(p)}
+        aria-label="Toggle wishlist"
+      >
+        {a.wished(p) ? "♥" : "♡"}
+      </button>
     </div>
   );
 }
@@ -124,11 +192,15 @@ export function PreorderCard({ p, a }: { p: Product; a: CardActions }) {
     <article className="sf-pre">
       <ProductLink p={p} a={a} className="sf-pre__media" label={p.name}>
         <ProductImage p={p} hover />
-        <span className="sh-badge sf-card__badge" style={{ background: "var(--blue)" }}>PRE-ORDER</span>
+        <span className="sh-badge sf-card__badge" style={{ background: "var(--blue)" }}>
+          PRE-ORDER
+        </span>
         <Highlight p={p} />
       </ProductLink>
       <div className="sf-pre__body">
-        <ProductLink p={p} a={a} className="sf-pre__name">{p.name}</ProductLink>
+        <ProductLink p={p} a={a} className="sf-pre__name">
+          {p.name}
+        </ProductLink>
         <strong>{money(p.priceCents, a.currency)}</strong>
         {discountPct(p) > 0 && <s className="sf-muted">{money(p.compareAtCents, a.currency)}</s>}
         <span className="sf-muted">Release {monthLabel(p.releaseMonth)}</span>
@@ -144,14 +216,29 @@ export function MiniRow({ p, a, rank, quickAdd }: { p: Product; a: CardActions; 
   const added = a.inCart(p);
   return (
     <div className="sf-mini">
-      {rank !== undefined && <span className="sf-mini__rank" style={{ color: rankColor }}>{rank}</span>}
-      <ProductLink p={p} a={a} label={p.name}><Thumb p={p} size={48} /></ProductLink>
+      {rank !== undefined && (
+        <span className="sf-mini__rank" style={{ color: rankColor }}>
+          {rank}
+        </span>
+      )}
+      <ProductLink p={p} a={a} label={p.name}>
+        <Thumb p={p} size={48} />
+      </ProductLink>
       <div className="sf-mini__main">
-        <ProductLink p={p} a={a} className="sf-mini__name">{p.name}</ProductLink>
-        <div className="sf-mini__status" style={{ color: STATUS_META[s].color }}>{statusShort(p)}</div>
+        <ProductLink p={p} a={a} className="sf-mini__name">
+          {p.name}
+        </ProductLink>
+        <div className="sf-mini__status" style={{ color: STATUS_META[s].color }}>
+          {statusShort(p)}
+        </div>
       </div>
       {quickAdd && s !== "out" ? (
-        <button type="button" className={`sf-mini__add ${added ? "is-added" : ""}`} onClick={() => a.onAdd(p)} aria-label={`Add ${p.name} to cart`}>
+        <button
+          type="button"
+          className={`sf-mini__add ${added ? "is-added" : ""}`}
+          onClick={() => a.onAdd(p)}
+          aria-label={`Add ${p.name} to cart`}
+        >
           {added ? "Added ✓" : `${money(p.priceCents, a.currency)} +`}
         </button>
       ) : (

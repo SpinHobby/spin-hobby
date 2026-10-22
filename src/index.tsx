@@ -11,14 +11,12 @@ if (IS_STAGING) markStaging();
 // start a sleeping server waking as soon as the site opens, so the banner shows before the first click
 wakeServer(API_URL);
 
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-);
+const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 root.render(
   <>
     <App />
     <ServerStatus />
     {IS_STAGING && <StagingBadge />}
-  </>
+  </>,
 );

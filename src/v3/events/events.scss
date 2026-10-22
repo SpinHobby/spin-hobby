@@ -19,7 +19,9 @@
   font-weight: 600;
   margin-bottom: 20px;
 
-  &:hover { color: var(--blue); }
+  &:hover {
+    color: var(--blue);
+  }
 }
 
 .ev-lead {
@@ -42,7 +44,10 @@
   line-height: 1.6;
   margin: 12px 0 0;
 
-  a { color: var(--blue); font-weight: 600; }
+  a {
+    color: var(--blue);
+    font-weight: 600;
+  }
 }
 
 .ev-list {
@@ -70,7 +75,9 @@
     color: var(--text);
   }
 
-  &.is-past { opacity: 0.7; }
+  &.is-past {
+    opacity: 0.7;
+  }
 }
 
 .ev-date {
@@ -93,5 +100,7 @@
   font-weight: 700;
   color: var(--blue);
 
-  &:hover { text-decoration: underline; }
+  &:hover {
+    text-decoration: underline;
+  }
 }

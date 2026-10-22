@@ -1,11 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-CA">
   <head>
     <meta charset="utf-8" />
-    <link
-      rel="icon"
-      href="/assets/transparent%20mascot%20chibi%20rotated.png"
-    />
+    <link rel="icon" href="/assets/transparent%20mascot%20chibi%20rotated.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1D2A53" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#121319" media="(prefers-color-scheme: dark)" />
@@ -13,11 +10,7 @@
       (function () {
         var stored = localStorage.getItem("spinhobby-theme");
         var theme =
-          stored === "light" || stored === "dark"
-            ? stored
-            : window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
+          stored === "light" || stored === "dark" ? stored : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         document.documentElement.setAttribute("data-theme", theme);
       })();
     </script>
@@ -37,9 +30,17 @@
         "description": "Canadian shop for authentic, officially licensed anime figures, plushies, trading cards and goods.",
         "email": "info@spinhobby.com",
         "foundingDate": "2022",
-        "areaServed": [{ "@type": "Country", "name": "Canada" }, { "@type": "Country", "name": "United States" }],
+        "areaServed": [
+          { "@type": "Country", "name": "Canada" },
+          { "@type": "Country", "name": "United States" }
+        ],
         "currenciesAccepted": "CAD",
-        "contactPoint": { "@type": "ContactPoint", "contactType": "customer support", "email": "info@spinhobby.com", "availableLanguage": "English" },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer support",
+          "email": "info@spinhobby.com",
+          "availableLanguage": "English"
+        },
         "sameAs": ["https://www.instagram.com/spinhobby", "https://www.ebay.ca/usr/spin-hobby", "https://discord.gg/7wGWc7AGcd"]
       }
     </script>
@@ -50,10 +51,7 @@
       href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link
-      rel="apple-touch-icon"
-      href="/assets/transparent%20mascot%20chibi%20rotated.png"
-    />
+    <link rel="apple-touch-icon" href="/assets/transparent%20mascot%20chibi%20rotated.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/

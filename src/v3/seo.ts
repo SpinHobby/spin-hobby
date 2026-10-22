@@ -70,6 +70,8 @@ export function useDocumentHead({ title, description, path, image, noindex, json
       script?.remove();
     }
 
-    return () => { document.title = prevTitle; };
+    return () => {
+      document.title = prevTitle;
+    };
   }, [enabled, title, description, path, image, noindex, jsonLd]);
 }

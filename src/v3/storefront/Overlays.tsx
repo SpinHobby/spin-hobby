@@ -8,7 +8,6 @@ import type { CartLine } from "./data";
 import { isCutout, photo } from "../photo";
 import type { ProductPage as ProductList } from "../types";
 
-
 /**
  * Up to three products that would take the cart to free shipping: in stock, not in the cart already, and priced to just cover what's
  * missing (the cheapest that does first), topped up with the next best. Loaded once when the cart opens.
@@ -17,8 +16,12 @@ function useShippingPicks(lines: CartLine[], remaining: number) {
   const [pool, setPool] = useState<Product[]>([]);
   useEffect(() => {
     let live = true;
-    api<ProductList>(`/products?${new URLSearchParams({ limit: "40", sort: "featured" })}`).then((r) => live && setPool(r.items)).catch(() => undefined);
-    return () => { live = false; };
+    api<ProductList>(`/products?${new URLSearchParams({ limit: "40", sort: "featured" })}`)
+      .then((r) => live && setPool(r.items))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
   }, []);
   if (remaining <= 0) return [];
   const inCart = new Set(lines.map((l) => l.variationId));
@@ -28,9 +31,22 @@ function useShippingPicks(lines: CartLine[], remaining: number) {
   return [...covers, ...rest].slice(0, 3);
 }
 
-export function CartDrawer({ lines, subtotal, currency, onQty, onAdd, onOpen, onClose }: {
-  lines: CartLine[]; subtotal: number; currency: Currency;
-  onQty: (variationId: string, qty: number) => void; onAdd: (p: Product) => void; onOpen: (p: Product) => void; onClose: () => void;
+export function CartDrawer({
+  lines,
+  subtotal,
+  currency,
+  onQty,
+  onAdd,
+  onOpen,
+  onClose,
+}: {
+  lines: CartLine[];
+  subtotal: number;
+  currency: Currency;
+  onQty: (variationId: string, qty: number) => void;
+  onAdd: (p: Product) => void;
+  onOpen: (p: Product) => void;
+  onClose: () => void;
 }) {
   useEscape(onClose);
   const threshold = storeFormat.freeShippingThresholdCents;
@@ -42,22 +58,38 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onAdd, onOpen, on
       <div className="sh-overlay" onClick={onClose} />
       <aside className="sh-drawer" role="dialog" aria-modal="true" aria-label="Cart">
         <div className="sh-drawer__head">
-          <span>Your cart <span className="sf-muted sf-drawer-count">· {lines.reduce((s, l) => s + l.quantity, 0)}</span></span>
-          <button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close cart">×</button>
+          <span>
+            Your cart <span className="sf-muted sf-drawer-count">· {lines.reduce((s, l) => s + l.quantity, 0)}</span>
+          </span>
+          <button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close cart">
+            ×
+          </button>
         </div>
         {lines.length === 0 ? (
           <div className="sh-drawer__body sf-cart-empty">
             <img src="/assets/transparent%20mascot%20chibi%20rotated.png" alt="" />
             <strong>Your cart is empty</strong>
             <span>New figures, plushies and goods land every week.</span>
-            <button type="button" className="sh-btn" onClick={onClose}>Keep shopping</button>
+            <button type="button" className="sh-btn" onClick={onClose}>
+              Keep shopping
+            </button>
           </div>
         ) : (
           <>
             <div className="sh-drawer__body">
               <div className={`sf-ship-meter ${remaining > 0 ? "" : "is-done"}`}>
-                <span>{remaining > 0 ? <>Add <b>{money(remaining, currency)}</b> for free shipping</> : <b>You've unlocked free shipping 🎉</b>}</span>
-                <div className="sf-ship-meter__bar"><i style={{ width: `${progress * 100}%` }} /></div>
+                <span>
+                  {remaining > 0 ? (
+                    <>
+                      Add <b>{money(remaining, currency)}</b> for free shipping
+                    </>
+                  ) : (
+                    <b>You've unlocked free shipping 🎉</b>
+                  )}
+                </span>
+                <div className="sf-ship-meter__bar">
+                  <i style={{ width: `${progress * 100}%` }} />
+                </div>
               </div>
               {lines.map((l) => (
                 <div className="sf-cart-line" key={l.variationId}>
@@ -68,10 +100,18 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onAdd, onOpen, on
                     <div className="sf-cart-line__name">{l.name}</div>
                     {l.isPreorder && <span className="sf-cart-line__pre">Pre-order</span>}
                     <div className="sf-stepper" aria-label={`Quantity for ${l.name}`}>
-                      <button type="button" onClick={() => onQty(l.variationId, l.quantity - 1)} aria-label="Decrease">−</button>
+                      <button type="button" onClick={() => onQty(l.variationId, l.quantity - 1)} aria-label="Decrease">
+                        −
+                      </button>
                       <span>{l.quantity}</span>
-                      <button type="button" onClick={() => onQty(l.variationId, l.quantity + 1)} aria-label="Increase"
-                        disabled={l.maxPerCustomer != null && l.quantity >= l.maxPerCustomer}>+</button>
+                      <button
+                        type="button"
+                        onClick={() => onQty(l.variationId, l.quantity + 1)}
+                        aria-label="Increase"
+                        disabled={l.maxPerCustomer != null && l.quantity >= l.maxPerCustomer}
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                   <strong>{money(l.unitPriceCents * l.quantity, currency)}</strong>
@@ -79,7 +119,9 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onAdd, onOpen, on
               ))}
               {picks.length > 0 && (
                 <section className="sf-picks" aria-labelledby="picks-title">
-                  <div id="picks-title" className="sf-picks__title">{picks[0].priceCents >= remaining ? "Add one for free shipping" : "Popular add-ons"}</div>
+                  <div id="picks-title" className="sf-picks__title">
+                    {picks[0].priceCents >= remaining ? "Add one for free shipping" : "Popular add-ons"}
+                  </div>
                   {picks.map((p) => (
                     <div key={p.id} className="sf-pick">
                       <button type="button" className="sf-pick__open" onClick={() => onOpen(p)} aria-label={`View ${p.name}`}>
@@ -88,16 +130,23 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onAdd, onOpen, on
                         </span>
                         <span className="sf-pick__name">{p.name}</span>
                       </button>
-                      <button type="button" className="sf-pick__add" onClick={() => onAdd(p)} aria-label={`Add ${p.name} to cart`}>+ {money(p.priceCents, currency)}</button>
+                      <button type="button" className="sf-pick__add" onClick={() => onAdd(p)} aria-label={`Add ${p.name} to cart`}>
+                        + {money(p.priceCents, currency)}
+                      </button>
                     </div>
                   ))}
                 </section>
               )}
             </div>
             <div className="sf-cart-foot">
-              <div className="sf-cart-foot__row"><span>Subtotal</span><strong>{money(subtotal, currency)}</strong></div>
+              <div className="sf-cart-foot__row">
+                <span>Subtotal</span>
+                <strong>{money(subtotal, currency)}</strong>
+              </div>
               <span className="sf-muted">Shipping and taxes are calculated at checkout. Charged in CAD.</span>
-              <a href="/checkout" className="sh-btn sf-cart-foot__cta sf-center">🔒 Secure checkout · {money(subtotal, currency)}</a>
+              <a href="/checkout" className="sh-btn sf-cart-foot__cta sf-center">
+                🔒 Secure checkout · {money(subtotal, currency)}
+              </a>
               <span className="sf-muted sf-center">Secure payment with PayPal or card. Your cart is saved on this device.</span>
             </div>
           </>
@@ -107,8 +156,16 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onAdd, onOpen, on
   );
 }
 
-export function NotifyDialog({ product, email, onClose, onDone }: {
-  product: Product; email: string | null; onClose: () => void; onDone: (message: string) => void;
+export function NotifyDialog({
+  product,
+  email,
+  onClose,
+  onDone,
+}: {
+  product: Product;
+  email: string | null;
+  onClose: () => void;
+  onDone: (message: string) => void;
 }) {
   const [value, setValue] = useState(email ?? "");
   const [busy, setBusy] = useState(false);
@@ -119,7 +176,8 @@ export function NotifyDialog({ product, email, onClose, onDone }: {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       await api("/alerts", { method: "POST", body: JSON.stringify({ email: value.trim(), variationId: product.variationId }) });
       onDone(`We'll email ${value.trim()} when it's back`);
@@ -134,27 +192,43 @@ export function NotifyDialog({ product, email, onClose, onDone }: {
       <div className="sh-overlay" onClick={onClose} />
       <form className="sf-dialog" role="dialog" aria-modal="true" aria-labelledby="notify-title" onSubmit={submit}>
         <div className="sf-dialog__head">
-          <span className="sh-eyebrow" style={{ color: "var(--blue)" }}>Restock alert</span>
-          <button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close">×</button>
+          <span className="sh-eyebrow" style={{ color: "var(--blue)" }}>
+            Restock alert
+          </span>
+          <button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close">
+            ×
+          </button>
         </div>
-        <h2 id="notify-title" className="sh-display">{product.name}</h2>
+        <h2 id="notify-title" className="sh-display">
+          {product.name}
+        </h2>
         <p className="sf-muted">Sold out right now. Leave your email and we'll let you know the moment it's restocked.</p>
-        <input ref={inputRef} className="sh-input" type="email" required placeholder="you@example.com" value={value} onChange={(e) => setValue(e.target.value)} />
+        <input
+          ref={inputRef}
+          className="sh-input"
+          type="email"
+          required
+          placeholder="you@example.com"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+        />
         {error && <span className="sf-error">{error}</span>}
-        <button className="sh-btn" disabled={busy}>{busy ? "Saving…" : "Notify me"}</button>
+        <button className="sh-btn" disabled={busy}>
+          {busy ? "Saving…" : "Notify me"}
+        </button>
       </form>
     </>
   );
 }
 
-export function AccountMenu({ email, user, onSignOut }: {
-  email: string | null; user: AppUser | null; onSignOut: () => void;
-}) {
+export function AccountMenu({ email, user, onSignOut }: { email: string | null; user: AppUser | null; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const close = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [open]);
@@ -180,34 +254,77 @@ export function AccountMenu({ email, user, onSignOut }: {
   }, [open, email]);
 
   // Close the menu once a sign-in from it succeeds; the storefront shows the welcome.
-  useEffect(() => { if (email) setOpen(false); }, [email]);
+  useEffect(() => {
+    if (email) setOpen(false);
+  }, [email]);
 
   const isStaff = user?.role === "staff" || user?.role === "owner";
   const name = greetingName(user);
 
   return (
     <div className="sf-account" ref={ref}>
-      <button type="button" className={`sf-head-link ${email ? "sf-account__btn" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu"
-        aria-label={email ? `Account: signed in as ${email}` : "Sign in"}>
-        {email ? <><span className="sf-avatar" aria-hidden>{name.charAt(0).toUpperCase()}</span><span className="sf-account__hi">Hi, {name}</span></> : "Sign in"}
+      <button
+        type="button"
+        className={`sf-head-link ${email ? "sf-account__btn" : ""}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={email ? `Account: signed in as ${email}` : "Sign in"}
+      >
+        {email ? (
+          <>
+            <span className="sf-avatar" aria-hidden>
+              {name.charAt(0).toUpperCase()}
+            </span>
+            <span className="sf-account__hi">Hi, {name}</span>
+          </>
+        ) : (
+          "Sign in"
+        )}
       </button>
       {open && (
         <div className="sf-menu" role="menu" ref={menuRef}>
-          <button type="button" className="sf-menu__close" onClick={() => setOpen(false)} aria-label="Close">×</button>
+          <button type="button" className="sf-menu__close" onClick={() => setOpen(false)} aria-label="Close">
+            ×
+          </button>
           {email ? (
             <>
               <div className="sf-menu__who">
-                <span className="sf-avatar sf-avatar--lg" aria-hidden>{name.charAt(0).toUpperCase()}</span>
-                <div><b>{name}</b><span>{email}</span></div>
+                <span className="sf-avatar sf-avatar--lg" aria-hidden>
+                  {name.charAt(0).toUpperCase()}
+                </span>
+                <div>
+                  <b>{name}</b>
+                  <span>{email}</span>
+                </div>
               </div>
-              {isStaff && <a role="menuitem" href="/admin">Store admin ↗</a>}
-              {!(import.meta.env.PRO) && <a role="menuitem" href="/account">Your Account</a>}
-              <button role="menuitem" type="button" onClick={() => { setOpen(false); onSignOut(); }}>Sign out</button>
+              {isStaff && (
+                <a role="menuitem" href="/admin">
+                  Store admin ↗
+                </a>
+              )}
+              {!import.meta.env.PRO && (
+                <a role="menuitem" href="/account">
+                  Your Account
+                </a>
+              )}
+              <button
+                role="menuitem"
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onSignOut();
+                }}
+              >
+                Sign out
+              </button>
             </>
           ) : (
             <>
               <div className="sf-menu__label">Sign in or create an account to sync your wishlist and track orders</div>
-              <div className="sf-menu__signin"><SignInPanel compact allowSignup /></div>
+              <div className="sf-menu__signin">
+                <SignInPanel compact allowSignup />
+              </div>
             </>
           )}
         </div>
@@ -227,13 +344,21 @@ export function WelcomeCard({ user, isNew, onClose }: { user: AppUser; isNew: bo
   const isStaff = user.role === "staff" || user.role === "owner";
   return (
     <div className="sf-welcome" role="status" aria-live="polite">
-      <span className="sf-avatar sf-avatar--lg" aria-hidden>{name.charAt(0).toUpperCase()}</span>
+      <span className="sf-avatar sf-avatar--lg" aria-hidden>
+        {name.charAt(0).toUpperCase()}
+      </span>
       <div className="sf-welcome__body">
         <b>{isNew ? `Welcome to Spin Hobby, ${name}!` : `Welcome back, ${name}!`}</b>
-        <span>{isNew ? "Your account is ready. Wishlist items and orders are now saved to it." : "You're signed in. Your wishlist and orders are synced."}</span>
+        <span>
+          {isNew
+            ? "Your account is ready. Wishlist items and orders are now saved to it."
+            : "You're signed in. Your wishlist and orders are synced."}
+        </span>
         {isStaff && <a href="/admin">Go to store admin →</a>}
       </div>
-      <button type="button" className="sf-welcome__close" onClick={onClose} aria-label="Dismiss">×</button>
+      <button type="button" className="sf-welcome__close" onClick={onClose} aria-label="Dismiss">
+        ×
+      </button>
     </div>
   );
 }

@@ -18,7 +18,9 @@ export default function MaintenancePage({ message }: { message?: string | null }
         <div className="mp-icon">🔧</div>
         <h1>We'll be right back</h1>
         <p>{message?.trim() || "Spin Hobby is currently down for maintenance. We'll be back shortly — thanks for your patience."}</p>
-        <button type="button" className="mp-retry" onClick={() => window.location.reload()}>Retry now</button>
+        <button type="button" className="mp-retry" onClick={() => window.location.reload()}>
+          Retry now
+        </button>
         {SHOW_EBAY_STORE && (
           <a href={EBAY_URL} target="_blank" rel="noopener noreferrer" className="mp-ebay">
             Or shop our eBay store in the meantime →

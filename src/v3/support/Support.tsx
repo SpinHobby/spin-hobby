@@ -11,8 +11,16 @@ import { useStoreConfig } from "../storeConfig";
 const TOPICS: { label: string; subject: string; body: string }[] = [
   { label: "Order question", subject: "Order question", body: "Order number:\nEmail used at checkout:\n\nHow can we help?\n" },
   { label: "Pre-order", subject: "Pre-order question", body: "Item:\nOrder number (if you have one):\n\nHow can we help?\n" },
-  { label: "Shipping", subject: "Shipping question", body: "Order number (if you have one):\nShip-to country and province/state:\n\nHow can we help?\n" },
-  { label: "Damaged or wrong item", subject: "Problem with my order", body: "Order number:\n\nWhat arrived? Please attach photos of the item and the packaging.\n" },
+  {
+    label: "Shipping",
+    subject: "Shipping question",
+    body: "Order number (if you have one):\nShip-to country and province/state:\n\nHow can we help?\n",
+  },
+  {
+    label: "Damaged or wrong item",
+    subject: "Problem with my order",
+    body: "Order number:\n\nWhat arrived? Please attach photos of the item and the packaging.\n",
+  },
   { label: "Something else", subject: "Question for Spin Hobby", body: "" },
 ];
 
@@ -32,7 +40,10 @@ export default function Support() {
   // Footer links point at /support#shipping etc.: open that answer and bring it into view.
   useEffect(() => {
     const target = hash ? document.getElementById(decodeURIComponent(hash.slice(1))) : null;
-    if (!target) { window.scrollTo({ top: 0 }); return; }
+    if (!target) {
+      window.scrollTo({ top: 0 });
+      return;
+    }
     if (target instanceof HTMLDetailsElement) target.open = true;
     target.scrollIntoView({ block: "start" });
   }, [hash]);
@@ -44,17 +55,25 @@ export default function Support() {
   return (
     <>
       <main className="sp-wrap">
-        <Link to="/" className="sp-back">← Back to the store</Link>
+        <Link to="/" className="sp-back">
+          ← Back to the store
+        </Link>
         <h1>Help &amp; support</h1>
         <p className="sp-lead">Questions about an order, a pre-order or a product? Email us and we'll get back to you.</p>
 
         <section id="contact" className="sp-card" aria-labelledby="sp-contact">
           <h2 id="sp-contact">Contact us</h2>
-          <a className="sp-email" href={mailto("Question for Spin Hobby")}>{SUPPORT_EMAIL}</a>
-          <p className="sp-hint">Pick a topic and your mail app opens with the details we usually need. For order questions, include your order number.</p>
+          <a className="sp-email" href={mailto("Question for Spin Hobby")}>
+            {SUPPORT_EMAIL}
+          </a>
+          <p className="sp-hint">
+            Pick a topic and your mail app opens with the details we usually need. For order questions, include your order number.
+          </p>
           <div className="sp-topics">
             {TOPICS.map((t) => (
-              <a key={t.label} className="sp-chip" href={mailto(t.subject, t.body)}>{t.label}</a>
+              <a key={t.label} className="sp-chip" href={mailto(t.subject, t.body)}>
+                {t.label}
+              </a>
             ))}
           </div>
         </section>
@@ -62,10 +81,30 @@ export default function Support() {
         <section className="sp-card" aria-labelledby="sp-elsewhere">
           <h2 id="sp-elsewhere">Find us elsewhere</h2>
           <ul className="sp-links">
-            <li><a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a><span>Join our community and chat with fellow fans</span></li>
-            <li><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a><span>New arrivals and convention updates</span></li>
-            {SHOW_EBAY_STORE && <li><a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a><span>Our listings on eBay Canada</span></li>}
-            <li><Link to="/events">Events</Link><span>Conventions where you can meet us in person</span></li>
+            <li>
+              <a href={DISCORD_URL} target="_blank" rel="noreferrer">
+                Discord
+              </a>
+              <span>Join our community and chat with fellow fans</span>
+            </li>
+            <li>
+              <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">
+                Instagram
+              </a>
+              <span>New arrivals and convention updates</span>
+            </li>
+            {SHOW_EBAY_STORE && (
+              <li>
+                <a href={EBAY_URL} target="_blank" rel="noreferrer">
+                  eBay store ↗
+                </a>
+                <span>Our listings on eBay Canada</span>
+              </li>
+            )}
+            <li>
+              <Link to="/events">Events</Link>
+              <span>Conventions where you can meet us in person</span>
+            </li>
           </ul>
         </section>
 
@@ -74,29 +113,50 @@ export default function Support() {
           <details id="shipping">
             <summary>Where do you ship, and what does it cost?</summary>
             <p>We ship across Canada and to the United States. {shipping}</p>
-            <p>For US orders, the destination country may charge duties or import taxes on arrival; those aren&apos;t included in what you pay us. See section 5 of our <Link to="/legal/terms">Terms of Service</Link>.</p>
+            <p>
+              For US orders, the destination country may charge duties or import taxes on arrival; those aren&apos;t included in what you
+              pay us. See section 5 of our <Link to="/legal/terms">Terms of Service</Link>.
+            </p>
           </details>
           <details id="order-status">
             <summary>When will my order ship, and how do I track it?</summary>
             <p>In-stock orders are packed within {handlingLabel()}. When your order ships we email you the carrier and tracking number.</p>
-            <p>If you checked out while signed in, your orders are saved to your account. If you can&apos;t find a tracking email, <a href={mailto("Order status", TOPICS[0].body)}>email us</a> with your order number.</p>
+            <p>
+              If you checked out while signed in, your orders are saved to your account. If you can&apos;t find a tracking email,{" "}
+              <a href={mailto("Order status", TOPICS[0].body)}>email us</a> with your order number.
+            </p>
           </details>
           <details id="preorders">
             <summary>How do pre-orders work?</summary>
-            <p>Pre-orders are charged when you check out and ship as soon as the item arrives; we email you when it&apos;s on its way. Release dates are set by the maker and can move, so treat them as estimates.</p>
-            <p>Cancellation terms for pre-orders are in section 6 of our <Link to="/legal/terms">Terms of Service</Link>.</p>
+            <p>
+              Pre-orders are charged when you check out and ship as soon as the item arrives; we email you when it&apos;s on its way.
+              Release dates are set by the maker and can move, so treat them as estimates.
+            </p>
+            <p>
+              Cancellation terms for pre-orders are in section 6 of our <Link to="/legal/terms">Terms of Service</Link>.
+            </p>
           </details>
           <details id="restock">
             <summary>An item is sold out. Will it come back?</summary>
-            <p>Open the product and choose <b>Notify me</b>. Enter your email and we&apos;ll let you know when it&apos;s back in stock.</p>
+            <p>
+              Open the product and choose <b>Notify me</b>. Enter your email and we&apos;ll let you know when it&apos;s back in stock.
+            </p>
           </details>
           <details id="returns">
             <summary>My item arrived damaged or isn&apos;t what I ordered</summary>
-            <p>We&apos;re sorry about that! <a href={mailto("Problem with my order", TOPICS[3].body)}>Email us</a> within 14 days of delivery with your order number and photos of the item and packaging, and we&apos;ll work out a replacement or refund. We don&apos;t take returns for a change of mind. Our full returns terms are in section 6 of the <Link to="/legal/terms">Terms of Service</Link>.</p>
+            <p>
+              We&apos;re sorry about that! <a href={mailto("Problem with my order", TOPICS[3].body)}>Email us</a> within 14 days of delivery
+              with your order number and photos of the item and packaging, and we&apos;ll work out a replacement or refund. We don&apos;t
+              take returns for a change of mind. Our full returns terms are in section 6 of the{" "}
+              <Link to="/legal/terms">Terms of Service</Link>.
+            </p>
           </details>
           <details id="payment">
             <summary>Is paying on the site safe?</summary>
-            <p>Payments are handled by Square and PayPal. Your card details go straight to them and are never stored on our servers. More in our <Link to="/legal/privacy">Privacy Policy</Link>.</p>
+            <p>
+              Payments are handled by Square and PayPal. Your card details go straight to them and are never stored on our servers. More in
+              our <Link to="/legal/privacy">Privacy Policy</Link>.
+            </p>
           </details>
         </div>
       </main>

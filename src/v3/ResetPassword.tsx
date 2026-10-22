@@ -27,7 +27,8 @@ export default function ResetPassword() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       await updatePassword(password);
       setStatus("done");
@@ -42,7 +43,9 @@ export default function ResetPassword() {
   return (
     <div className="sh lg">
       <header className="lg-header">
-        <a href="/" className="lg-logo"><img src={LOGO} alt="Spin Hobby" /></a>
+        <a href="/" className="lg-logo">
+          <img src={LOGO} alt="Spin Hobby" />
+        </a>
         <button type="button" className="sh-icon-btn" onClick={toggle} title="Toggle theme" aria-label="Toggle dark mode">
           {theme === "dark" ? "☀" : "☾"}
         </button>
@@ -55,7 +58,9 @@ export default function ResetPassword() {
           <>
             <h1>This link has expired</h1>
             <p className="lg-updated">Password-reset links are only valid for a short time. Ask for a new one from the sign-in screen.</p>
-            <a className="lg-back" href="/admin">← Back to sign in</a>
+            <a className="lg-back" href="/admin">
+              ← Back to sign in
+            </a>
           </>
         )}
 
@@ -64,11 +69,24 @@ export default function ResetPassword() {
             <h1>Set a new password</h1>
             <p className="lg-updated">Choose a new password for your account.</p>
             <form className="sh-signin__form" onSubmit={submit} style={{ maxWidth: 360 }}>
-              <PasswordInput required minLength={8} autoComplete="new-password"
-                placeholder="New password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="New password" />
-              <button className="sh-btn" disabled={busy}>{busy ? "Saving…" : "Save password"}</button>
+              <PasswordInput
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="New password (8+ characters)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-label="New password"
+              />
+              <button className="sh-btn" disabled={busy}>
+                {busy ? "Saving…" : "Save password"}
+              </button>
             </form>
-            {error && <div className="sh-signin__error" role="alert">{error}</div>}
+            {error && (
+              <div className="sh-signin__error" role="alert">
+                {error}
+              </div>
+            )}
           </>
         )}
 

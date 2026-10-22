@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 const elapsed = (from: string | null, now: number) => {
   if (!from) return "";
   const s = Math.max(0, Math.floor((now - Date.parse(from)) / 1000));
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, "0");
+  const h = Math.floor(s / 3600),
+    m = Math.floor((s % 3600) / 60),
+    sec = String(s % 60).padStart(2, "0");
   return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
 };
 
@@ -20,12 +22,22 @@ export function JobProgress({ progress, step, startedAt }: { progress: number | 
   }, []);
   const pct = Math.max(0, Math.min(100, progress ?? 0));
   return (
-    <div className="ad-jobprogress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={step ?? "Being worked on"}>
+    <div
+      className="ad-jobprogress"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={pct}
+      aria-label={step ?? "Being worked on"}
+    >
       <span className="ad-jobprogress__spinner" aria-hidden="true" />
       <div className="ad-jobprogress__main">
-        <div className="ad-jobprogress__bar"><span style={{ width: `${Math.max(pct, 2)}%` }} /></div>
+        <div className="ad-jobprogress__bar">
+          <span style={{ width: `${Math.max(pct, 2)}%` }} />
+        </div>
         <div className="ad-jobprogress__text">
-          <b>{pct}%</b> · {step ?? "Starting…"}{startedAt ? <span className="ad-muted"> · {elapsed(startedAt, now)}</span> : null}
+          <b>{pct}%</b> · {step ?? "Starting…"}
+          {startedAt ? <span className="ad-muted"> · {elapsed(startedAt, now)}</span> : null}
         </div>
       </div>
     </div>

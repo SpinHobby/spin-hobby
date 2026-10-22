@@ -10,7 +10,13 @@ export function Toolbar({ children }: { children: ReactNode }) {
  * The search box of a list (filtering is up to the page). Escape clears it. `shortcut` lets "/" jump to it from anywhere on the page,
  * as in most admin tools (only use it for the page's main search).
  */
-export function SearchInput({ value, onChange, placeholder = "Search…", label, shortcut = false }: {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Search…",
+  label,
+  shortcut = false,
+}: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -32,10 +38,23 @@ export function SearchInput({ value, onChange, placeholder = "Search…", label,
     return () => window.removeEventListener("keydown", onKey);
   }, [shortcut]);
   return (
-    <input ref={ref} className="ui-search" type="search" placeholder={shortcut ? `${placeholder}   ( / )` : placeholder} value={value} aria-label={label}
-      enterKeyHint="search" autoComplete="off"
+    <input
+      ref={ref}
+      className="ui-search"
+      type="search"
+      placeholder={shortcut ? `${placeholder}   ( / )` : placeholder}
+      value={value}
+      aria-label={label}
+      enterKeyHint="search"
+      autoComplete="off"
       onChange={(e) => onChange(e.target.value)}
-      onKeyDown={(e) => { if (e.key === "Escape" && value) { e.preventDefault(); onChange(""); } }} />
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && value) {
+          e.preventDefault();
+          onChange("");
+        }
+      }}
+    />
   );
 }
 
@@ -47,7 +66,12 @@ export interface ChipOption<K extends string = string> {
 }
 
 /** Filter chips, one chosen at a time (All, To ship, Shipped...). For several at once, use FilterChipsMulti. */
-export function FilterChips<K extends string>({ options, value, onChange, label }: {
+export function FilterChips<K extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
   options: ChipOption<K>[];
   value: K;
   onChange: (key: NoInfer<K>) => void;
@@ -56,8 +80,15 @@ export function FilterChips<K extends string>({ options, value, onChange, label 
   return (
     <div className="ui-chips" role="group" aria-label={label}>
       {options.map((o) => (
-        <button key={o.key} type="button" className={`sh-chip ${value === o.key ? "is-active" : ""}`} aria-pressed={value === o.key} onClick={() => onChange(o.key)}>
-          {o.label}{o.count !== undefined ? ` · ${o.count}` : ""}
+        <button
+          key={o.key}
+          type="button"
+          className={`sh-chip ${value === o.key ? "is-active" : ""}`}
+          aria-pressed={value === o.key}
+          onClick={() => onChange(o.key)}
+        >
+          {o.label}
+          {o.count !== undefined ? ` · ${o.count}` : ""}
         </button>
       ))}
     </div>
@@ -65,7 +96,13 @@ export function FilterChips<K extends string>({ options, value, onChange, label 
 }
 
 /** Filter chips where several can be on together (In stock + Pre-order); none on means "everything". */
-export function FilterChipsMulti<K extends string>({ options, value, onChange, label, allLabel = "All" }: {
+export function FilterChipsMulti<K extends string>({
+  options,
+  value,
+  onChange,
+  label,
+  allLabel = "All",
+}: {
   options: ChipOption<K>[];
   value: K[];
   onChange: (keys: NoInfer<K>[]) => void;
@@ -76,10 +113,26 @@ export function FilterChipsMulti<K extends string>({ options, value, onChange, l
   const toggle = (k: K) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k]);
   return (
     <div className="ui-chips" role="group" aria-label={label}>
-      {allLabel !== null && <button type="button" className={`sh-chip ${value.length === 0 ? "is-active" : ""}`} aria-pressed={value.length === 0} onClick={() => onChange([])}>{allLabel}</button>}
+      {allLabel !== null && (
+        <button
+          type="button"
+          className={`sh-chip ${value.length === 0 ? "is-active" : ""}`}
+          aria-pressed={value.length === 0}
+          onClick={() => onChange([])}
+        >
+          {allLabel}
+        </button>
+      )}
       {options.map((o) => (
-        <button key={o.key} type="button" className={`sh-chip ${value.includes(o.key) ? "is-active" : ""}`} aria-pressed={value.includes(o.key)} onClick={() => toggle(o.key)}>
-          {o.label}{o.count !== undefined ? ` · ${o.count}` : ""}
+        <button
+          key={o.key}
+          type="button"
+          className={`sh-chip ${value.includes(o.key) ? "is-active" : ""}`}
+          aria-pressed={value.includes(o.key)}
+          onClick={() => toggle(o.key)}
+        >
+          {o.label}
+          {o.count !== undefined ? ` · ${o.count}` : ""}
         </button>
       ))}
     </div>

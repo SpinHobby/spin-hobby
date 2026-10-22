@@ -27,15 +27,38 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
-        {isOn("uiKit") && <Route path="/ui-kit" element={<Suspense fallback={null}><UiKit /></Suspense>} />}
+        <Route
+          path="/admin/*"
+          element={
+            <Suspense fallback={null}>
+              <Admin />
+            </Suspense>
+          }
+        />
+        {isOn("uiKit") && (
+          <Route
+            path="/ui-kit"
+            element={
+              <Suspense fallback={null}>
+                <UiKit />
+              </Suspense>
+            }
+          />
+        )}
         {/* Plain content pages share one header + footer; everything else brings its own chrome. */}
         <Route element={<SiteLayout />}>
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
           <Route path="/events" element={<Events />} />
         </Route>
-        <Route path="/reset-password" element={<Suspense fallback={null}><ResetPassword /></Suspense>} />
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense fallback={null}>
+              <ResetPassword />
+            </Suspense>
+          }
+        />
         <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
         <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
         <Route path="/*" element={<GatedApp />} />
@@ -62,7 +85,14 @@ function GatedApp() {
   }
   return (
     <Routes>
-      <Route path="/checkout/*" element={<Suspense fallback={null}><Checkout /></Suspense>} />
+      <Route
+        path="/checkout/*"
+        element={
+          <Suspense fallback={null}>
+            <Checkout />
+          </Suspense>
+        }
+      />
       <Route path="/*" element={<Storefront />} />
     </Routes>
   );

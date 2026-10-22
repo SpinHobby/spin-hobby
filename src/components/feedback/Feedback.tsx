@@ -5,7 +5,12 @@ import "../styles/components.scss";
  * A notice across the top of the content. `tone`: `info` (gold: worth knowing), `success` (green: it worked), `error` (red: it didn't).
  * Optional `action` (Retry, Undo) and `onDismiss` (a × to hide it).
  */
-export function Banner({ tone = "info", action, onDismiss, children }: {
+export function Banner({
+  tone = "info",
+  action,
+  onDismiss,
+  children,
+}: {
   tone?: "info" | "success" | "error";
   action?: { label: string; onClick: () => void };
   onDismiss?: () => void;
@@ -15,8 +20,16 @@ export function Banner({ tone = "info", action, onDismiss, children }: {
     <div className={`ui-banner ui-banner--${tone}`} role={tone === "error" ? "alert" : "status"}>
       <span>{children}</span>
       <span className="ui-row-gap">
-        {action && <button type="button" onClick={action.onClick}>{action.label}</button>}
-        {onDismiss && <button type="button" onClick={onDismiss} aria-label="Dismiss">×</button>}
+        {action && (
+          <button type="button" onClick={action.onClick}>
+            {action.label}
+          </button>
+        )}
+        {onDismiss && (
+          <button type="button" onClick={onDismiss} aria-label="Dismiss">
+            ×
+          </button>
+        )}
       </span>
     </div>
   );
@@ -48,11 +61,26 @@ export function Spinner({ size = "md", label = "Loading" }: { size?: "sm" | "md"
 }
 
 /** How far along something is (an upload, a photo being processed): `value` from 0 to 100, with an optional label and note. */
-export function ProgressBar({ value, label, note, tone = "primary" }: { value: number; label?: ReactNode; note?: ReactNode; tone?: "primary" | "good" | "warn" }) {
+export function ProgressBar({
+  value,
+  label,
+  note,
+  tone = "primary",
+}: {
+  value: number;
+  label?: ReactNode;
+  note?: ReactNode;
+  tone?: "primary" | "good" | "warn";
+}) {
   const v = Math.max(0, Math.min(100, value));
   return (
     <div className="ui-progress">
-      {(label || note) && <div className="ui-between ui-sm"><span className="ui-strong">{label}</span><span className="ui-muted">{note ?? `${Math.round(v)}%`}</span></div>}
+      {(label || note) && (
+        <div className="ui-between ui-sm">
+          <span className="ui-strong">{label}</span>
+          <span className="ui-muted">{note ?? `${Math.round(v)}%`}</span>
+        </div>
+      )}
       <div className="ui-progress__track" role="progressbar" aria-valuenow={Math.round(v)} aria-valuemin={0} aria-valuemax={100}>
         <div className={`ui-progress__bar ui-progress__bar--${tone}`} style={{ width: `${v}%` }} />
       </div>
@@ -71,5 +99,9 @@ const TONES = {
 /** A small coloured label for a status ("Paid", "Shipped", "Refunded"). Pick the tone by meaning: good, warn, bad, info, neutral. */
 export function StatusBadge({ tone = "neutral", children }: { tone?: keyof typeof TONES; children: ReactNode }) {
   const t = TONES[tone];
-  return <span className="sh-badge" style={{ background: t.bg, color: t.fg }}>{children}</span>;
+  return (
+    <span className="sh-badge" style={{ background: t.bg, color: t.fg }}>
+      {children}
+    </span>
+  );
 }

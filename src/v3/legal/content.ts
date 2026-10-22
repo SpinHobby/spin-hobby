@@ -131,9 +131,7 @@ export const TERMS_SECTIONS: LegalSection[] = [
   },
   {
     heading: "16. Contact Us",
-    body: [
-      `Questions about these Terms? Reach us at ${SUPPORT_EMAIL}.`,
-    ],
+    body: [`Questions about these Terms? Reach us at ${SUPPORT_EMAIL}.`],
   },
 ];
 
@@ -187,7 +185,9 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: "7. Your Rights",
     body: [
-      "You can ask us to access, correct, or delete the personal information we hold about you, or withdraw consent for marketing emails at any time (every marketing email includes an unsubscribe link). To make a request, email " + SUPPORT_EMAIL + " - we'll respond within a reasonable time and may need to verify your identity first.",
+      "You can ask us to access, correct, or delete the personal information we hold about you, or withdraw consent for marketing emails at any time (every marketing email includes an unsubscribe link). To make a request, email " +
+        SUPPORT_EMAIL +
+        " - we'll respond within a reasonable time and may need to verify your identity first.",
       "Deleting account information tied to an active or recent order may affect our ability to help with warranty, return, or shipping issues on that order.",
     ],
   },
@@ -211,8 +211,6 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   },
   {
     heading: "11. Contact Us",
-    body: [
-      `Questions about this Privacy Policy, or a request about your data? Email ${SUPPORT_EMAIL}.`,
-    ],
+    body: [`Questions about this Privacy Policy, or a request about your data? Email ${SUPPORT_EMAIL}.`],
   },
 ];

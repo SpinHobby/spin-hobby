@@ -17,7 +17,19 @@ export interface PanelTab<K extends string = string> {
  *   <PanelLayout tag="MY ACCOUNT" tabs={tabs} active={tab} onSelect={setTab} title="Orders">…</PanelLayout>
  */
 export function PanelLayout<K extends string>({
-  tabs, active, onSelect, title, tag, brandHref = "/", logo = "/logo/logo%20cropped.png", navLabel, footer, topActions, banner, toast, children,
+  tabs,
+  active,
+  onSelect,
+  title,
+  tag,
+  brandHref = "/",
+  logo = "/logo/logo%20cropped.png",
+  navLabel,
+  footer,
+  topActions,
+  banner,
+  toast,
+  children,
 }: {
   tabs: PanelTab<K>[];
   active: K;
@@ -46,9 +58,18 @@ export function PanelLayout<K extends string>({
   const content = useRef<HTMLElement>(null);
   const first = useRef(true);
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
+    if (first.current) {
+      first.current = false;
+      return;
+    }
     if (prefersReducedMotion()) return;
-    content.current?.animate?.([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
+    content.current?.animate?.(
+      [
+        { opacity: 0, transform: "translateY(8px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" },
+    );
   }, [active]);
   const select = (key: K) => {
     onSelect(key);
@@ -60,14 +81,26 @@ export function PanelLayout<K extends string>({
       {navOpen && <div className="sh-overlay ui-nav-overlay" onClick={() => setNavOpen(false)} />}
       <aside className={`ui-side ${navOpen ? "is-open" : ""}`}>
         <div className="ui-side__brand">
-          <a href={brandHref}><img src={logo} alt="Spin Hobby" /></a>
+          <a href={brandHref}>
+            <img src={logo} alt="Spin Hobby" />
+          </a>
           {tag && <span className="ui-tag">{tag}</span>}
         </div>
         <nav ref={ind.ref} className="ui-side__nav" aria-label={navLabel ?? tag ?? "Sections"}>
           <span className={`ui-ind ui-side__ind ${ind.ready ? "is-ready" : ""}`} style={ind.style} aria-hidden />
           {tabs.map((t) => (
-            <button key={t.key} type="button" data-on={active === t.key} className={active === t.key ? "is-active" : ""} aria-current={active === t.key ? "page" : undefined} onClick={() => select(t.key)}>
-              <span className="ui-side__item"><span className="ui-side__dot" />{t.label}</span>
+            <button
+              key={t.key}
+              type="button"
+              data-on={active === t.key}
+              className={active === t.key ? "is-active" : ""}
+              aria-current={active === t.key ? "page" : undefined}
+              onClick={() => select(t.key)}
+            >
+              <span className="ui-side__item">
+                <span className="ui-side__dot" />
+                {t.label}
+              </span>
               {!!t.badge && t.badge > 0 && <span className="ui-side__badge">{t.badge}</span>}
             </button>
           ))}
@@ -77,7 +110,9 @@ export function PanelLayout<K extends string>({
 
       <div className="ui-main">
         <header className="ui-top">
-          <button type="button" className="sh-icon-btn ui-burger" onClick={() => setNavOpen(true)} aria-label="Open menu">☰</button>
+          <button type="button" className="sh-icon-btn ui-burger" onClick={() => setNavOpen(true)} aria-label="Open menu">
+            ☰
+          </button>
           <h1 className="sh-display">{title}</h1>
           {topActions}
         </header>
@@ -86,7 +121,11 @@ export function PanelLayout<K extends string>({
           {children}
         </main>
       </div>
-      {toast && <div key={String(toast)} className="sh-toast" role="status" aria-live="polite">{toast}</div>}
+      {toast && (
+        <div key={String(toast)} className="sh-toast" role="status" aria-live="polite">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

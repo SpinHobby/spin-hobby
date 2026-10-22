@@ -11,7 +11,18 @@ type Native = ButtonHTMLAttributes<HTMLButtonElement>;
  * - `loading`: shows a spinner and blocks clicks while something is being saved. Keep the label ("Saving…").
  * - `icon`: something small before the label (an emoji or an SVG). `fullWidth` stretches it across its container.
  */
-export function Button({ variant = "primary", size = "md", loading = false, fullWidth = false, icon, className = "", type = "button", disabled, children, ...rest }: Native & {
+export function Button({
+  variant = "primary",
+  size = "md",
+  loading = false,
+  fullWidth = false,
+  icon,
+  className = "",
+  type = "button",
+  disabled,
+  children,
+  ...rest
+}: Native & {
   variant?: "primary" | "ghost" | "danger" | "gold";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
@@ -20,9 +31,22 @@ export function Button({ variant = "primary", size = "md", loading = false, full
 }) {
   const v = variant === "primary" ? "" : `sh-btn--${variant}`;
   return (
-    <button {...rest} type={type} disabled={disabled || loading} aria-busy={loading || undefined}
-      className={`sh-btn ui-btn ${v} ${size === "sm" ? "ui-btn-sm" : size === "lg" ? "ui-btn-lg" : ""} ${fullWidth ? "ui-btn--full" : ""} ${className}`}>
-      {loading ? <span className="ui-spinner ui-spinner--sm" aria-hidden /> : icon && <span className="ui-btn__icon" aria-hidden>{icon}</span>}
+    <button
+      {...rest}
+      type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`sh-btn ui-btn ${v} ${size === "sm" ? "ui-btn-sm" : size === "lg" ? "ui-btn-lg" : ""} ${fullWidth ? "ui-btn--full" : ""} ${className}`}
+    >
+      {loading ? (
+        <span className="ui-spinner ui-spinner--sm" aria-hidden />
+      ) : (
+        icon && (
+          <span className="ui-btn__icon" aria-hidden>
+            {icon}
+          </span>
+        )
+      )}
       {children}
     </button>
   );
@@ -34,13 +58,26 @@ export function LinkButton({ danger = false, className = "", type = "button", ..
 }
 
 /** A round button with only an icon (×, ☰, ☀). `label` is required: it is what a screen reader says, and the tooltip. */
-export function IconButton({ label, icon, size = "md", className = "", type = "button", ...rest }: Omit<Native, "children"> & {
+export function IconButton({
+  label,
+  icon,
+  size = "md",
+  className = "",
+  type = "button",
+  ...rest
+}: Omit<Native, "children"> & {
   label: string;
   icon: ReactNode;
   size?: "sm" | "md";
 }) {
   return (
-    <button {...rest} type={type} aria-label={label} title={label} className={`ui-iconbtn ${size === "sm" ? "ui-iconbtn--sm" : ""} ${className}`}>
+    <button
+      {...rest}
+      type={type}
+      aria-label={label}
+      title={label}
+      className={`ui-iconbtn ${size === "sm" ? "ui-iconbtn--sm" : ""} ${className}`}
+    >
       <span aria-hidden>{icon}</span>
     </button>
   );

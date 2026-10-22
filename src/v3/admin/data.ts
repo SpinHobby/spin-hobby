@@ -1,14 +1,42 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api";
-import type { Dashboard, HeroSlide, Homepage, Order, Product, ProductPage, Readiness, ShopCategory, StoreEvent, StoreSettings } from "../types";
+import type {
+  Dashboard,
+  HeroSlide,
+  Homepage,
+  Order,
+  Product,
+  ProductPage,
+  Readiness,
+  ShopCategory,
+  StoreEvent,
+  StoreSettings,
+} from "../types";
 
 export type Screen = "Dashboard" | "Products" | "Imports" | "Photos" | "Descriptions" | "Categories" | "Orders" | "Homepage" | "Settings";
-export const SCREENS: Screen[] = ["Dashboard", "Products", "Imports", "Photos", "Descriptions", "Categories", "Orders", "Homepage", "Settings"];
+export const SCREENS: Screen[] = [
+  "Dashboard",
+  "Products",
+  "Imports",
+  "Photos",
+  "Descriptions",
+  "Categories",
+  "Orders",
+  "Homepage",
+  "Settings",
+];
 
 export const DEFAULT_SETTINGS: StoreSettings = {
-  payment_provider: "paypal", shipping_standard_cents: 899, shipping_express_cents: 1999, free_shipping_threshold_cents: 7500,
-  low_stock_threshold: 3, fx_cad_usd: 0.73, handling_days_min: 2, handling_days_max: 3,
-  maintenance_mode: false, maintenance_message: null,
+  payment_provider: "paypal",
+  shipping_standard_cents: 899,
+  shipping_express_cents: 1999,
+  free_shipping_threshold_cents: 7500,
+  low_stock_threshold: 3,
+  fx_cad_usd: 0.73,
+  handling_days_min: 2,
+  handling_days_max: 3,
+  maintenance_mode: false,
+  maintenance_message: null,
 };
 
 export interface AdminData {
@@ -44,7 +72,18 @@ async function adminProductsUpFront() {
 
 export function useAdminData(enabled: boolean) {
   const [data, setData] = useState<AdminData>({
-    dashboard: null, products: [], orders: [], slides: [], events: [], settings: DEFAULT_SETTINGS, readiness: null, categories: [], previewSlides: [], promos: { closingSoon: 0, maxDiscountPct: 0 }, loading: true, errors: [],
+    dashboard: null,
+    products: [],
+    orders: [],
+    slides: [],
+    events: [],
+    settings: DEFAULT_SETTINGS,
+    readiness: null,
+    categories: [],
+    previewSlides: [],
+    promos: { closingSoon: 0, maxDiscountPct: 0 },
+    loading: true,
+    errors: [],
   });
   const [nonce, setNonce] = useState(0);
 
@@ -68,7 +107,7 @@ export function useAdminData(enabled: boolean) {
       const errors = [dash, products, orders, slides, events, settings, readiness, categories, home]
         .filter((r): r is PromiseRejectedResult => r.status === "rejected")
         .map((r) => (r.reason as Error)?.message ?? "Request failed");
-      const val = <T,>(r: PromiseSettledResult<T>) => (r.status === "fulfilled" ? r.value : null);
+      const val = <T>(r: PromiseSettledResult<T>) => (r.status === "fulfilled" ? r.value : null);
       setData({
         dashboard: val(dash),
         products: val(products) ?? [],
@@ -84,7 +123,9 @@ export function useAdminData(enabled: boolean) {
         errors: Array.from(new Set(errors)),
       });
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [enabled, nonce]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
@@ -112,6 +153,13 @@ export function customerName(o: Order) {
 export function addressLine(o: Order) {
   const a = o.shipping_address;
   if (!a) return "—";
-  return [a.address1 ?? a.address?.primary, a.address2 ?? a.address?.secondary, [a.city, a.province].filter(Boolean).join(", "), a.postalCode, a.country]
-    .filter(Boolean).join(", ");
+  return [
+    a.address1 ?? a.address?.primary,
+    a.address2 ?? a.address?.secondary,
+    [a.city, a.province].filter(Boolean).join(", "),
+    a.postalCode,
+    a.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
 }

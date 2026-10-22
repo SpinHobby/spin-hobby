@@ -71,20 +71,28 @@ export function statusLabel(p: Product) {
   const s = normalizeStatus(p.status);
   const n = p.stockCount;
   switch (s) {
-    case "in": return n ? `${n} in stock · ships in ${handlingLabel()}` : `In stock · ships in ${handlingLabel()}`;
-    case "low": return `Only ${n ?? "a few"} left`;
-    case "pre": return `Release ${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}`;
-    case "out": return p.status === "closed" ? "Pre-order closed" : "Sold out · restock alerts available";
+    case "in":
+      return n ? `${n} in stock · ships in ${handlingLabel()}` : `In stock · ships in ${handlingLabel()}`;
+    case "low":
+      return `Only ${n ?? "a few"} left`;
+    case "pre":
+      return `Release ${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}`;
+    case "out":
+      return p.status === "closed" ? "Pre-order closed" : "Sold out · restock alerts available";
   }
 }
 
 export function statusShort(p: Product) {
   const s = normalizeStatus(p.status);
   switch (s) {
-    case "in": return "In stock";
-    case "low": return `Only ${p.stockCount ?? "a few"} left`;
-    case "pre": return `Pre-order · ${monthLabel(p.releaseMonth)}`;
-    case "out": return "Sold out";
+    case "in":
+      return "In stock";
+    case "low":
+      return `Only ${p.stockCount ?? "a few"} left`;
+    case "pre":
+      return `Pre-order · ${monthLabel(p.releaseMonth)}`;
+    case "out":
+      return "Sold out";
   }
 }
 
@@ -103,6 +111,10 @@ export function greetingName(user: { firstName?: string | null; email: string } 
 
 export function initials(email: string | null | undefined) {
   if (!email) return "SH";
-  const name = email.split("@")[0].replace(/[^a-zA-Z]/g, " ").trim().split(/\s+/);
+  const name = email
+    .split("@")[0]
+    .replace(/[^a-zA-Z]/g, " ")
+    .trim()
+    .split(/\s+/);
   return ((name[0]?.[0] ?? "S") + (name[1]?.[0] ?? name[0]?.[1] ?? "H")).toUpperCase();
 }

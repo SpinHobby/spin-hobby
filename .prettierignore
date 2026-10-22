@@ -4,3 +4,5 @@ public
 vendor
 package-lock.json
 *.min.js
+# prose: formatting only reflows tables and paragraphs
+*.md

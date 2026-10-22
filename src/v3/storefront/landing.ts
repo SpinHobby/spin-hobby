@@ -8,11 +8,22 @@ import type { CategoryTree } from "../categoryTree";
 import { slugify, type NavKey } from "./data";
 
 export interface LandingCopy {
-  h1: string; title: string; description: string; intro: string; crumbs: { name: string; path: string }[];
+  h1: string;
+  title: string;
+  description: string;
+  intro: string;
+  crumbs: { name: string; path: string }[];
   /** The address search engines should treat as the original, when another page covers the same thing. */
   canonical?: string;
 }
-interface SectionCopy { nav: NavKey; path: string; h1: string; title: string; description: string; intro: string }
+interface SectionCopy {
+  nav: NavKey;
+  path: string;
+  h1: string;
+  title: string;
+  description: string;
+  intro: string;
+}
 
 const fill = (text: string) => text.replace(/\{freeShipping\}/g, freeShippingLabel());
 export const SECTIONS = copy.sections as SectionCopy[];
@@ -29,9 +40,7 @@ export const categoryPath = (tree: CategoryTree, id: string) => `/category/${slu
 export const seriesPath = (series: string) => `/series/${slugify(series)}`;
 
 export type Landing =
-  | { kind: "section"; nav: NavKey; path: string }
-  | { kind: "category"; slug: string }
-  | { kind: "series"; slug: string };
+  { kind: "section"; nav: NavKey; path: string } | { kind: "category"; slug: string } | { kind: "series"; slug: string };
 
 export function landingFromPath(pathname: string): Landing | null {
   // the build writes these pages as files (figures.html), so the .html form of an address can turn up in links too
@@ -48,7 +57,11 @@ export function categoryBySlug(tree: CategoryTree, slug: string) {
 }
 
 /** A readable name from an address, until a product tells us the real spelling. */
-export const titleFromSlug = (slug: string) => slug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+export const titleFromSlug = (slug: string) =>
+  slug
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 
 export function sectionCopy(nav: NavKey): LandingCopy | null {
   const s = byNav.get(nav);
@@ -96,6 +109,11 @@ export function breadcrumbJsonLd(crumbs: { name: string; path: string }[]) {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    itemListElement: [{ name: "Shop", path: "/" }, ...crumbs].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.name, item: `${SITE_URL}${c.path}` })),
+    itemListElement: [{ name: "Shop", path: "/" }, ...crumbs].map((c, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: c.name,
+      item: `${SITE_URL}${c.path}`,
+    })),
   };
 }

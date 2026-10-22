@@ -12,12 +12,21 @@ export type ApiRequest = RequestInit & { body?: BodyInit | null };
 
 // ---------------------------------------------------------------- session
 
-export interface Session { accessToken: string; refreshToken: string; expiresAt: number; user: AppUser }
+export interface Session {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  user: AppUser;
+}
 const SESSION_KEY = "spinhobby-session";
 const listeners = new Set<(s: Session | null) => void>();
 
 function readSession(): Session | null {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null"); } catch { return null; }
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null");
+  } catch {
+    return null;
+  }
 }
 let session: Session | null = typeof window === "undefined" ? null : readSession();
 
@@ -26,20 +35,31 @@ function setSession(next: Session | null) {
   try {
     if (next) localStorage.setItem(SESSION_KEY, JSON.stringify(next));
     else localStorage.removeItem(SESSION_KEY);
-  } catch { /* storage blocked */ }
+  } catch {
+    /* storage blocked */
+  }
   listeners.forEach((fn) => fn(next));
 }
 
-export function getSession() { return session; }
+export function getSession() {
+  return session;
+}
 
 export function onSessionChange(fn: (s: Session | null) => void) {
   listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 // Another tab signed in or out.
 if (typeof window !== "undefined") {
-  window.addEventListener("storage", (e) => { if (e.key === SESSION_KEY) { session = readSession(); listeners.forEach((fn) => fn(session)); } });
+  window.addEventListener("storage", (e) => {
+    if (e.key === SESSION_KEY) {
+      session = readSession();
+      listeners.forEach((fn) => fn(session));
+    }
+  });
 }
 
 let refreshing: Promise<Session | null> | null = null;
@@ -47,9 +67,17 @@ function refreshSession(): Promise<Session | null> {
   const current = session;
   if (!current) return Promise.resolve(null);
   refreshing ??= request<Session>("/auth/refresh", { method: "POST", body: JSON.stringify({ refreshToken: current.refreshToken }) }, null)
-    .then((next) => { setSession(next); return next; })
-    .catch(() => { setSession(null); return null; })
-    .finally(() => { refreshing = null; });
+    .then((next) => {
+      setSession(next);
+      return next;
+    })
+    .catch(() => {
+      setSession(null);
+      return null;
+    })
+    .finally(() => {
+      refreshing = null;
+    });
   return refreshing;
 }
 
@@ -133,7 +161,14 @@ export async function apiFile(path: string, init: ApiRequest = {}): Promise<{ bl
 
 export type OAuthProvider = "google" | "discord";
 /** `username`: the email box also accepts the staging admin username (staging site only). */
-export interface AuthProviders { password: boolean; signup?: boolean; google: boolean; discord: boolean; dev?: boolean; username?: boolean }
+export interface AuthProviders {
+  password: boolean;
+  signup?: boolean;
+  google: boolean;
+  discord: boolean;
+  dev?: boolean;
+  username?: boolean;
+}
 
 let providersPromise: Promise<AuthProviders> | null = null;
 export function authProviders(): Promise<AuthProviders> {
@@ -148,20 +183,37 @@ export async function signInWithPassword(email: string, password: string) {
 /** Creates a customer account (no confirmation email) and signs straight in. */
 // Set by a fresh sign-up so the welcome message can say "welcome" rather than "welcome back".
 let justSignedUp = false;
-export function consumeSignupFlag() { const v = justSignedUp; justSignedUp = false; return v; }
+export function consumeSignupFlag() {
+  const v = justSignedUp;
+  justSignedUp = false;
+  return v;
+}
 
 export async function signUpWithPassword(email: string, password: string, firstName?: string) {
   justSignedUp = true;
-  setSession(await request<Session>("/auth/signup", { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() || undefined }) }, null));
+  setSession(
+    await request<Session>(
+      "/auth/signup",
+      { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() || undefined }) },
+      null,
+    ),
+  );
 }
 
 /** Sends the browser to Google/Discord; it comes back to the same page (see completeOAuthRedirect). */
 export async function signIn(provider: OAuthProvider, returnPath = window.location.pathname) {
-  const { url } = await request<{ url: string }>(`/auth/oauth-url?provider=${provider}&redirectTo=${encodeURIComponent(window.location.origin + returnPath)}`, {}, null);
+  const { url } = await request<{ url: string }>(
+    `/auth/oauth-url?provider=${provider}&redirectTo=${encodeURIComponent(window.location.origin + returnPath)}`,
+    {},
+    null,
+  );
   window.location.assign(url);
 }
 
-export interface AuthRedirectResult { type: string | null; error: string | null }
+export interface AuthRedirectResult {
+  type: string | null;
+  error: string | null;
+}
 
 /**
  * After Google/Discord, or after a password-recovery email link, Supabase returns tokens (or an
@@ -178,7 +230,12 @@ export async function completeOAuthRedirect(): Promise<AuthRedirectResult | null
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
   const me = await request<{ user: AppUser }>("/auth/me", {}, access).catch(() => null);
   if (!me) return { type, error: "Your session could not be loaded." };
-  setSession({ accessToken: access, refreshToken: refresh, expiresAt: Number(hash.get("expires_at") ?? Math.floor(Date.now() / 1000) + 3600), user: me.user });
+  setSession({
+    accessToken: access,
+    refreshToken: refresh,
+    expiresAt: Number(hash.get("expires_at") ?? Math.floor(Date.now() / 1000) + 3600),
+    user: me.user,
+  });
   return { type, error: null };
 }
 

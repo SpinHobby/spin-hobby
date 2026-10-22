@@ -5,7 +5,12 @@ import "@gleamshelf/react/style.css";
  * The Gleamshelf photo editor, full screen. Loaded on demand from PhotoUploader so shoppers never download it.
  * Exports within the upload limits: WebP, 1200 px (1600 for homepage slides), under 5 MB.
  */
-export default function PhotoEditor({ url, folder, onDone, onCancel }: {
+export default function PhotoEditor({
+  url,
+  folder,
+  onDone,
+  onCancel,
+}: {
   url: string;
   folder: "products" | "slides";
   onDone: (result: GleamResult) => void;

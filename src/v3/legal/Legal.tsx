@@ -7,7 +7,9 @@ import { LAST_UPDATED, PRIVACY_SECTIONS, TERMS_SECTIONS, type LegalSection } fro
 export default function Legal() {
   return (
     <div className="lg-wrap">
-      <a href="/" className="lg-back">← Back to the store</a>
+      <a href="/" className="lg-back">
+        ← Back to the store
+      </a>
 
       <Routes>
         <Route path="terms" element={<LegalTab privacy={false} />} />
@@ -29,7 +31,9 @@ function LegalTab({ privacy }: { privacy: boolean }) {
     path: location.pathname,
   });
 
-  useEffect(() => { window.scrollTo({ top: 0 }); }, [privacy]);
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [privacy]);
 
   return (
     <>

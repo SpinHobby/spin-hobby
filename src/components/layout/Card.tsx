@@ -6,7 +6,13 @@ import "../styles/components.scss";
  * a button). Put lists and tables straight inside; use `padded` for forms and text so they get breathing room. A padded card stacks its
  * children with even gaps, so wrap a sentence in a <p> (otherwise a <b> or <code> inside it starts a new line).
  */
-export function Card({ title, action, padded = false, className = "", children }: {
+export function Card({
+  title,
+  action,
+  padded = false,
+  className = "",
+  children,
+}: {
   title?: ReactNode;
   action?: ReactNode;
   padded?: boolean;
@@ -15,7 +21,12 @@ export function Card({ title, action, padded = false, className = "", children }
 }) {
   return (
     <section className={`ui-card ${className}`}>
-      {title !== undefined && <div className="ui-card__head"><span>{title}</span>{action}</div>}
+      {title !== undefined && (
+        <div className="ui-card__head">
+          <span>{title}</span>
+          {action}
+        </div>
+      )}
       {padded ? <div className="ui-pad">{children}</div> : children}
     </section>
   );
@@ -31,10 +42,22 @@ export function Stats({ items }: { items: { label: string; value: ReactNode; not
   return (
     <div className="ui-kpis">
       {items.map((s) => {
-        const body = <><span className="ui-kpi__label">{s.label}</span><span className="sh-display ui-kpi__value">{s.value}</span>{s.note && <span className="ui-kpi__note">{s.note}</span>}</>;
-        return s.onClick
-          ? <button key={s.label} type="button" className="ui-kpi" onClick={s.onClick}>{body}</button>
-          : <div key={s.label} className="ui-kpi">{body}</div>;
+        const body = (
+          <>
+            <span className="ui-kpi__label">{s.label}</span>
+            <span className="sh-display ui-kpi__value">{s.value}</span>
+            {s.note && <span className="ui-kpi__note">{s.note}</span>}
+          </>
+        );
+        return s.onClick ? (
+          <button key={s.label} type="button" className="ui-kpi" onClick={s.onClick}>
+            {body}
+          </button>
+        ) : (
+          <div key={s.label} className="ui-kpi">
+            {body}
+          </div>
+        );
       })}
     </div>
   );

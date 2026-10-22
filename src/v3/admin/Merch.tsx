@@ -14,7 +14,15 @@ import { polishPhoto, type StickerBox } from "./polish";
 import { useSeriesList } from "./seriesList";
 import type { Ctx } from "./Screens";
 
-const PREVIEW: CardActions = { currency: "CAD", inCart: () => false, wished: () => false, onAdd: () => {}, onNotify: () => {}, onWish: () => {}, onOpen: () => {} };
+const PREVIEW: CardActions = {
+  currency: "CAD",
+  inCart: () => false,
+  wished: () => false,
+  onAdd: () => {},
+  onNotify: () => {},
+  onWish: () => {},
+  onOpen: () => {},
+};
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 // The photo editor is only downloaded when someone opens it.
 const PhotoEditor = lazy(() => import("./PhotoEditor"));
@@ -24,8 +32,19 @@ const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
 // ---------------------------------------------------------------- photos
 
 /** Drop or pick photos; each is shrunk in the browser, then uploaded. First photo is the cover. */
-export function PhotoUploader({ urls, onChange, folder = "products", max = 6, single = false, selection }: {
-  urls: string[]; onChange: (urls: string[]) => void; folder?: "products" | "slides"; max?: number; single?: boolean;
+export function PhotoUploader({
+  urls,
+  onChange,
+  folder = "products",
+  max = 6,
+  single = false,
+  selection,
+}: {
+  urls: string[];
+  onChange: (urls: string[]) => void;
+  folder?: "products" | "slides";
+  max?: number;
+  single?: boolean;
   /** When given, every photo gets a tick box so several can be picked for a batch step. */
   selection?: { selected: Set<string>; onToggle: (url: string) => void };
 }) {
@@ -40,7 +59,8 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
   /** Uploads the edited photo and puts it in place of the one that was opened. */
   const saveEdit = async (index: number, result: GleamResult) => {
     setEditing(null);
-    setError(""); setNote("");
+    setError("");
+    setNote("");
     setBusy("Uploading edited photo…");
     try {
       const url = await uploadPrepared(await preparedFromBlob(result.blob, result.width, result.height), folder);
@@ -53,9 +73,15 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
   };
 
   const add = async (files: FileList | File[]) => {
-    const list = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, Math.max(limit - (single ? 0 : urls.length), 0));
-    if (!list.length) { if (files.length) setError("Choose image files."); return; }
-    setError(""); setNote("");
+    const list = Array.from(files)
+      .filter((f) => f.type.startsWith("image/"))
+      .slice(0, Math.max(limit - (single ? 0 : urls.length), 0));
+    if (!list.length) {
+      if (files.length) setError("Choose image files.");
+      return;
+    }
+    setError("");
+    setNote("");
     const added: string[] = [];
     let before = 0;
     let after = 0;
@@ -79,8 +105,17 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
     }
   };
 
-  const drop = (e: DragEvent) => { e.preventDefault(); setDragging(false); if (!busy) add(e.dataTransfer.files); };
-  const move = (i: number) => { const next = [...urls]; const [x] = next.splice(i, 1); next.unshift(x); onChange(next); };
+  const drop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    if (!busy) add(e.dataTransfer.files);
+  };
+  const move = (i: number) => {
+    const next = [...urls];
+    const [x] = next.splice(i, 1);
+    next.unshift(x);
+    onChange(next);
+  };
   const remove = (i: number) => onChange(urls.filter((_, k) => k !== i));
   const full = urls.length >= limit && !single;
 
@@ -93,23 +128,48 @@ export function PhotoUploader({ urls, onChange, folder = "products", max = 6, si
               <img src={url} alt="" />
               {selection && (
                 <label className="ad-photos__pick" title="Select this photo">
-                  <input type="checkbox" checked={selection.selected.has(url)} onChange={() => selection.onToggle(url)} aria-label={`Select photo ${i + 1}`} />
+                  <input
+                    type="checkbox"
+                    checked={selection.selected.has(url)}
+                    onChange={() => selection.onToggle(url)}
+                    aria-label={`Select photo ${i + 1}`}
+                  />
                 </label>
               )}
               {!single && i === 0 && <span className="ad-photos__cover">Cover</span>}
               <div className="ad-photos__actions">
-                <button type="button" onClick={() => setEditing(i)} disabled={!!busy} title="Edit photo" aria-label="Edit photo">✎</button>
-                {!single && i > 0 && <button type="button" onClick={() => move(i)} title="Make cover photo">★</button>}
-                <button type="button" onClick={() => remove(i)} aria-label="Remove photo">×</button>
+                <button type="button" onClick={() => setEditing(i)} disabled={!!busy} title="Edit photo" aria-label="Edit photo">
+                  ✎
+                </button>
+                {!single && i > 0 && (
+                  <button type="button" onClick={() => move(i)} title="Make cover photo">
+                    ★
+                  </button>
+                )}
+                <button type="button" onClick={() => remove(i)} aria-label="Remove photo">
+                  ×
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
       {!full && (
-        <button type="button" className={`ad-drop ${dragging ? "is-over" : ""}`} disabled={!!busy}
-          onClick={() => input.current?.click()} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={drop}>
-          <span className="ad-drop__icon" aria-hidden>{busy ? "⏳" : "📷"}</span>
+        <button
+          type="button"
+          className={`ad-drop ${dragging ? "is-over" : ""}`}
+          disabled={!!busy}
+          onClick={() => input.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={drop}
+        >
+          <span className="ad-drop__icon" aria-hidden>
+            {busy ? "⏳" : "📷"}
+          </span>
           <span className="ad-drop__title">{busy || (single ? (urls.length ? "Replace photo" : "Add photo") : "Add photos")}</span>
           {!busy && <span className="ad-drop__hint">Drop here or click · resized automatically before upload</span>}
         </button>
@@ -135,10 +195,19 @@ export function StockField({ value, onChange }: { value: number | null; onChange
     <div className="ad-stock">
       <div className="ad-stock__row">
         <div className="ad-stepper" aria-disabled={!tracked}>
-          <button type="button" onClick={() => set((value ?? 0) - 1)} disabled={!tracked || (value ?? 0) <= 0} aria-label="One less">−</button>
-          <input inputMode="numeric" value={tracked ? String(value) : "∞"} disabled={!tracked} aria-label="Units in stock"
-            onChange={(e) => set(Number(e.target.value.replace(/\D/g, "")))} />
-          <button type="button" onClick={() => set((value ?? 0) + 1)} disabled={!tracked} aria-label="One more">+</button>
+          <button type="button" onClick={() => set((value ?? 0) - 1)} disabled={!tracked || (value ?? 0) <= 0} aria-label="One less">
+            −
+          </button>
+          <input
+            inputMode="numeric"
+            value={tracked ? String(value) : "∞"}
+            disabled={!tracked}
+            aria-label="Units in stock"
+            onChange={(e) => set(Number(e.target.value.replace(/\D/g, "")))}
+          />
+          <button type="button" onClick={() => set((value ?? 0) + 1)} disabled={!tracked} aria-label="One more">
+            +
+          </button>
         </div>
         <span className="ad-muted ad-sm">{!tracked ? "Always available" : value === 0 ? "Sold out" : `${value} in stock`}</span>
       </div>
@@ -153,8 +222,19 @@ export function StockField({ value, onChange }: { value: number | null; onChange
 // ---------------------------------------------------------------- add product
 
 interface Draft {
-  name: string; price: string; compareAt: string; stock: number | null; photos: string[];
-  preorder: boolean; release: string; orderBy: string; series: string; jan: string; maxPer: string; featured: boolean; description: string;
+  name: string;
+  price: string;
+  compareAt: string;
+  stock: number | null;
+  photos: string[];
+  preorder: boolean;
+  release: string;
+  orderBy: string;
+  series: string;
+  jan: string;
+  maxPer: string;
+  featured: boolean;
+  description: string;
   categoryId: string | null;
   /** In a sealed box: the box artwork can be used as the main photo. */
   sealed: boolean;
@@ -166,14 +246,62 @@ interface Draft {
   /** Create it in Square (the default), or keep it only in our own database. */
   inSquare: boolean;
 }
-interface ArtworkCrop { x: number; y: number; width: number; height: number; rotationDegrees: number }
-interface AiUsage { inputTokens: number; outputTokens: number; costUsd: number; monthSpendUsd: number; monthStopUsd: number }
-interface AiDraft { title: string; description: string; category: string; artworkCrop?: ArtworkCrop; barcode?: string; series?: string; seriesIsNew?: boolean; usage?: AiUsage }
+interface ArtworkCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotationDegrees: number;
+}
+interface AiUsage {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  monthSpendUsd: number;
+  monthStopUsd: number;
+}
+interface AiDraft {
+  title: string;
+  description: string;
+  category: string;
+  artworkCrop?: ArtworkCrop;
+  barcode?: string;
+  series?: string;
+  seriesIsNew?: boolean;
+  usage?: AiUsage;
+}
 /** "2,621 in + 167 out tokens, about $0.017 (this month $1.53 of the $30 limit)". */
 const usageText = (u: AiUsage) =>
   `${u.inputTokens.toLocaleString()} in + ${u.outputTokens.toLocaleString()} out tokens, about $${u.costUsd.toFixed(3)} (this month $${u.monthSpendUsd.toFixed(2)} of the $${u.monthStopUsd} limit)`;
-interface ExistingProduct { id: string; name: string; source: "square" | "manual"; stockCount: number | null; isActive: boolean }
-const EMPTY: Draft = { name: "", price: "", compareAt: "", stock: 1, photos: [], preorder: false, release: "", orderBy: "", series: "", jan: "", maxPer: "", featured: false, description: "", categoryId: null, sealed: true, squareCategory: "", crop: null, useArtwork: true, hidden: false, inSquare: true };
+interface ExistingProduct {
+  id: string;
+  name: string;
+  source: "square" | "manual";
+  stockCount: number | null;
+  isActive: boolean;
+}
+const EMPTY: Draft = {
+  name: "",
+  price: "",
+  compareAt: "",
+  stock: 1,
+  photos: [],
+  preorder: false,
+  release: "",
+  orderBy: "",
+  series: "",
+  jan: "",
+  maxPer: "",
+  featured: false,
+  description: "",
+  categoryId: null,
+  sealed: true,
+  squareCategory: "",
+  crop: null,
+  useArtwork: true,
+  hidden: false,
+  inSquare: true,
+};
 
 const toCents = (v: string) => (v.trim() ? Math.round(Number(v) * 100) : null);
 
@@ -196,7 +324,13 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const code = cleanBarcode(d.jan);
   const codeBad = d.inSquare && d.jan.trim() !== "" && !code;
 
-  const toggleSelected = (url: string) => setSelected((cur) => { const next = new Set(cur); if (next.has(url)) next.delete(url); else next.add(url); return next; });
+  const toggleSelected = (url: string) =>
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
 
   /**
    * Runs what the admin ticked, and only that. The free step (green-backdrop cut-out) works on every selected photo
@@ -205,7 +339,10 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
    */
   const runPolish = async () => {
     const urls = d.photos;
-    if (!urls[0]) { setAi({ state: "failed", note: "Add a photo first." }); return; }
+    if (!urls[0]) {
+      setAi({ state: "failed", note: "Add a photo first." });
+      return;
+    }
     const wantText = choice.text;
     const backdropOn = new Set<number>();
     if (choice.removeBackground) {
@@ -227,8 +364,19 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
         const r = await api<AiDraft & { stickers?: StickerBox[] }>("/cashier/identify", { method: "POST", body: form });
         stickers = choice.removeStickers ? (r.stickers ?? []) : undefined;
         // Asked for explicitly, so the suggestion replaces what is there (except a barcode already scanned or typed).
-        setD((x) => ({ ...x, name: r.title, description: r.description, squareCategory: r.category, crop: r.artworkCrop ?? null, jan: x.jan || r.barcode || "", series: r.series ?? x.series }));
-        if (r.usage) { spent += r.usage.costUsd; notes.push(`Title and description written. Used ${usageText(r.usage)}.`); }
+        setD((x) => ({
+          ...x,
+          name: r.title,
+          description: r.description,
+          squareCategory: r.category,
+          crop: r.artworkCrop ?? null,
+          jan: x.jan || r.barcode || "",
+          series: r.series ?? x.series,
+        }));
+        if (r.usage) {
+          spent += r.usage.costUsd;
+          notes.push(`Title and description written. Used ${usageText(r.usage)}.`);
+        }
       }
       const next = [...urls];
       const originals: string[] = [];
@@ -240,18 +388,31 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
         setAi({ state: "working", note: order.length > 1 ? `Working on photo ${n + 1} of ${order.length}…` : "Working on the photo…" });
         const coverStickers = i === 0 && choice.removeStickers;
         const { blob, report } = await polishPhoto(await (await fetch(urls[i])).blob(), {
-          removeBackground: backdropOn.has(i), removeStickers: coverStickers, stickers: coverStickers ? stickers : undefined,
+          removeBackground: backdropOn.has(i),
+          removeStickers: coverStickers,
+          stickers: coverStickers ? stickers : undefined,
         });
         next[i] = await uploadPrepared(await preparedFromBlob(blob, 0, 0), "products");
         if (keepOriginal) originals.push(urls[i]);
-        if (backdropOn.has(i)) { if (report.backgroundRemoved) removed += 1; else missing += 1; }
+        if (backdropOn.has(i)) {
+          if (report.backgroundRemoved) removed += 1;
+          else missing += 1;
+        }
         if (report.usage) spent += report.usage.costUsd;
         stickersFilled += report.stickersFilled;
       }
       if (order.length) setD((x) => ({ ...x, photos: [...next, ...originals].slice(0, 8) }));
       setSelected(new Set());
-      if (choice.removeBackground) notes.push(`Green backdrop removed from ${removed} photo${removed === 1 ? "" : "s"}${missing ? `; ${missing} had no green backdrop, so ${missing === 1 ? "it was" : "they were"} left as ${missing === 1 ? "it is" : "they are"}` : ""}.`);
-      if (choice.removeStickers) notes.push(stickersFilled ? `${stickersFilled} sticker${stickersFilled === 1 ? "" : "s"} painted over on the cover photo.` : "No shop sticker was found on the cover photo.");
+      if (choice.removeBackground)
+        notes.push(
+          `Green backdrop removed from ${removed} photo${removed === 1 ? "" : "s"}${missing ? `; ${missing} had no green backdrop, so ${missing === 1 ? "it was" : "they were"} left as ${missing === 1 ? "it is" : "they are"}` : ""}.`,
+        );
+      if (choice.removeStickers)
+        notes.push(
+          stickersFilled
+            ? `${stickersFilled} sticker${stickersFilled === 1 ? "" : "s"} painted over on the cover photo.`
+            : "No shop sticker was found on the cover photo.",
+        );
       setAi({ state: "done", note: `${notes.join(" ")}${spent ? ` Total about $${spent.toFixed(3)}.` : " Nothing was charged."}` });
     } catch (e) {
       setAi({ state: "failed", note: `${errMsg(e)}` });
@@ -265,19 +426,34 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
     setExisting(null);
     if (!code || !d.inSquare) return;
     let current = true;
-    api<{ product: ExistingProduct | null }>(`/admin/products/by-barcode/${code}`).then((r) => { if (current) setExisting(r.product); }).catch(() => undefined);
-    return () => { current = false; };
+    api<{ product: ExistingProduct | null }>(`/admin/products/by-barcode/${code}`)
+      .then((r) => {
+        if (current) setExisting(r.product);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
   }, [code, d.inSquare]);
 
   const addToExisting = async () => {
     if (!existing) return;
     setSaving(true);
     try {
-      const r = await api<{ stockCount: number }>(`/admin/products/${encodeURIComponent(existing.id)}/add-stock`, { method: "POST", body: JSON.stringify({ quantity: Math.max(1, d.stock ?? 1) }) });
+      const r = await api<{ stockCount: number }>(`/admin/products/${encodeURIComponent(existing.id)}/add-stock`, {
+        method: "POST",
+        body: JSON.stringify({ quantity: Math.max(1, d.stock ?? 1) }),
+      });
       ctx.reload();
       ctx.flash(`${existing.name}: stock is now ${r.stockCount}`);
-      setD({ ...EMPTY, categoryId: d.categoryId, inSquare: squareConnected }); setAi({ state: "idle", note: "" }); setTouched(false);
-    } catch (e) { ctx.flash(errMsg(e)); } finally { setSaving(false); }
+      setD({ ...EMPTY, categoryId: d.categoryId, inSquare: squareConnected });
+      setAi({ state: "idle", note: "" });
+      setTouched(false);
+    } catch (e) {
+      ctx.flash(errMsg(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const price = toCents(d.price);
@@ -293,10 +469,30 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
   const show = (k: keyof Draft) => (touched ? errors[k] : undefined);
 
   const preview: Product = {
-    id: "preview", variationId: "preview-v", name: d.name || "Product name", series: d.series || null, character: null, category: ctx.data.categories.find((c) => c.id === d.categoryId)?.name ?? null,
-    images: d.photos, priceCents: price && price > 0 ? price : 0, compareAtCents: compare && price && compare > price ? compare : null, currency: "CAD",
-    status: d.preorder ? "pre" : d.stock === null ? "in" : d.stock <= 0 ? "out" : d.stock <= ctx.data.settings.low_stock_threshold ? "low" : "in",
-    stockCount: d.stock, releaseMonth: d.release || null, orderByDate: d.orderBy || null, rank: null, maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
+    id: "preview",
+    variationId: "preview-v",
+    name: d.name || "Product name",
+    series: d.series || null,
+    character: null,
+    category: ctx.data.categories.find((c) => c.id === d.categoryId)?.name ?? null,
+    images: d.photos,
+    priceCents: price && price > 0 ? price : 0,
+    compareAtCents: compare && price && compare > price ? compare : null,
+    currency: "CAD",
+    status: d.preorder
+      ? "pre"
+      : d.stock === null
+        ? "in"
+        : d.stock <= 0
+          ? "out"
+          : d.stock <= ctx.data.settings.low_stock_threshold
+            ? "low"
+            : "in",
+    stockCount: d.stock,
+    releaseMonth: d.release || null,
+    orderByDate: d.orderBy || null,
+    rank: null,
+    maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
   };
 
   const save = async (addAnother: boolean) => {
@@ -304,24 +500,44 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
     if (!valid) return;
     setSaving(true);
     const body = {
-      name: d.name.trim(), priceCents: price, compareAtCents: compare, stockCount: d.stock,
-      imageUrls: d.photos, availability: d.preorder ? "preorder" : "auto", releaseMonth: d.release || null, orderByDate: d.orderBy || null,
-      series: d.series.trim() || null, janCode: d.jan.trim() || null, maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
-      isFeatured: d.featured, description: d.description.trim() || null, categoryId: d.categoryId,
+      name: d.name.trim(),
+      priceCents: price,
+      compareAtCents: compare,
+      stockCount: d.stock,
+      imageUrls: d.photos,
+      availability: d.preorder ? "preorder" : "auto",
+      releaseMonth: d.release || null,
+      orderByDate: d.orderBy || null,
+      series: d.series.trim() || null,
+      janCode: d.jan.trim() || null,
+      maxPerCustomer: d.maxPer ? Number(d.maxPer) : null,
+      isFeatured: d.featured,
+      description: d.description.trim() || null,
+      categoryId: d.categoryId,
     };
     try {
       if (d.inSquare) {
-        await api("/admin/products/quick-add", { method: "POST", body: JSON.stringify({
-          ...body, janCode: null, barcode: code, category: d.squareCategory.trim() || null, hidden: d.hidden,
-          artworkCrop: d.sealed && d.useArtwork ? d.crop : null,
-        }) });
+        await api("/admin/products/quick-add", {
+          method: "POST",
+          body: JSON.stringify({
+            ...body,
+            janCode: null,
+            barcode: code,
+            category: d.squareCategory.trim() || null,
+            hidden: d.hidden,
+            artworkCrop: d.sealed && d.useArtwork ? d.crop : null,
+          }),
+        });
       } else {
         await api("/admin/products", { method: "POST", body: JSON.stringify(body) });
       }
       ctx.reload();
       ctx.flash(`${body.name} added${d.inSquare ? " to Square and the shop" : " to the shop"}`);
-      if (addAnother) { setD({ ...EMPTY, categoryId: d.categoryId, inSquare: d.inSquare }); setAi({ state: "idle", note: "" }); setTouched(false); }
-      else onClose();
+      if (addAnother) {
+        setD({ ...EMPTY, categoryId: d.categoryId, inSquare: d.inSquare });
+        setAi({ state: "idle", note: "" });
+        setTouched(false);
+      } else onClose();
     } catch (e) {
       ctx.flash(errMsg(e));
     } finally {
@@ -333,33 +549,68 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
     <>
       <div className="sh-overlay" onClick={onClose} />
       <aside className="sh-drawer ad-drawer--wide" role="dialog" aria-modal="true" aria-label="Add product">
-        <div className="sh-drawer__head"><span>Add product</span><button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close">×</button></div>
+        <div className="sh-drawer__head">
+          <span>Add product</span>
+          <button type="button" className="sh-icon-btn" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
         <div className="sh-drawer__body ad-add">
           <div className="ad-add__form">
             <section className="ad-add__section">
               <div className="ad-label">Photos</div>
-              <PhotoUploader urls={d.photos} onChange={onPhotos} selection={d.inSquare ? { selected, onToggle: toggleSelected } : undefined} />
+              <PhotoUploader
+                urls={d.photos}
+                onChange={onPhotos}
+                selection={d.inSquare ? { selected, onToggle: toggleSelected } : undefined}
+              />
               {d.inSquare && (
                 <>
                   <div className="ad-seg" role="group" aria-label="Condition">
-                    <button type="button" className={d.sealed ? "is-active" : ""} onClick={() => set("sealed", true)}>Sealed in box</button>
-                    <button type="button" className={!d.sealed ? "is-active" : ""} onClick={() => set("sealed", false)}>Opened / loose</button>
+                    <button type="button" className={d.sealed ? "is-active" : ""} onClick={() => set("sealed", true)}>
+                      Sealed in box
+                    </button>
+                    <button type="button" className={!d.sealed ? "is-active" : ""} onClick={() => set("sealed", false)}>
+                      Opened / loose
+                    </button>
                   </div>
                   {d.photos[0] && (
                     <div className="ad-polish-box">
-                      <div className="ad-label" style={{ margin: 0 }}>Improve with these steps <span className="ad-muted">· nothing that costs money runs unless you tick it</span></div>
-                      <PolishOptions choice={choice} onChange={setChoice} showText busy={ai.state === "working"} onRun={runPolish}
-                        selection={{ count: d.photos.filter((u) => selected.has(u)).length, total: d.photos.length, onAll: () => setSelected(new Set(d.photos)), onNone: () => setSelected(new Set()) }} />
-                      <label className="ad-check-inline"><input type="checkbox" checked={keepOriginal} onChange={(e) => setKeepOriginal(e.target.checked)} />Keep my original photos as extra pictures</label>
+                      <div className="ad-label" style={{ margin: 0 }}>
+                        Improve with these steps <span className="ad-muted">· nothing that costs money runs unless you tick it</span>
+                      </div>
+                      <PolishOptions
+                        choice={choice}
+                        onChange={setChoice}
+                        showText
+                        busy={ai.state === "working"}
+                        onRun={runPolish}
+                        selection={{
+                          count: d.photos.filter((u) => selected.has(u)).length,
+                          total: d.photos.length,
+                          onAll: () => setSelected(new Set(d.photos)),
+                          onNone: () => setSelected(new Set()),
+                        }}
+                      />
+                      <label className="ad-check-inline">
+                        <input type="checkbox" checked={keepOriginal} onChange={(e) => setKeepOriginal(e.target.checked)} />
+                        Keep my original photos as extra pictures
+                      </label>
                     </div>
                   )}
                   {ai.state !== "idle" && (
                     <div className={`ad-ai ad-ai--${ai.state}`} role="status">
-                      <span>{ai.state === "working" ? "✨ " : ai.state === "done" ? "✨ " : "⚠ "}{ai.note}</span>
+                      <span>
+                        {ai.state === "working" ? "✨ " : ai.state === "done" ? "✨ " : "⚠ "}
+                        {ai.note}
+                      </span>
                     </div>
                   )}
                   {d.sealed && d.crop && (
-                    <label className="ad-check-inline"><input type="checkbox" checked={d.useArtwork} onChange={(e) => set("useArtwork", e.target.checked)} />Use the picture printed on the box as the main photo (your photo is kept as the next one)</label>
+                    <label className="ad-check-inline">
+                      <input type="checkbox" checked={d.useArtwork} onChange={(e) => set("useArtwork", e.target.checked)} />
+                      Use the picture printed on the box as the main photo (your photo is kept as the next one)
+                    </label>
                   )}
                 </>
               )}
@@ -368,36 +619,81 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
             <section className="ad-add__section">
               <label className={`ad-field ${show("name") ? "has-error" : ""}`}>
                 <span className="ad-field__top">Name {show("name") && <em>{show("name")}</em>}</span>
-                <input className="sh-input" autoFocus placeholder="e.g. Rem 1/7 Scale Figure" value={d.name} onChange={(e) => set("name", e.target.value)} maxLength={200} />
+                <input
+                  className="sh-input"
+                  autoFocus
+                  placeholder="e.g. Rem 1/7 Scale Figure"
+                  value={d.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  maxLength={200}
+                />
               </label>
               <div className="ad-grid2">
                 <CategorySelect ctx={ctx} value={d.categoryId} onChange={(id) => set("categoryId", id)} />
                 <SeriesSelect value={d.series} onChange={(name) => set("series", name)} list={seriesList} />
               </div>
-              <label className="ad-field">Description<textarea className="sh-input" rows={3} value={d.description} onChange={(e) => set("description", e.target.value)} maxLength={2000} /></label>
+              <label className="ad-field">
+                Description
+                <textarea
+                  className="sh-input"
+                  rows={3}
+                  value={d.description}
+                  onChange={(e) => set("description", e.target.value)}
+                  maxLength={2000}
+                />
+              </label>
               <div className="ad-grid2">
                 <label className={`ad-field ${show("jan") ? "has-error" : ""}`}>
                   <span className="ad-field__top">Barcode {show("jan") && <em>{show("jan")}</em>}</span>
                   <span className="ad-barcode">
-                    <input className="sh-input" inputMode="numeric" placeholder="scan or type" value={d.jan} onChange={(e) => set("jan", e.target.value.replace(/[^\d\s-]/g, ""))} maxLength={20} />
-                    <button type="button" className="sh-btn sh-btn--ghost" onClick={() => setScanning(true)}>📷 Scan</button>
+                    <input
+                      className="sh-input"
+                      inputMode="numeric"
+                      placeholder="scan or type"
+                      value={d.jan}
+                      onChange={(e) => set("jan", e.target.value.replace(/[^\d\s-]/g, ""))}
+                      maxLength={20}
+                    />
+                    <button type="button" className="sh-btn sh-btn--ghost" onClick={() => setScanning(true)}>
+                      📷 Scan
+                    </button>
                   </span>
                 </label>
                 {d.inSquare && (
-                  <label className="ad-field">Category in Square
-                    <input className="sh-input" placeholder="e.g. Figures" value={d.squareCategory} onChange={(e) => set("squareCategory", e.target.value)} maxLength={120} />
+                  <label className="ad-field">
+                    Category in Square
+                    <input
+                      className="sh-input"
+                      placeholder="e.g. Figures"
+                      value={d.squareCategory}
+                      onChange={(e) => set("squareCategory", e.target.value)}
+                      maxLength={120}
+                    />
                   </label>
                 )}
               </div>
               {existing && (
                 <div className="ad-callout" role="status">
-                  <span><b>Already in your catalog:</b> {existing.name} ({existing.stockCount == null ? "stock not tracked" : `${existing.stockCount} in stock`}).</span>
-                  {existing.source === "square" && <button type="button" className="ad-link" onClick={addToExisting} disabled={saving}>Add {Math.max(1, d.stock ?? 1)} to its stock instead</button>}
+                  <span>
+                    <b>Already in your catalog:</b> {existing.name} (
+                    {existing.stockCount == null ? "stock not tracked" : `${existing.stockCount} in stock`}).
+                  </span>
+                  {existing.source === "square" && (
+                    <button type="button" className="ad-link" onClick={addToExisting} disabled={saving}>
+                      Add {Math.max(1, d.stock ?? 1)} to its stock instead
+                    </button>
+                  )}
                 </div>
               )}
               {scanning && (
                 <Suspense fallback={null}>
-                  <BarcodeScanner onClose={() => setScanning(false)} onCode={(c) => { set("jan", c); setScanning(false); }} />
+                  <BarcodeScanner
+                    onClose={() => setScanning(false)}
+                    onCode={(c) => {
+                      set("jan", c);
+                      setScanning(false);
+                    }}
+                  />
                 </Suspense>
               )}
             </section>
@@ -406,63 +702,141 @@ export function AddProductDrawer({ ctx, onClose }: { ctx: Ctx; onClose: () => vo
               <div className="ad-grid2">
                 <label className={`ad-field ${show("price") ? "has-error" : ""}`}>
                   <span className="ad-field__top">Price (CAD) {show("price") && <em>{show("price")}</em>}</span>
-                  <div className="ad-money"><span>$</span><input className="sh-input" inputMode="decimal" placeholder="0.00" value={d.price} onChange={(e) => set("price", e.target.value.replace(/[^\d.]/g, ""))} /></div>
+                  <div className="ad-money">
+                    <span>$</span>
+                    <input
+                      className="sh-input"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={d.price}
+                      onChange={(e) => set("price", e.target.value.replace(/[^\d.]/g, ""))}
+                    />
+                  </div>
                 </label>
                 <label className={`ad-field ${show("compareAt") ? "has-error" : ""}`}>
-                  <span className="ad-field__top">Original price {show("compareAt") ? <em>{show("compareAt")}</em> : <small>for a sale</small>}</span>
-                  <div className="ad-money"><span>$</span><input className="sh-input" inputMode="decimal" placeholder="optional" value={d.compareAt} onChange={(e) => set("compareAt", e.target.value.replace(/[^\d.]/g, ""))} /></div>
+                  <span className="ad-field__top">
+                    Original price {show("compareAt") ? <em>{show("compareAt")}</em> : <small>for a sale</small>}
+                  </span>
+                  <div className="ad-money">
+                    <span>$</span>
+                    <input
+                      className="sh-input"
+                      inputMode="decimal"
+                      placeholder="optional"
+                      value={d.compareAt}
+                      onChange={(e) => set("compareAt", e.target.value.replace(/[^\d.]/g, ""))}
+                    />
+                  </div>
                 </label>
               </div>
             </section>
 
             <section className="ad-add__section">
               <div className="ad-seg" role="group" aria-label="Availability">
-                <button type="button" className={!d.preorder ? "is-active" : ""} onClick={() => set("preorder", false)}>In stock now</button>
-                <button type="button" className={d.preorder ? "is-active" : ""} onClick={() => set("preorder", true)}>Pre-order</button>
+                <button type="button" className={!d.preorder ? "is-active" : ""} onClick={() => set("preorder", false)}>
+                  In stock now
+                </button>
+                <button type="button" className={d.preorder ? "is-active" : ""} onClick={() => set("preorder", true)}>
+                  Pre-order
+                </button>
               </div>
               {d.preorder ? (
                 <div className="ad-grid2">
-                  <label className="ad-field">Release month<input className="sh-input" type="month" value={d.release} onChange={(e) => set("release", e.target.value)} /></label>
+                  <label className="ad-field">
+                    Release month
+                    <input className="sh-input" type="month" value={d.release} onChange={(e) => set("release", e.target.value)} />
+                  </label>
                   <label className={`ad-field ${show("orderBy") ? "has-error" : ""}`}>
                     <span className="ad-field__top">Order by {show("orderBy") && <em>{show("orderBy")}</em>}</span>
                     <input className="sh-input" type="date" value={d.orderBy} onChange={(e) => set("orderBy", e.target.value)} />
                   </label>
                 </div>
               ) : (
-                <div className="ad-field">Stock<StockField value={d.stock} onChange={(v) => set("stock", v)} /></div>
+                <div className="ad-field">
+                  Stock
+                  <StockField value={d.stock} onChange={(v) => set("stock", v)} />
+                </div>
               )}
             </section>
 
-            <button type="button" className="ad-link ad-add__more" onClick={() => setShowMore((v) => !v)}>{showMore ? "− Fewer details" : "+ More details (limits, featured, hide, where it is kept)"}</button>
+            <button type="button" className="ad-link ad-add__more" onClick={() => setShowMore((v) => !v)}>
+              {showMore ? "− Fewer details" : "+ More details (limits, featured, hide, where it is kept)"}
+            </button>
             {showMore && (
               <section className="ad-add__section">
                 <div className="ad-grid2">
                   <label className={`ad-field ${show("maxPer") ? "has-error" : ""}`}>
                     <span className="ad-field__top">Max per customer {show("maxPer") && <em>{show("maxPer")}</em>}</span>
-                    <input className="sh-input" inputMode="numeric" placeholder="No limit" value={d.maxPer} onChange={(e) => set("maxPer", e.target.value.replace(/\D/g, ""))} />
+                    <input
+                      className="sh-input"
+                      inputMode="numeric"
+                      placeholder="No limit"
+                      value={d.maxPer}
+                      onChange={(e) => set("maxPer", e.target.value.replace(/\D/g, ""))}
+                    />
                   </label>
                 </div>
-                <label className="ad-check-inline"><input type="checkbox" checked={d.featured} onChange={(e) => set("featured", e.target.checked)} />Feature on the homepage and at the top of the catalog</label>
-                {d.inSquare && <label className="ad-check-inline"><input type="checkbox" checked={d.hidden} onChange={(e) => set("hidden", e.target.checked)} />Keep it off the website for now (it is still created in Square)</label>}
-                {squareConnected
-                  ? <label className="ad-check-inline"><input type="checkbox" checked={!d.inSquare} onChange={(e) => { set("inSquare", !e.target.checked); if (e.target.checked) setAi({ state: "idle", note: "" }); }} />Keep it only in our database (don't create it in Square)</label>
-                  : <span className="ad-muted ad-sm">Square isn't connected here, so the product is kept in our database only.</span>}
+                <label className="ad-check-inline">
+                  <input type="checkbox" checked={d.featured} onChange={(e) => set("featured", e.target.checked)} />
+                  Feature on the homepage and at the top of the catalog
+                </label>
+                {d.inSquare && (
+                  <label className="ad-check-inline">
+                    <input type="checkbox" checked={d.hidden} onChange={(e) => set("hidden", e.target.checked)} />
+                    Keep it off the website for now (it is still created in Square)
+                  </label>
+                )}
+                {squareConnected ? (
+                  <label className="ad-check-inline">
+                    <input
+                      type="checkbox"
+                      checked={!d.inSquare}
+                      onChange={(e) => {
+                        set("inSquare", !e.target.checked);
+                        if (e.target.checked) setAi({ state: "idle", note: "" });
+                      }}
+                    />
+                    Keep it only in our database (don't create it in Square)
+                  </label>
+                ) : (
+                  <span className="ad-muted ad-sm">Square isn't connected here, so the product is kept in our database only.</span>
+                )}
               </section>
             )}
           </div>
 
           <aside className="ad-add__preview">
             <div className="ad-preview">
-              <div className="ad-preview__label"><span className="ad-dot" style={{ background: "var(--teal)" }} />Storefront preview</div>
-              <div className="sf ad-preview__stage"><div className="ad-preview__card"><ProductCard p={preview} a={PREVIEW} /></div></div>
-              <div className="ad-preview__meta"><span><b>Shoppers see:</b> {price ? `${money(price)} · ` : ""}{statusLabel(preview)}</span></div>
+              <div className="ad-preview__label">
+                <span className="ad-dot" style={{ background: "var(--teal)" }} />
+                Storefront preview
+              </div>
+              <div className="sf ad-preview__stage">
+                <div className="ad-preview__card">
+                  <ProductCard p={preview} a={PREVIEW} />
+                </div>
+              </div>
+              <div className="ad-preview__meta">
+                <span>
+                  <b>Shoppers see:</b> {price ? `${money(price)} · ` : ""}
+                  {statusLabel(preview)}
+                </span>
+              </div>
             </div>
           </aside>
         </div>
         <div className="sh-drawer__foot">
-          {touched && !valid && <span className="ad-error" style={{ marginRight: "auto" }}>Fix the highlighted fields</span>}
-          <button type="button" className="sh-btn sh-btn--ghost" onClick={() => save(true)} disabled={saving || ai.state === "working"}>Save & add another</button>
-          <button type="button" className="sh-btn" onClick={() => save(false)} disabled={saving}>{saving ? (d.inSquare ? "Adding to Square…" : "Saving…") : d.inSquare ? "Add to Square" : "Add to shop"}</button>
+          {touched && !valid && (
+            <span className="ad-error" style={{ marginRight: "auto" }}>
+              Fix the highlighted fields
+            </span>
+          )}
+          <button type="button" className="sh-btn sh-btn--ghost" onClick={() => save(true)} disabled={saving || ai.state === "working"}>
+            Save & add another
+          </button>
+          <button type="button" className="sh-btn" onClick={() => save(false)} disabled={saving}>
+            {saving ? (d.inSquare ? "Adding to Square…" : "Saving…") : d.inSquare ? "Add to Square" : "Add to shop"}
+          </button>
         </div>
       </aside>
     </>
@@ -476,7 +850,21 @@ export function InlineStock({ ctx, p, onChange }: { ctx: Ctx; p: Product; onChan
   const change = async (delta: number) => {
     const next = Math.max(0, (p.stockCount ?? 0) + delta);
     setBusy(true);
-    const update = (stockCount: number | null) => { onChange?.(stockCount); ctx.setData((x) => ({ ...x, products: x.products.map((q) => (q.id === p.id ? { ...q, stockCount, status: stockCount === null ? "in" : stockCount <= 0 ? "out" : stockCount <= x.settings.low_stock_threshold ? "low" : "in" } : q)) })); };
+    const update = (stockCount: number | null) => {
+      onChange?.(stockCount);
+      ctx.setData((x) => ({
+        ...x,
+        products: x.products.map((q) =>
+          q.id === p.id
+            ? {
+                ...q,
+                stockCount,
+                status: stockCount === null ? "in" : stockCount <= 0 ? "out" : stockCount <= x.settings.low_stock_threshold ? "low" : "in",
+              }
+            : q,
+        ),
+      }));
+    };
     const previous = p.stockCount;
     update(next);
     try {
@@ -491,9 +879,13 @@ export function InlineStock({ ctx, p, onChange }: { ctx: Ctx; p: Product; onChan
   if (p.stockCount === null) return <span className="ad-strong">∞</span>;
   return (
     <span className="ad-inline-stock" onClick={(e) => e.stopPropagation()}>
-      <button type="button" onClick={() => change(-1)} disabled={busy || (p.stockCount ?? 0) <= 0} aria-label={`One less ${p.name}`}>−</button>
+      <button type="button" onClick={() => change(-1)} disabled={busy || (p.stockCount ?? 0) <= 0} aria-label={`One less ${p.name}`}>
+        −
+      </button>
       <b>{p.stockCount}</b>
-      <button type="button" onClick={() => change(1)} disabled={busy} aria-label={`One more ${p.name}`}>+</button>
+      <button type="button" onClick={() => change(1)} disabled={busy} aria-label={`One more ${p.name}`}>
+        +
+      </button>
     </span>
   );
 }

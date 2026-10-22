@@ -27,11 +27,15 @@ function set(next: ServerState) {
   listeners.forEach((fn) => fn(state, since));
 }
 
-export function serverState() { return { state, since }; }
+export function serverState() {
+  return { state, since };
+}
 
 export function onServerState(fn: (s: ServerState, since: number | null) => void) {
   listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -41,11 +45,18 @@ function waitUntilUp(apiUrl: string): Promise<void> {
   pinging ??= (async () => {
     const start = Date.now();
     while (Date.now() - start < WAKE_LIMIT_MS) {
-      const ok = await fetch(`${apiUrl}/health/live`, { cache: "no-store" }).then((r) => r.ok).catch(() => false);
-      if (ok) { set("ok"); return; }
+      const ok = await fetch(`${apiUrl}/health/live`, { cache: "no-store" })
+        .then((r) => r.ok)
+        .catch(() => false);
+      if (ok) {
+        set("ok");
+        return;
+      }
       await sleep(PING_MS);
     }
-  })().finally(() => { pinging = null; });
+  })().finally(() => {
+    pinging = null;
+  });
   return pinging;
 }
 
@@ -61,7 +72,10 @@ export async function watchedFetch(apiUrl: string, url: string, init: RequestIni
   const isRead = method === "GET" || method === "HEAD";
   const start = Date.now();
   pending++;
-  slowTimer ??= setTimeout(() => { slowTimer = null; if (pending > 0 && state === "ok") set("slow"); }, SLOW_MS);
+  slowTimer ??= setTimeout(() => {
+    slowTimer = null;
+    if (pending > 0 && state === "ok") set("slow");
+  }, SLOW_MS);
   try {
     for (;;) {
       let response: Response | null = null;
@@ -71,7 +85,8 @@ export async function watchedFetch(apiUrl: string, url: string, init: RequestIni
         response = null;
       }
       // the shop server's own errors are JSON (a 503 "Square is not connected" is an answer, not a server waking up); the proxy's are not
-      const booting = !!response && BOOTING.has(response.status) && !(response.headers.get("content-type") ?? "").includes("application/json");
+      const booting =
+        !!response && BOOTING.has(response.status) && !(response.headers.get("content-type") ?? "").includes("application/json");
       if (response && !booting) {
         set("ok");
         return response;
@@ -89,7 +104,10 @@ export async function watchedFetch(apiUrl: string, url: string, init: RequestIni
     }
   } finally {
     pending--;
-    if (pending === 0 && slowTimer) { clearTimeout(slowTimer); slowTimer = null; }
+    if (pending === 0 && slowTimer) {
+      clearTimeout(slowTimer);
+      slowTimer = null;
+    }
   }
 }
 

@@ -14,7 +14,13 @@ export function useAuth() {
     const off = onSessionChange(setSession);
     // Finish a Google/Discord sign-in, then confirm the stored session is still valid.
     completeOAuthRedirect()
-      .then(() => (getSession() ? api<{ user: AppUser }>("/auth/me").then(() => undefined).catch(() => undefined) : undefined))
+      .then(() =>
+        getSession()
+          ? api<{ user: AppUser }>("/auth/me")
+              .then(() => undefined)
+              .catch(() => undefined)
+          : undefined,
+      )
       .finally(() => setReady(true));
     return off;
   }, []);
@@ -28,11 +34,16 @@ export function useLocalState<T>(key: string, initial: T) {
     try {
       const raw = localStorage.getItem(key);
       return raw ? (JSON.parse(raw) as T) : initial;
-    } catch { return initial; }
+    } catch {
+      return initial;
+    }
   });
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage blocked */ }
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      /* storage blocked */
+    }
   }, [key, value]);
   return [value, setValue] as const;
 }
-

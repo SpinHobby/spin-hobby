@@ -46,7 +46,10 @@ function loadMascot() {
   mascot ??= new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => { mascot = null; reject(new Error("Couldn't load the mascot picture")); };
+    img.onerror = () => {
+      mascot = null;
+      reject(new Error("Couldn't load the mascot picture"));
+    };
     img.src = MASCOT_URL;
   });
   return mascot;
@@ -109,7 +112,10 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: StickerLabel, x: number
   ctx.font = `700 ${nameSize}px ${UI_FONT}`;
   const lines = wrap(ctx, label.name, tw, 2);
   let ty = y + pad;
-  for (const line of lines) { ctx.fillText(line, tx, ty, tw); ty += Math.round(nameSize * 1.18); }
+  for (const line of lines) {
+    ctx.fillText(line, tx, ty, tw);
+    ty += Math.round(nameSize * 1.18);
+  }
   if (lines.length < 2 && label.series) {
     ctx.font = `500 ${Math.round(22 * s)}px ${UI_FONT}`;
     ctx.fillStyle = MUTED;
@@ -161,7 +167,7 @@ const MIN_BAR = 2;
 export function barcodeFits(code: string, size: LabelSize) {
   const widths = code128Widths(code);
   const w = Math.round(SIZES[size].width * DPI);
-  const pad = Math.round(18 * (SIZES[size].height * DPI / 360));
+  const pad = Math.round(18 * ((SIZES[size].height * DPI) / 360));
   return !!widths && barUnit(widths, w - 2 * pad) > 0;
 }
 
@@ -173,12 +179,19 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, max: n
   let i = 0;
   for (; i < words.length; i++) {
     const next = line ? `${line} ${words[i]}` : words[i];
-    if (ctx.measureText(next).width <= width || !line) { line = next; continue; }
+    if (ctx.measureText(next).width <= width || !line) {
+      line = next;
+      continue;
+    }
     lines.push(line);
     line = words[i];
     if (lines.length === max) break;
   }
-  if (lines.length < max && line) { lines.push(line); line = ""; i = words.length; }
+  if (lines.length < max && line) {
+    lines.push(line);
+    line = "";
+    i = words.length;
+  }
   const leftOver = i < words.length;
   const last = lines.length - 1;
   if (last >= 0 && (leftOver || ctx.measureText(lines[last]).width > width)) {

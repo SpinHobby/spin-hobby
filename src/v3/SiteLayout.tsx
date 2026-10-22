@@ -17,13 +17,17 @@ export default function SiteLayout() {
   return (
     <div className="sh sl">
       <header className="sl-header">
-        <a href="/" className="sl-logo"><img src={LOGO} alt="Spin Hobby" /></a>
+        <a href="/" className="sl-logo">
+          <img src={LOGO} alt="Spin Hobby" />
+        </a>
         <button type="button" className="sh-icon-btn" onClick={toggle} title="Toggle theme" aria-label="Toggle dark mode">
           {theme === "dark" ? "☀" : "☾"}
         </button>
       </header>
       <div className="sl-main">
-        <Suspense fallback={null}><Outlet /></Suspense>
+        <Suspense fallback={null}>
+          <Outlet />
+        </Suspense>
       </div>
       <SiteFooter />
     </div>

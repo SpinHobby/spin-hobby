@@ -34,18 +34,35 @@ export default function BarcodeScanner({ onCode, onClose }: { onCode: (code: str
         try {
           for (const hit of await detector.current.detect(el)) {
             const code = cleanBarcode(hit.rawValue);
-            if (code) { onCode(code); return; }
+            if (code) {
+              onCode(code);
+              return;
+            }
           }
-        } catch { /* a frame that cannot be read is skipped */ }
+        } catch {
+          /* a frame that cannot be read is skipped */
+        }
       }
       timer = window.setTimeout(scan, 150);
     };
     (async () => {
-      if (!navigator.mediaDevices?.getUserMedia) { setMessage("This browser can't open the camera here. Take a photo of the barcode instead."); return; }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setMessage("This browser can't open the camera here. Take a photo of the barcode instead.");
+        return;
+      }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false });
-        if (stopped) { stream.getTracks().forEach((t) => t.stop()); return; }
-        if (video.current) { video.current.srcObject = stream; await video.current.play().catch(() => undefined); }
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
+          audio: false,
+        });
+        if (stopped) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        if (video.current) {
+          video.current.srcObject = stream;
+          await video.current.play().catch(() => undefined);
+        }
         setLive(true);
         setMessage("Point the camera at the barcode and hold steady.");
         scan();
@@ -53,7 +70,11 @@ export default function BarcodeScanner({ onCode, onClose }: { onCode: (code: str
         setMessage("The camera isn't available (allow camera access, or take a photo of the barcode instead).");
       }
     })();
-    return () => { stopped = true; window.clearTimeout(timer); stream?.getTracks().forEach((t) => t.stop()); };
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      stream?.getTracks().forEach((t) => t.stop());
+    };
   }, [onCode]);
 
   const fromPhoto = async (file: File | undefined) => {
@@ -63,7 +84,10 @@ export default function BarcodeScanner({ onCode, onClose }: { onCode: (code: str
       const bitmap = await createImageBitmap(file);
       for (const hit of await detector.current.detect(bitmap)) {
         const code = cleanBarcode(hit.rawValue);
-        if (code) { onCode(code); return; }
+        if (code) {
+          onCode(code);
+          return;
+        }
       }
       setMessage("No readable barcode in that photo. Get closer, keep it flat and well lit, then try again.");
     } catch {
@@ -79,13 +103,26 @@ export default function BarcodeScanner({ onCode, onClose }: { onCode: (code: str
           <video ref={video} playsInline muted aria-label="Camera" />
           {live && <span className="ad-scan__line" aria-hidden />}
         </div>
-        <p className="ad-muted ad-sm" role="status">{message}</p>
+        <p className="ad-muted ad-sm" role="status">
+          {message}
+        </p>
         <div className="ad-modal__actions">
           <label className="sh-btn sh-btn--ghost">
             Take or choose a photo
-            <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => { void fromPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={(e) => {
+                void fromPhoto(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
           </label>
-          <button type="button" className="sh-btn sh-btn--ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="sh-btn sh-btn--ghost" onClick={onClose}>
+            Cancel
+          </button>
         </div>
       </div>
     </div>

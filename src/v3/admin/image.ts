@@ -1,6 +1,13 @@
 import { api } from "../../lib/api";
 
-export interface PreparedImage { blob: Blob; dataUrl: string; type: string; width: number; height: number; originalBytes: number }
+export interface PreparedImage {
+  blob: Blob;
+  dataUrl: string;
+  type: string;
+  width: number;
+  height: number;
+  originalBytes: number;
+}
 
 async function decode(file: File): Promise<ImageBitmap | HTMLImageElement> {
   try {

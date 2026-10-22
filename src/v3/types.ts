@@ -68,7 +68,12 @@ export interface ProductVariation {
   isDefault: boolean;
 }
 
-export interface ProductPage { success: true; items: Product[]; cursor?: string; total: number }
+export interface ProductPage {
+  success: true;
+  items: Product[];
+  cursor?: string;
+  total: number;
+}
 
 export interface HeroSlide {
   id: string;
@@ -96,8 +101,8 @@ export interface ShopCategory {
   parentId: string | null;
   name: string;
   sortOrder: number;
-  isVisible?: boolean;     // admin only
-  productCount?: number;   // admin only: products directly in this category
+  isVisible?: boolean; // admin only
+  productCount?: number; // admin only: products directly in this category
 }
 
 export interface Homepage {
@@ -114,7 +119,12 @@ export interface Homepage {
 }
 
 export type Role = "customer" | "staff" | "owner";
-export interface AppUser { id: string; email: string; role: Role; firstName?: string | null }
+export interface AppUser {
+  id: string;
+  email: string;
+  role: Role;
+  firstName?: string | null;
+}
 
 export type OrderStatus = "pending" | "paid" | "preorder_reserved" | "fulfilled" | "shipped" | "cancelled" | "refunded";
 
@@ -130,9 +140,17 @@ export interface OrderItem {
 }
 
 export interface Address {
-  firstName?: string; lastName?: string; name?: { first?: string; last?: string };
-  address1?: string; address2?: string; address?: { primary?: string; secondary?: string };
-  city?: string; province?: string; postalCode?: string; country?: string; phone?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: { first?: string; last?: string };
+  address1?: string;
+  address2?: string;
+  address?: { primary?: string; secondary?: string };
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  country?: string;
+  phone?: string;
 }
 
 export interface Order {
@@ -166,8 +184,23 @@ export interface Dashboard {
   lowStock: number;
   alertsWaiting: number;
   toShipList: Pick<Order, "id" | "billing_email" | "total_cents" | "status" | "created_at">[];
-  lowStockList: { id: string; name: string; variation_id: string; stock_count: number | null; status: string; order_by_date: string | null; /** Shoppers waiting for a restock email. */ alerts_waiting?: number }[];
-  closingPreorders: { id: string; name: string; variation_id: string; stock_count: number | null; status: string; order_by_date: string | null }[];
+  lowStockList: {
+    id: string;
+    name: string;
+    variation_id: string;
+    stock_count: number | null;
+    status: string;
+    order_by_date: string | null;
+    /** Shoppers waiting for a restock email. */ alerts_waiting?: number;
+  }[];
+  closingPreorders: {
+    id: string;
+    name: string;
+    variation_id: string;
+    stock_count: number | null;
+    status: string;
+    order_by_date: string | null;
+  }[];
 }
 
 export interface StoreSettings {

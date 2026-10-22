@@ -4,11 +4,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 export function useToast(duration = 2200) {
   const [toast, setToast] = useState("");
   const timer = useRef<number>();
-  const flash = useCallback((message: string) => {
-    setToast(message);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setToast(""), duration);
-  }, [duration]);
+  const flash = useCallback(
+    (message: string) => {
+      setToast(message);
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setToast(""), duration);
+    },
+    [duration],
+  );
   useEffect(() => () => window.clearTimeout(timer.current), []);
   return { toast, flash };
 }
@@ -17,7 +20,9 @@ export function useToast(duration = 2200) {
 export function useEscape(onEscape: (() => void) | null) {
   useEffect(() => {
     if (!onEscape) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onEscape(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onEscape();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onEscape]);
@@ -38,7 +43,11 @@ export function useTheme() {
   const [theme, setTheme] = useState<Theme>(readTheme);
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    try { localStorage.setItem(THEME_KEY, theme); } catch { /* storage blocked */ }
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* storage blocked */
+    }
   }, [theme]);
   const toggle = useCallback(() => setTheme((t) => (t === "dark" ? "light" : "dark")), []);
   return { theme, toggle };
@@ -63,10 +72,15 @@ export function useSlidingIndicator<T extends HTMLElement>(active: unknown, axis
     if (!list) return;
     const place = () => {
       const on = list.querySelector<HTMLElement>('[data-on="true"]');
-      if (!on) { setStyle({ opacity: 0 }); return; }
-      setStyle(axis === "y"
-        ? { transform: `translateY(${on.offsetTop}px)`, height: on.offsetHeight, opacity: 1 }
-        : { transform: `translateX(${on.offsetLeft}px)`, width: on.offsetWidth, opacity: 1 });
+      if (!on) {
+        setStyle({ opacity: 0 });
+        return;
+      }
+      setStyle(
+        axis === "y"
+          ? { transform: `translateY(${on.offsetTop}px)`, height: on.offsetHeight, opacity: 1 }
+          : { transform: `translateX(${on.offsetLeft}px)`, width: on.offsetWidth, opacity: 1 },
+      );
     };
     place();
     const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);

@@ -11,7 +11,12 @@ export const STATE_META: Record<AdminState, { label: string; badge: string; colo
   out: { label: "Sold out", badge: "SOLD OUT", color: "var(--muted)", hint: "Live but sold out; shoppers can ask for a restock alert." },
   pre: { label: "Pre-order", badge: "PRE-ORDER", color: "var(--blue)", hint: "Open for pre-orders." },
   closed: { label: "Pre-order closed", badge: "CLOSED", color: "#9a6b2f", hint: "The order-by date has passed, so it can't be bought." },
-  unavailable: { label: "Unavailable", badge: "UNAVAILABLE", color: "#c27c0e", hint: "Not shown to shoppers: its default variation isn't sellable in Square." },
+  unavailable: {
+    label: "Unavailable",
+    badge: "UNAVAILABLE",
+    color: "#c27c0e",
+    hint: "Not shown to shoppers: its default variation isn't sellable in Square.",
+  },
   hidden: { label: "Hidden", badge: "HIDDEN", color: "#8a8d96", hint: "Hidden from the storefront by availability." },
   retired: { label: "Retired", badge: "RETIRED", color: "#5b5f70", hint: "Deleted in Square. Kept so past orders still resolve." },
 };
@@ -36,14 +41,29 @@ export interface CatalogFilters {
   changedWithin: "" | "24" | "168";
 }
 
-export const EMPTY_FILTERS: CatalogFilters = { q: "", status: [], source: "", categoryId: "", seriesId: "", featured: false, alerts: false, noPhoto: false, min: "", max: "", changedWithin: "" };
+export const EMPTY_FILTERS: CatalogFilters = {
+  q: "",
+  status: [],
+  source: "",
+  categoryId: "",
+  seriesId: "",
+  featured: false,
+  alerts: false,
+  noPhoto: false,
+  min: "",
+  max: "",
+  changedWithin: "",
+};
 
 /** How many featured products the homepage shows (the same number the API uses). */
 export const FRONT_PAGE_SLOTS = 8;
 
 export type SortKey = "name" | "price" | "stock" | "category" | "status" | "updated" | "created" | "release" | "alerts" | "front";
 export type SortDir = "asc" | "desc";
-export interface Sort { key: SortKey; dir: SortDir }
+export interface Sort {
+  key: SortKey;
+  dir: SortDir;
+}
 export const DEFAULT_SORT: Sort = { key: "created", dir: "desc" };
 
 const SORT_LABELS: Record<SortKey, [asc: string, desc: string]> = {
@@ -61,23 +81,43 @@ const SORT_LABELS: Record<SortKey, [asc: string, desc: string]> = {
 export const SORT_OPTIONS = (Object.keys(SORT_LABELS) as SortKey[]).flatMap((key) =>
   (["desc", "asc"] as SortDir[])
     .filter((dir) => !(key === "alerts" && dir === "asc") && !(key === "front" && dir === "desc"))
-    .map((dir) => ({ value: `${key}:${dir}`, label: SORT_LABELS[key][dir === "asc" ? 0 : 1] })));
+    .map((dir) => ({ value: `${key}:${dir}`, label: SORT_LABELS[key][dir === "asc" ? 0 : 1] })),
+);
 
-export const parseSort = (value: string): Sort => { const [key, dir] = value.split(":"); return { key: key as SortKey, dir: dir as SortDir }; };
+export const parseSort = (value: string): Sort => {
+  const [key, dir] = value.split(":");
+  return { key: key as SortKey, dir: dir as SortDir };
+};
 
 /** How many filters are narrowing the list (the search box counts as one). */
 export function activeFilterCount(f: CatalogFilters) {
-  return [f.q.trim(), f.status.length, f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.noPhoto, f.min.trim() || f.max.trim(), f.changedWithin].filter(Boolean).length;
+  return [
+    f.q.trim(),
+    f.status.length,
+    f.source,
+    f.categoryId,
+    f.seriesId,
+    f.featured,
+    f.alerts,
+    f.noPhoto,
+    f.min.trim() || f.max.trim(),
+    f.changedWithin,
+  ].filter(Boolean).length;
 }
 
 /** Maps the dashboard's old deep links ("Low / sold out") onto the new filters. */
 export function filtersFromShortcut(name: string): CatalogFilters | null {
   switch (name) {
-    case "In stock": return { ...EMPTY_FILTERS, status: ["in"] };
-    case "Low / sold out": return { ...EMPTY_FILTERS, status: ["low", "out"] };
-    case "Pre-order": return { ...EMPTY_FILTERS, status: ["pre"] };
-    case "Featured": return { ...EMPTY_FILTERS, featured: true };
-    default: return null;
+    case "In stock":
+      return { ...EMPTY_FILTERS, status: ["in"] };
+    case "Low / sold out":
+      return { ...EMPTY_FILTERS, status: ["low", "out"] };
+    case "Pre-order":
+      return { ...EMPTY_FILTERS, status: ["pre"] };
+    case "Featured":
+      return { ...EMPTY_FILTERS, featured: true };
+    default:
+      return null;
   }
 }
 
@@ -94,7 +134,11 @@ export interface CatalogCounts {
   lastSyncedAt: string | null;
 }
 
-export interface CatalogPage { items: Product[]; total: number; counts: CatalogCounts }
+export interface CatalogPage {
+  items: Product[];
+  total: number;
+  counts: CatalogCounts;
+}
 
 export function catalogQuery(f: CatalogFilters, sort: Sort, page: number, pageSize: number) {
   const p = new URLSearchParams(filterQuery(f, sort));
@@ -123,7 +167,10 @@ export function filterQuery(f: CatalogFilters, sort: Sort) {
 /** Waits `ms` after the value stops changing, so typing in the search box doesn't fire a request per key. */
 export function useDebounced<T>(value: T, ms = 300) {
   const [debounced, setDebounced] = useState(value);
-  useEffect(() => { const t = setTimeout(() => setDebounced(value), ms); return () => clearTimeout(t); }, [value, ms]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
   return debounced;
 }
 
@@ -140,15 +187,27 @@ export function useCatalog(filters: CatalogFilters, sort: Sort, page: number, pa
     const id = ++latest.current;
     setLoading(true);
     api<CatalogPage & { success: true }>(`/admin/catalog?${query}`)
-      .then((res) => { if (id === latest.current) { setData(res); setError(""); } })
-      .catch((e) => { if (id === latest.current) setError(e instanceof Error ? e.message : "Couldn't load products"); })
-      .finally(() => { if (id === latest.current) setLoading(false); });
+      .then((res) => {
+        if (id === latest.current) {
+          setData(res);
+          setError("");
+        }
+      })
+      .catch((e) => {
+        if (id === latest.current) setError(e instanceof Error ? e.message : "Couldn't load products");
+      })
+      .finally(() => {
+        if (id === latest.current) setLoading(false);
+      });
   }, [query, nonce]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
   /** Updates a row on screen right away; `refresh()` then brings back the server's derived fields. */
-  const patch = useCallback((id: string, change: Partial<Product>) =>
-    setData((d) => (d ? { ...d, items: d.items.map((p) => (p.id === id ? { ...p, ...change } : p)) } : d)), []);
+  const patch = useCallback(
+    (id: string, change: Partial<Product>) =>
+      setData((d) => (d ? { ...d, items: d.items.map((p) => (p.id === id ? { ...p, ...change } : p)) } : d)),
+    [],
+  );
 
   return { data, loading, error, refresh, patch };
 }
@@ -175,22 +234,31 @@ export const CARD_BELOW = 954;
 export type Density = "full" | "wide" | "medium" | "narrow" | "cards";
 export function densityFor(width: number): Density {
   if (width === 0 || width >= 1354) return "full";
-  if (width >= 1194) return "wide";   // drops "Release / order by"
+  if (width >= 1194) return "wide"; // drops "Release / order by"
   if (width >= 1084) return "medium"; // ...and "Added"
   if (width >= CARD_BELOW) return "narrow"; // ...and "Category"
   return "cards";
 }
 
 const PREFS_KEY = "spinhobby-admin-products";
-export interface ProductPrefs { sort: Sort; pageSize: number }
+export interface ProductPrefs {
+  sort: Sort;
+  pageSize: number;
+}
 /** Sort order and page size are habits worth remembering; filters are not (a leftover filter looks like missing products). */
 export function loadPrefs(): ProductPrefs {
   try {
     const raw = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
     const okSort = raw?.sort && SORT_OPTIONS.some((o) => o.value === `${raw.sort.key}:${raw.sort.dir}`);
     return { sort: okSort ? raw.sort : DEFAULT_SORT, pageSize: [25, 50, 100].includes(raw?.pageSize) ? raw.pageSize : 50 };
-  } catch { return { sort: DEFAULT_SORT, pageSize: 50 }; }
+  } catch {
+    return { sort: DEFAULT_SORT, pageSize: 50 };
+  }
 }
 export function savePrefs(prefs: ProductPrefs) {
-  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage blocked */ }
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* storage blocked */
+  }
 }

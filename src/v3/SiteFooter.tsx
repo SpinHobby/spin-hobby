@@ -17,7 +17,11 @@ export default function SiteFooter() {
           <span className="sh-footer__h">Shop</span>
           <a href="/">Back to the store</a>
           <Link to="/events">Events</Link>
-          {SHOW_EBAY_STORE && <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>}
+          {SHOW_EBAY_STORE && (
+            <a href={EBAY_URL} target="_blank" rel="noreferrer">
+              eBay store ↗
+            </a>
+          )}
         </nav>
         <nav className="sh-footer__col" aria-label="Help">
           <span className="sh-footer__h">Help</span>
@@ -28,8 +32,12 @@ export default function SiteFooter() {
         </nav>
         <nav className="sh-footer__col" aria-label="Community">
           <span className="sh-footer__h">Community</span>
-          <a href={DISCORD_URL} target="_blank" rel="noreferrer">Discord</a>
-          <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">Instagram</a>
+          <a href={DISCORD_URL} target="_blank" rel="noreferrer">
+            Discord
+          </a>
+          <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer">
+            Instagram
+          </a>
         </nav>
       </div>
       <div className="sh-footer__bottom">

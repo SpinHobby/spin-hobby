@@ -10,7 +10,13 @@ export const isShown = (p: Product) => p.state !== "hidden" && p.state !== "reti
 /** Any product kept in our own database that has not already moved can be moved into Square (the server checks the same). */
 export const canMoveToSquare = (p: Product) => isLocal(p) && p.state !== "retired";
 
-export interface MoveResult { id: string; name: string; photosMoved: number; photosRemoved: number; alreadyMoved: boolean }
+export interface MoveResult {
+  id: string;
+  name: string;
+  photosMoved: number;
+  photosRemoved: number;
+  alreadyMoved: boolean;
+}
 
 /** Show or hide request shared by the list and the drawer. */
 export async function setVisible(id: string, visible: boolean) {
