@@ -1,0 +1,11 @@
+{
+  // Prettier formats on save, but only the lines you changed ("modifications"), so saving never rewrites a whole file.
+  // The code is written more compactly than Prettier would print it; reformatting everything at once is a separate, deliberate step.
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "modifications",
+  "prettier.requireConfig": true,
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
