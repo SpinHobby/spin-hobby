@@ -42,5 +42,5 @@ is already formatted, so a save changes only what you typed. The commit that for
 ## Branches and deploys
 
 Work on a branch from `staging` and open a pull request into `staging`. Netlify builds the `staging` branch as the staging site
-(https://spin-hobby-staging.netlify.app, test data and sandbox payments) and `main` as the live site. Changes reach the live site when `staging` is merged
-into `main`.
+(https://spin-hobby-staging.netlify.app, test data and sandbox payments) and `production` as the live site. Changes reach the live site when `staging` is merged
+into `production`.
