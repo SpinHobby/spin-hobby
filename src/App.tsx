@@ -12,6 +12,7 @@ const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
 const Events = lazy(() => import("./v3/events/Events"));
+const Account = lazy(() => import("./v3/account/Account"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 
 // A password-reset email can only point at one address (Supabase's Site URL unless the redirect is
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
         {/* Plain content pages share one header + footer; everything else brings its own chrome. */}
         <Route element={<SiteLayout />}>
+          <Route path="/account/*" element={<Account />} />
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
           <Route path="/events" element={<Events />} />

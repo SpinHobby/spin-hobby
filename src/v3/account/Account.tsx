@@ -1,0 +1,175 @@
+import { useCallback, useState } from "react";
+import "../tokens.scss";
+import "../storefront/storefront.scss"; // previews render real storefront components
+import "./account.scss";
+import { api } from "../../lib/api";
+import { SignInPanel } from "../SignIn";
+import { initials, relativeAge } from "../format";
+
+function syncAgo(iso: string | null | undefined) {
+  if (!iso) return "never";
+  const min = Math.floor((Date.now() - Date.parse(iso)) / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  return `${relativeAge(iso)} ago`;
+}
+import { useAuth, useTheme, useToast } from "../hooks";
+import { useDocumentHead } from "../seo";
+import { useStoreConfig } from "../storeConfig";
+import { SCREENS, useAdminData, type Screen } from "./data";
+import { CategoriesScreen } from "./Categories";
+import { ImportsScreen } from "./Imports";
+import { PhotosScreen } from "./PhotoQueue";
+import { DashboardScreen, HomepageScreen, OrdersScreen, ProfileScreen, SettingsScreen, type Ctx } from "./Screens";
+
+const LOGO = "/logo/logo%20cropped.png";
+
+export default function Admin() {
+  useDocumentHead({ title: "Admin | Spin Hobby", description: "Admin", path: "/admin", noindex: true });
+  // what checkout really uses: on a local copy with no payment keys that is a test payment, whatever the setting says
+  const checkoutProvider = useStoreConfig()?.provider;
+  const auth = useAuth();
+  const { theme, toggle } = useTheme();
+  const { toast, flash } = useToast();
+  const isStaff = auth.user?.role === "staff" || auth.user?.role === "owner";
+  const isOwner = auth.user?.role === "owner";
+  const { data, setData, reload } = useAdminData(isStaff);
+
+  const [screen, setScreenState] = useState<Screen>(() => {
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    return (SCREENS as string[]).includes(hash) ? (hash as Screen) : "Dashboard";
+  });
+  const [productFilter, setProductFilter] = useState("All");
+  const [orderTab, setOrderTab] = useState("All");
+  const [syncing, setSyncing] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+
+  const go = useCallback((next: Screen, extra?: { productFilter?: string; orderTab?: string }) => {
+    setScreenState(next);
+    if (extra?.productFilter) setProductFilter(extra.productFilter);
+    if (extra?.orderTab) setOrderTab(extra.orderTab);
+    setNavOpen(false);
+    window.history.replaceState(null, "", `#${next}`);
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  // Sidebar badges come straight from the server's dashboard numbers.
+  const toShipCount = data.dashboard?.toShip ?? 0;
+  const lowCount = data.dashboard?.lowStock ?? 0;
+
+  if (!auth.ready) {
+    return <div className="sh ad-gate"><div className="ad-gate__card"><img src={LOGO} alt="Spin Hobby" /><div className="sh-skeleton" style={{ height: 14, width: "70%" }} /></div></div>;
+  }
+  if (!auth.session || !isStaff) {
+    return <Gate signedInAs={auth.session ? auth.email : null} onSignOut={auth.signOut} />;
+  }
+
+  const syncNow = async () => {
+    if (!isOwner) { flash("Only the owner can run a full Square sync"); return; }
+    setSyncing(true);
+    try {
+      await api("/admin/square/sync", { method: "POST" });
+      flash("Synced catalog & inventory from Square");
+      reload();
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const ctx: Ctx = { data, setData, reload, isOwner, flash, go, productFilter, setProductFilter, orderTab, setOrderTab };
+  const lastSync = data.readiness?.lastSyncAt;
+  const connected = !!data.readiness?.appAndLocationConnected;
+
+  return (
+    <div className="sh ad">
+      {navOpen && <div className="sh-overlay ad-nav-overlay" onClick={() => setNavOpen(false)} />}
+      <aside className={`ad-side ${navOpen ? "is-open" : ""}`}>
+        <div className="ad-side__brand">
+          <a href="/"><img src={LOGO} alt="Spin Hobby" /></a>
+          <span className="ad-tag">ACCOUNT</span>
+        </div>
+        <nav className="ad-side__nav" aria-label="Admin">
+          {SCREENS.map((n) => {
+            const badge = n === "Orders" ? toShipCount : n === "Products" ? lowCount : 0;
+            return (
+              <button key={n} type="button" className={screen === n ? "is-active" : ""} aria-current={screen === n ? "page" : undefined} onClick={() => go(n)}>
+                <span className="ad-side__item"><span className="ad-side__dot" />{n}</span>
+                {badge > 0 && <span className="ad-side__badge">{badge}</span>}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="ad-side__foot">
+          <div className="ad-side__status">
+            <span className="ad-dot" style={{ background: connected ? "#3fbf92" : "#f06a6e" }} />
+            <span>{connected ? (lastSync ? `Square connected · synced ${syncAgo(lastSync)}` : "Square connected · not synced yet") : "Square not connected"}</span>
+          </div>
+          <div className="ad-side__status">
+            <span className="ad-dot" style={{ background: "var(--gold)" }} />
+            <span>Payments: {checkoutProvider === "test" ? "test payments (no money)" : data.settings.payment_provider === "square" ? "Square" : "PayPal"}</span>
+          </div>
+          <button type="button" className="ad-side__sync" onClick={syncNow} disabled={syncing}>{syncing ? "Syncing…" : "Sync with Square"}</button>
+        </div>
+      </aside>
+
+      <div className="ad-main">
+        <header className="ad-top">
+          <button type="button" className="sh-icon-btn ad-burger" onClick={() => setNavOpen(true)} aria-label="Open menu">☰</button>
+          <h1 className="sh-display">{screen}</h1>
+          <button type="button" className="ad-theme" onClick={toggle} aria-label="Toggle dark mode">{theme === "dark" ? "☀" : "☾"}</button>
+          <a href="/" target="_blank" rel="noreferrer" className="ad-top__store">View store ↗</a>
+          <div className="ad-user" title={auth.email ?? "Demo"}>
+            <span className="ad-avatar">{initials(auth.email)}</span>
+            <span className="ad-user__role">{auth.user?.role === "owner" ? "Owner" : "Staff"}</span>
+            <button type="button" className="ad-user__out" onClick={auth.signOut}>Sign out</button>
+          </div>
+        </header>
+
+        <main className="ad-content">
+          {data.errors.length > 0 && (
+            <div className="ad-banner ad-banner--error" role="alert">
+              <span>Some data couldn't load: {data.errors.join(" · ")}</span>
+              <button type="button" onClick={reload}>Retry</button>
+            </div>
+          )}
+          {screen === "Dashboard" && <DashboardScreen ctx={ctx} />}
+          {screen === "Products" && <ProfileScreen ctx={ctx} />}
+          {screen === "Imports" && <ImportsScreen ctx={ctx} />}
+          {screen === "Photos" && <PhotosScreen ctx={ctx} />}
+          {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
+          {screen === "Orders" && <OrdersScreen ctx={ctx} />}
+          {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
+          {screen === "Settings" && <SettingsScreen ctx={ctx} />}
+        </main>
+      </div>
+
+      {toast && <div className="sh-toast" role="status" aria-live="polite">{toast}</div>}
+    </div>
+  );
+}
+
+function Gate({ signedInAs, onSignOut }: { signedInAs: string | null; onSignOut: () => void }) {
+  return (
+    <div className="sh ad-gate">
+      <div className="ad-gate__card">
+        <div className="ad-gate__brand"><img src={LOGO} alt="Spin Hobby" /><span className="ad-tag">ADMIN</span></div>
+        {signedInAs ? (
+          <>
+            <h1 className="sh-display">No admin access yet</h1>
+            <p>You're signed in as <b>{signedInAs}</b>, but this account isn't staff or owner. Ask the store owner to add your email to the admin list, then sign in again.</p>
+            <button type="button" className="sh-btn" onClick={onSignOut}>Sign out</button>
+          </>
+        ) : (
+          <>
+            <h1 className="sh-display">Staff sign in</h1>
+            <p>Manage products, orders, homepage content and payments for spinhobby.com.</p>
+            <SignInPanel returnPath="/admin" />
+          </>
+        )}
+        <a href="/" className="ad-gate__back">← Back to the store</a>
+      </div>
+    </div>
+  );
+}
