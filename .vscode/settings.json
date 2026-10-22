@@ -1,9 +1,8 @@
 {
-  // Prettier formats on save, but only the lines you changed ("modifications"), so saving never rewrites a whole file.
-  // The code is written more compactly than Prettier would print it; reformatting everything at once is a separate, deliberate step.
+  // Prettier formats the whole file on save. Every file is already formatted (see .git-blame-ignore-revs), so a save changes only what you typed.
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
-  "editor.formatOnSaveMode": "modifications",
+  "editor.formatOnSaveMode": "file",
   "prettier.requireConfig": true,
   "files.eol": "\n",
   "files.insertFinalNewline": true,

@@ -31,6 +31,8 @@
     "dev": "vite",
     "build": "tsc && vite build && node scripts/generate-seo.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "preview": "vite preview"
   },
   "browserslist": {
