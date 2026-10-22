@@ -51,7 +51,7 @@ export default function App() {
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
           <Route path="/events" element={<Events />} />
-          {import.meta.env.PROD && (
+          {!import.meta.env.PROD && (
             <Route
               path="/account"
               element={
