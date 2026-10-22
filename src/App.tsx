@@ -13,6 +13,7 @@ const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
 const Events = lazy(() => import("./v3/events/Events"));
+const Account = lazy(() => import("./v3/account/Account"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 // the shared building blocks shown live (local and staging only)
 const UiKit = lazy(() => import("./components/showcase/ComponentsPage"));
@@ -27,15 +28,48 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/admin/*" element={<Suspense fallback={null}><Admin /></Suspense>} />
-        {isOn("uiKit") && <Route path="/ui-kit" element={<Suspense fallback={null}><UiKit /></Suspense>} />}
+        <Route
+          path="/admin/*"
+          element={
+            <Suspense fallback={null}>
+              <Admin />
+            </Suspense>
+          }
+        />
+        {isOn("uiKit") && (
+          <Route
+            path="/ui-kit"
+            element={
+              <Suspense fallback={null}>
+                <UiKit />
+              </Suspense>
+            }
+          />
+        )}
         {/* Plain content pages share one header + footer; everything else brings its own chrome. */}
         <Route element={<SiteLayout />}>
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
           <Route path="/events" element={<Events />} />
+          {import.meta.env.PROD && (
+            <Route
+              path="/account"
+              element={
+                <Suspense fallback={null}>
+                  <Account />
+                </Suspense>
+              }
+            />
+          )}
         </Route>
-        <Route path="/reset-password" element={<Suspense fallback={null}><ResetPassword /></Suspense>} />
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense fallback={null}>
+              <ResetPassword />
+            </Suspense>
+          }
+        />
         <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
         <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
         <Route path="/*" element={<GatedApp />} />
@@ -62,7 +96,14 @@ function GatedApp() {
   }
   return (
     <Routes>
-      <Route path="/checkout/*" element={<Suspense fallback={null}><Checkout /></Suspense>} />
+      <Route
+        path="/checkout/*"
+        element={
+          <Suspense fallback={null}>
+            <Checkout />
+          </Suspense>
+        }
+      />
       <Route path="/*" element={<Storefront />} />
     </Routes>
   );
