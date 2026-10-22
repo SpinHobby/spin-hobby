@@ -218,6 +218,48 @@ html[data-theme="dark"] .ui-panel, html[data-theme="dark"] .ad { --block: #161c2
   button { border: 0; background: none; padding: 0 0 0 2px; color: var(--muted); font-size: 14px; line-height: 1; &:hover { color: var(--red); } } }
 @media (prefers-reduced-motion: reduce) { .ui-spinner { animation-duration: 2s; } }
 
+// ------------------------------------------------------------ motion: gliding highlights, entrances, press feedback
+// The highlight under the chosen tab / segment (see useSlidingIndicator). It only animates once placed, so it never flies in.
+$ease-out: cubic-bezier(.2, .8, .2, 1);
+.ui-ind { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 0;
+  &.is-ready { transition: transform .32s $ease-out, width .32s $ease-out, height .32s $ease-out, opacity .2s; } }
+
+.ui-side__nav { position: relative;
+  button { position: relative; z-index: 1; transition: color .2s, background .15s;
+    &.is-active { background: transparent; }
+    &:active { transform: scale(.985); } } }
+.ui-side__ind { left: 10px; right: 10px; border-radius: 10px; background: rgba(255,255,255,.12);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  &::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--gold); } }
+.ui-side__dot { transition: background .2s, box-shadow .2s; }
+.ui-side__nav button.is-active .ui-side__dot { background: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 28%, transparent); }
+
+.ui-tabs { position: relative; }
+.ui-tabs button { position: relative; z-index: 1; transition: color .2s; }
+.ui-tabs--underline { button, button.is-on { border-bottom-color: transparent; } }
+.ui-tabs--underline .ui-tabs__ind { top: auto; bottom: 0; height: 2px !important; border-radius: 2px; background: var(--primary); }
+.ui-tabs--pills .ui-tabs__ind { bottom: 0; border-radius: 99px; background: var(--primary); }
+.ui-tabs--pills button.is-on { background: transparent; }
+
+.ui-seg { position: relative; background: var(--surface);
+  button { position: relative; z-index: 1; background: transparent; transition: color .2s;
+    & + button { border-left: 0; }
+    &.is-on { background: transparent; } } }
+.ui-seg__ind { bottom: 0; background: var(--primary); }
+
+.ui-btn { transition: filter .15s, transform .08s, background .15s, box-shadow .15s;
+  &:active:not(:disabled) { transform: scale(.97); } }
+.ui-iconbtn, .ui-menu__trigger, .ui-link { transition: background .15s, color .15s, transform .08s; &:active:not(:disabled) { transform: scale(.94); } }
+:where(.ui-panel) :where(button, a, [role="tab"], [role="switch"]):focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.ui-tr, .ui-line--btn { transition: background .12s; }
+.ui-dialog { animation: ui-dialog-in .22s $ease-out; }
+@keyframes ui-dialog-in { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+.ui-menu__list { animation: ui-pop-in .14s $ease-out; transform-origin: top; }
+@keyframes ui-pop-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.ui-progress__bar { transition: width .5s $ease-out; }
+.ui-kpi { transition: border-color .15s, box-shadow .15s, transform .15s; &:is(button):hover { transform: translateY(-1px); } }
+
 // ------------------------------------------------------------ responsive
 @media (max-width: 860px) {
   .ui-side, .ad-side { position: fixed; left: 0; top: 0; bottom: 0; height: auto; z-index: 45; transform: translateX(-105%); transition: transform .2s ease-out; }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useSlidingIndicator } from "../hooks";
 import "../styles/components.scss";
 
 export interface TabItem<K extends string = string> {
@@ -19,10 +20,12 @@ export function Tabs<K extends string>({ items, value, onChange, label, variant 
   label: string;
   variant?: "underline" | "pills";
 }) {
+  const ind = useSlidingIndicator<HTMLDivElement>(value);
   return (
-    <div className={`ui-tabs ui-tabs--${variant}`} role="tablist" aria-label={label}>
+    <div ref={ind.ref} className={`ui-tabs ui-tabs--${variant}`} role="tablist" aria-label={label}>
+      <span className={`ui-ind ui-tabs__ind ${ind.ready ? "is-ready" : ""}`} style={ind.style} aria-hidden />
       {items.map((t) => (
-        <button key={t.key} type="button" role="tab" aria-selected={value === t.key} disabled={t.disabled}
+        <button key={t.key} type="button" role="tab" aria-selected={value === t.key} data-on={value === t.key} disabled={t.disabled}
           className={value === t.key ? "is-on" : ""} onClick={() => onChange(t.key)}>
           {t.label}{t.count !== undefined && <span className="ui-tabs__count">{t.count}</span>}
         </button>

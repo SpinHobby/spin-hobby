@@ -11,6 +11,7 @@ import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions } from "./ProductViews";
 import { isCutout, photo } from "../photo";
+import { addedMessage, closingLabel, shippingGap } from "./nudges";
 
 function productJsonLd(p: Product) {
   const availability = normalizeStatus(p.status) === "out" ? "https://schema.org/OutOfStock"
@@ -37,8 +38,8 @@ function productJsonLd(p: Product) {
 const RELATED = 8;
 
 /** Full product page at /product/<id>: gallery, buy box, details and "You may also like". */
-export function ProductPage({ id, initial, a, tree, cartQty, onAddQty, onViewCart, onCategory, onHome, onToast }: {
-  id: string; initial: Product | null; a: CardActions; tree: CategoryTree; cartQty: (variationId: string) => number;
+export function ProductPage({ id, initial, a, tree, cartQty, cartSubtotal, onAddQty, onViewCart, onCategory, onHome, onToast }: {
+  id: string; initial: Product | null; a: CardActions; tree: CategoryTree; cartQty: (variationId: string) => number; cartSubtotal: number;
   onAddQty: (p: Product, qty: number) => void; onViewCart: () => void;
   onCategory: (categoryId: string) => void; onHome: () => void; onToast: (message: string) => void;
 }) {
@@ -139,7 +140,7 @@ export function ProductPage({ id, initial, a, tree, cartQty, onAddQty, onViewCar
 
       <div className="sf-pp__top">
         <Gallery p={p} />
-        <BuyBox p={p} a={a} inCartQty={cartQty(p.variationId)} onAddQty={onAddQty} onViewCart={onViewCart} onToast={onToast}
+        <BuyBox p={p} a={a} inCartQty={cartQty(p.variationId)} cartSubtotal={cartSubtotal} onAddQty={onAddQty} onViewCart={onViewCart} onToast={onToast}
           onCategory={p.categoryId && tree.byId.has(p.categoryId) ? () => onCategory(p.categoryId!) : undefined} />
       </div>
 
@@ -261,8 +262,8 @@ function Lightbox({ images, cutouts, index, name, onIndex, onClose }: { images: 
 }
 
 // ---------------------------------------------------------------- buy box
-function BuyBox({ p, a, inCartQty, onAddQty, onViewCart, onToast, onCategory }: {
-  p: Product; a: CardActions; inCartQty: number; onAddQty: (p: Product, qty: number) => void;
+function BuyBox({ p, a, inCartQty, cartSubtotal, onAddQty, onViewCart, onToast, onCategory }: {
+  p: Product; a: CardActions; inCartQty: number; cartSubtotal: number; onAddQty: (p: Product, qty: number) => void;
   onViewCart: () => void; onToast: (message: string) => void; onCategory?: () => void;
 }) {
   const [qty, setQty] = useState(1);
@@ -287,12 +288,15 @@ function BuyBox({ p, a, inCartQty, onAddQty, onViewCart, onToast, onCategory }: 
   const n = Math.max(1, Math.min(qty, room));
   const wished = a.wished(p);
   const buyLabel = s === "pre" ? "Pre-order" : "Add to cart";
+  const closing = s === "pre" ? closingLabel(p.orderByDate, 14) : null;
+  // Free shipping, made personal: does this cart (with this item, if not already in it) ship free, and if not, how far off is it?
+  const gapWith = shippingGap(cartSubtotal + (justAdded || room === 0 ? 0 : p.priceCents * n));
 
   const add = () => {
     onAddQty(p, n);
     setJustAdded(true);
     setQty(1);
-    onToast(`${n > 1 ? `${n} × ` : ""}${p.name} added to cart`);
+    onToast(addedMessage(`${n > 1 ? `${n} × ` : ""}${p.name} added to cart`, cartSubtotal, cartSubtotal + p.priceCents * n, a.currency));
   };
   const share = async () => {
     const url = window.location.origin + productPath(p);
@@ -321,7 +325,7 @@ function BuyBox({ p, a, inCartQty, onAddQty, onViewCart, onToast, onCategory }: 
           {off > 0 && <s>{money(p.compareAtCents, a.currency)}</s>}
           {off > 0 && <span className="sf-pp__off">Save {off}%</span>}
         </div>
-        <div className="sf-pp__status" style={{ color: meta.color }}><span className="sf-dot" style={{ background: meta.color }} />{statusLabel(p)}</div>
+        <div className="sf-pp__status" style={{ color: meta.color }}><span className={`sf-dot ${s === "low" ? "sf-dot--pulse" : ""}`} style={{ background: meta.color }} />{statusLabel(p)}</div>
       </div>
 
       {s === "pre" && (
@@ -330,6 +334,7 @@ function BuyBox({ p, a, inCartQty, onAddQty, onViewCart, onToast, onCategory }: 
             {p.releaseMonth && <div><span>Expected release</span><b>{monthLabel(p.releaseMonth)}</b></div>}
             {p.orderByDate && <div><span>Order by</span><b>{dayLabel(p.orderByDate)}</b></div>}
           </div>
+          {closing && <div className="sf-pp__closing">⏳ {closing}. Pre-orders close on the order-by date and may not reopen.</div>}
           <p>Pre-orders are charged now and ship as soon as they arrive. We'll email you when it's on its way. Release dates are set by the maker and can move.</p>
         </div>
       )}
@@ -372,7 +377,11 @@ function BuyBox({ p, a, inCartQty, onAddQty, onViewCart, onToast, onCategory }: 
       </div>
 
       <ul className="sf-pp__perks">
-        <li><span aria-hidden>🚚</span><div><b>Free shipping over {freeShippingLabel()}</b><span>Tracked, across Canada & the US</span></div></li>
+        <li className={gapWith === 0 ? "is-good" : ""}><span aria-hidden>🚚</span><div>
+          {gapWith === 0
+            ? <><b>{justAdded || room === 0 ? "Your order ships free" : "This order ships free"}</b><span>Your cart is over {freeShippingLabel()}: tracked, across Canada & the US</span></>
+            : <><b>Free shipping over {freeShippingLabel()}</b><span>{cartSubtotal > 0 || justAdded ? `${money(gapWith, a.currency)} to go${justAdded || room === 0 ? "" : " with this item"}` : "Tracked, across Canada & the US"}</span></>}
+        </div></li>
         <li><span aria-hidden>📦</span><div><b>{s === "pre" ? "Ships on release" : `Ships in ${handlingLabel()}`}</b><span>Carefully packed for collectors</span></div></li>
         <li><span aria-hidden>🔒</span><div><b>Secure checkout</b><span>Pay by card, charged in CAD</span></div></li>
         <li><span aria-hidden>💬</span><div><b>Questions?</b><span><a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(p.name)}`}>{SUPPORT_EMAIL}</a></span></div></li>

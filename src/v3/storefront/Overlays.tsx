@@ -1,21 +1,42 @@
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
-import { greetingName, money, storeFormat, type Currency } from "../format";
+import { greetingName, money, normalizeStatus, storeFormat, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
 import type { CartLine } from "./data";
-import { photo } from "../photo";
+import { isCutout, photo } from "../photo";
+import type { ProductPage as ProductList } from "../types";
 
 
-export function CartDrawer({ lines, subtotal, currency, onQty, onClose }: {
+/**
+ * Up to three products that would take the cart to free shipping: in stock, not in the cart already, and priced to just cover what's
+ * missing (the cheapest that does first), topped up with the next best. Loaded once when the cart opens.
+ */
+function useShippingPicks(lines: CartLine[], remaining: number) {
+  const [pool, setPool] = useState<Product[]>([]);
+  useEffect(() => {
+    let live = true;
+    api<ProductList>(`/products?${new URLSearchParams({ limit: "40", sort: "featured" })}`).then((r) => live && setPool(r.items)).catch(() => undefined);
+    return () => { live = false; };
+  }, []);
+  if (remaining <= 0) return [];
+  const inCart = new Set(lines.map((l) => l.variationId));
+  const ok = pool.filter((p) => !inCart.has(p.variationId) && ["in", "low"].includes(normalizeStatus(p.status)));
+  const covers = ok.filter((p) => p.priceCents >= remaining).sort((x, y) => x.priceCents - y.priceCents);
+  const rest = ok.filter((p) => p.priceCents < remaining).sort((x, y) => y.priceCents - x.priceCents);
+  return [...covers, ...rest].slice(0, 3);
+}
+
+export function CartDrawer({ lines, subtotal, currency, onQty, onAdd, onOpen, onClose }: {
   lines: CartLine[]; subtotal: number; currency: Currency;
-  onQty: (variationId: string, qty: number) => void; onClose: () => void;
+  onQty: (variationId: string, qty: number) => void; onAdd: (p: Product) => void; onOpen: (p: Product) => void; onClose: () => void;
 }) {
   useEscape(onClose);
   const threshold = storeFormat.freeShippingThresholdCents;
   const remaining = Math.max(threshold - subtotal, 0);
   const progress = threshold ? Math.min(subtotal / threshold, 1) : 1;
+  const picks = useShippingPicks(lines, remaining);
   return (
     <>
       <div className="sh-overlay" onClick={onClose} />
@@ -34,7 +55,7 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onClose }: {
         ) : (
           <>
             <div className="sh-drawer__body">
-              <div className="sf-ship-meter">
+              <div className={`sf-ship-meter ${remaining > 0 ? "" : "is-done"}`}>
                 <span>{remaining > 0 ? <>Add <b>{money(remaining, currency)}</b> for free shipping</> : <b>You've unlocked free shipping 🎉</b>}</span>
                 <div className="sf-ship-meter__bar"><i style={{ width: `${progress * 100}%` }} /></div>
               </div>
@@ -56,11 +77,27 @@ export function CartDrawer({ lines, subtotal, currency, onQty, onClose }: {
                   <strong>{money(l.unitPriceCents * l.quantity, currency)}</strong>
                 </div>
               ))}
+              {picks.length > 0 && (
+                <section className="sf-picks" aria-labelledby="picks-title">
+                  <div id="picks-title" className="sf-picks__title">{picks[0].priceCents >= remaining ? "Add one for free shipping" : "Popular add-ons"}</div>
+                  {picks.map((p) => (
+                    <div key={p.id} className="sf-pick">
+                      <button type="button" className="sf-pick__open" onClick={() => onOpen(p)} aria-label={`View ${p.name}`}>
+                        <span className={`sh-thumb ${p.images[0] ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 44, height: 44 }}>
+                          {p.images[0] && <img {...photo(p.images[0], 88, isCutout(p, p.images[0]))} alt="" />}
+                        </span>
+                        <span className="sf-pick__name">{p.name}</span>
+                      </button>
+                      <button type="button" className="sf-pick__add" onClick={() => onAdd(p)} aria-label={`Add ${p.name} to cart`}>+ {money(p.priceCents, currency)}</button>
+                    </div>
+                  ))}
+                </section>
+              )}
             </div>
             <div className="sf-cart-foot">
               <div className="sf-cart-foot__row"><span>Subtotal</span><strong>{money(subtotal, currency)}</strong></div>
               <span className="sf-muted">Shipping and taxes are calculated at checkout. Charged in CAD.</span>
-              <a href="/checkout" className="sh-btn sf-cart-foot__cta sf-center">Checkout</a>
+              <a href="/checkout" className="sh-btn sf-cart-foot__cta sf-center">🔒 Secure checkout · {money(subtotal, currency)}</a>
               <span className="sf-muted sf-center">Secure payment with PayPal or card. Your cart is saved on this device.</span>
             </div>
           </>

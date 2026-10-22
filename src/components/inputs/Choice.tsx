@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type InputHTMLAttributes, type ReactNode } from "react";
+import { useSlidingIndicator } from "../hooks";
 import "../styles/components.scss";
 
 /**
@@ -85,10 +86,12 @@ export function SegmentedControl<V extends string>({ label, options, value, onCh
   size?: "sm" | "md";
   fullWidth?: boolean;
 }) {
+  const ind = useSlidingIndicator<HTMLDivElement>(value);
   return (
-    <div className={`ui-seg ${size === "sm" ? "ui-seg--sm" : ""} ${fullWidth ? "ui-seg--full" : ""}`} role="radiogroup" aria-label={label}>
+    <div ref={ind.ref} className={`ui-seg ${size === "sm" ? "ui-seg--sm" : ""} ${fullWidth ? "ui-seg--full" : ""}`} role="radiogroup" aria-label={label}>
+      <span className={`ui-ind ui-seg__ind ${ind.ready ? "is-ready" : ""}`} style={ind.style} aria-hidden />
       {options.map((o) => (
-        <button key={o.value} type="button" role="radio" aria-checked={value === o.value} disabled={o.disabled}
+        <button key={o.value} type="button" role="radio" aria-checked={value === o.value} data-on={value === o.value} disabled={o.disabled}
           className={value === o.value ? "is-on" : ""} onClick={() => onChange(o.value)}>{o.label}</button>
       ))}
     </div>

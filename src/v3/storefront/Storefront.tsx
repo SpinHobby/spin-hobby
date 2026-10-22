@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./storefront.scss";
-import { normalizeStatus, type Currency } from "../format";
+import { handlingLabel, money, normalizeStatus, type Currency } from "../format";
 import { EVENTS } from "../events/data";
 import { eventDateShort, isPastEvent } from "../events/dates";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
@@ -20,6 +20,7 @@ import { CategoryNav } from "./CategoryNav";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
+import { addedMessage, shippingGap } from "./nudges";
 
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
@@ -44,6 +45,15 @@ export default function Storefront() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [notify, setNotify] = useState<Product | null>(null);
   const shopRef = useRef<HTMLElement>(null);
+
+  // The cart button gives a little bounce whenever something is added, so the shopper sees where it went.
+  const [bump, setBump] = useState(0);
+  const lastCount = useRef(cart.count);
+  useEffect(() => {
+    if (cart.count > lastCount.current) setBump((b) => b + 1);
+    lastCount.current = cart.count;
+  }, [cart.count]);
+  const gap = shippingGap(cart.subtotal);
 
   // Greet people when they go from signed out to signed in (password, sign-up, or back from Google/Discord).
   const [welcome, setWelcome] = useState<{ isNew: boolean } | null>(null);
@@ -176,7 +186,7 @@ export default function Storefront() {
     onAdd: (p) => {
       if (normalizeStatus(p.status) === "out") { setNotify(p); return; }
       cart.add(p);
-      flash(p.status === "pre" ? "Pre-order added to cart" : "Added to cart");
+      flash(addedMessage(p.status === "pre" ? "Pre-order added to cart" : "Added to cart", cart.subtotal, cart.subtotal + p.priceCents, currency));
     },
     onNotify: setNotify,
     onWish: wishlist.toggle,
@@ -193,7 +203,12 @@ export default function Storefront() {
       {/* Utility bar */}
       <div className="sf-utility">
         <div className="sf-wrap sf-utility__inner">
-          <span><span className="sf-gold">●</span> Free shipping on orders {freeShippingLabel()}+ · Canada &amp; US</span>
+          {/* once the cart has something, say how close it is to free shipping (a goal close at hand is motivating) */}
+          <span className="sf-utility__ship" key={cart.count ? (gap ? "gap" : "free") : "none"}>
+            {!cart.count ? <><span className="sf-gold">●</span> Free shipping on orders {freeShippingLabel()}+ · Canada &amp; US</>
+              : gap ? <><span className="sf-gold">●</span> You're <b>{money(gap, currency)}</b> away from free shipping</>
+              : <><span className="sf-gold">✓</span> Your order ships free</>}
+          </span>
           {/* site links only: Discord and Instagram are the icons beside the search */}
           <div className="sf-utility__links">
             {SHOW_EBAY_STORE && <a href={EBAY_URL} target="_blank" rel="noreferrer">eBay store ↗</a>}
@@ -241,7 +256,10 @@ export default function Storefront() {
               onClick={() => { leaveProduct(); setWishOnly((w) => !w); scrollShop(); }} aria-label={`Wishlist, ${wishlist.count} items`}>
               <span className="sf-red">♥</span>{wishlist.count}
             </button>
-            <button type="button" className="sf-cart-btn" onClick={() => setCartOpen(true)} aria-label={`Cart, ${cart.count} items`}>Cart · {cart.count}</button>
+            <button type="button" className={`sf-cart-btn ${bump ? (bump % 2 ? "is-bump-a" : "is-bump-b") : ""}`} onClick={() => setCartOpen(true)} aria-label={`Cart, ${cart.count} items`}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z" /><path d="M6 6 5 3H2" /><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /></svg>
+              <span className="sf-cart-btn__label">Cart</span><span key={bump} className="sf-cart-btn__n">{cart.count}</span>
+            </button>
           </div>
         </div>
         <nav className="sf-wrap sf-nav" aria-label="Shop sections">
@@ -254,7 +272,7 @@ export default function Storefront() {
       {productId ? (
         <div className="sf-wrap">
           <ProductPage id={productId} initial={initialProduct} a={actions} tree={tree}
-            cartQty={cart.qtyOf} onAddQty={(p, qty) => cart.add(p, qty)}
+            cartQty={cart.qtyOf} cartSubtotal={cart.subtotal} onAddQty={(p, qty) => cart.add(p, qty)}
             onViewCart={() => setCartOpen(true)} onToast={flash}
             onCategory={(id) => setCategory(`id:${id}`)}
             onHome={() => { clearFilters(); window.scrollTo({ top: 0 }); }} />
@@ -317,6 +335,7 @@ export default function Storefront() {
           {isHome && home && (
             <>
               <HeroRow slides={home.slides} closingSoon={closingSoon} maxOff={maxOff} onPreorders={() => setNav("Pre-Orders")} onSale={() => setNav("Sale")} />
+              <TrustStrip />
 
               {preorders.length > 0 && (
                 <section aria-labelledby="pre-title">
@@ -424,11 +443,26 @@ export default function Storefront() {
 
       <Footer currency={currency} onCurrency={setCurrency} onNav={setNav} />
 
-      {cartOpen && <CartDrawer lines={cart.lines} subtotal={cart.subtotal} currency={currency} onQty={cart.setQty} onClose={() => setCartOpen(false)} />}
+      {cartOpen && <CartDrawer lines={cart.lines} subtotal={cart.subtotal} currency={currency} onQty={cart.setQty} onAdd={(p) => cart.add(p)} onOpen={(p) => { setCartOpen(false); openProduct(p); }} onClose={() => setCartOpen(false)} />}
       {notify && <NotifyDialog product={notify} email={auth.email} onClose={() => setNotify(null)} onDone={(m) => { setNotify(null); flash(m); }} />}
       {welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />}
-      {toast && <div className="sh-toast" role="status" aria-live="polite">{toast}</div>}
+      {toast && !cartOpen && <div key={toast} className="sh-toast" role="status" aria-live="polite">{toast}</div>}
     </div>
+  );
+}
+
+/** Four reasons to buy here, right under the hero: what a first-time visitor wants to know before trusting a shop. */
+function TrustStrip() {
+  const items = [
+    { icon: "✦", title: "100% authentic", text: "Officially licensed goods only" },
+    { icon: "🚚", title: `Free shipping over ${freeShippingLabel()}`, text: "Tracked, Canada & US" },
+    { icon: "📦", title: `Ships in ${handlingLabel()}`, text: "Packed with care for collectors" },
+    { icon: "🔒", title: "Secure checkout", text: "Card or PayPal" },
+  ];
+  return (
+    <ul className="sf-trust" aria-label="Why shop with us">
+      {items.map((t) => <li key={t.title}><span aria-hidden>{t.icon}</span><div><b>{t.title}</b><span>{t.text}</span></div></li>)}
+    </ul>
   );
 }
 
@@ -457,7 +491,7 @@ export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
       <Banner className="sf-hero__banner" {...(slide.link_url ? { href: slide.link_url } : {})}
         onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} aria-roledescription="carousel">
         {slide.image_url ? (
-          <img className="sf-hero__photo" src={slide.image_url} alt="" />
+          <img key={slide.id} className="sf-hero__photo" src={slide.image_url} alt="" />
         ) : (
           <>
             <div className="sf-hero__sun" />
@@ -466,8 +500,10 @@ export function HeroRow({ slides, closingSoon, maxOff, onPreorders, onSale }: {
         )}
         <div className="sf-hero__copy" aria-live="polite">
           <div className="sf-hero__eyebrow">Welcome to Spin Hobby</div>
-          <h1 className="sh-display">{slide.headline}</h1>
-          {slide.subheading && <p>{slide.subheading}</p>}
+          <div key={slide.id} className="sf-hero__text">
+            <h1 className="sh-display">{slide.headline}</h1>
+            {slide.subheading && <p>{slide.subheading}</p>}
+          </div>
           {count > 1 && (
             <div className="sf-hero__dots" role="tablist" aria-label="Slides">
               {slides.map((s, i) => (

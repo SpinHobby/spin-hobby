@@ -646,3 +646,84 @@
 }
 @media (max-width: 480px) { .sf-pp__perks { grid-template-columns: 1fr; } }
 @keyframes sf-sticky-in { from { transform: translateY(100%); } }
+
+// ------------------------------------------------------------ feel: motion and honest nudges
+// Small motions that confirm what happened (it went into the cart, the slide changed) and make the shop feel finished. All of it
+// stops for people who ask their device for less motion (see tokens.scss).
+$sf-ease: cubic-bezier(.2, .8, .2, 1);
+
+// top bar: free-shipping progress once the cart has something
+.sf-utility__ship { animation: sh-fade .3s; b { color: var(--gold); } }
+
+// header cart: an icon, a count badge, and a bounce when something lands in it
+.sf-cart-btn { transition: filter .15s, transform .1s; &:active { transform: scale(.96); } }
+.sf-cart-btn__n { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; margin-left: 2px; border-radius: 99px;
+  background: #1d2a53; color: var(--gold); font-size: 12px; animation: sf-count-pop .45s $sf-ease; }
+.sf-cart-btn.is-bump-a { animation: sf-bump-a .5s $sf-ease; }
+.sf-cart-btn.is-bump-b { animation: sf-bump-b .5s $sf-ease; }
+@keyframes sf-bump-a { 30% { transform: scale(1.08) rotate(-2deg); } 60% { transform: scale(.98); } }
+@keyframes sf-bump-b { 30% { transform: scale(1.08) rotate(-2deg); } 60% { transform: scale(.98); } }
+@keyframes sf-count-pop { 0% { transform: scale(.4); } 60% { transform: scale(1.25); } }
+
+// trust strip under the hero
+.sf-trust { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+  li { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); min-width: 0; }
+  li > span { font-size: 18px; color: var(--gold); flex: none; }
+  div { display: flex; flex-direction: column; min-width: 0; font-size: 12px; color: var(--muted); }
+  b { font-size: 13.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
+@media (max-width: 900px) { .sf-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+// hero: slides cross-fade instead of jumping
+.sf-hero__photo { animation: sf-hero-photo .7s ease-out; }
+.sf-hero__text { animation: sf-rise .5s $sf-ease; }
+@keyframes sf-hero-photo { from { opacity: 0; transform: scale(1.03); } }
+@keyframes sf-rise { from { opacity: 0; transform: translateY(8px); } }
+
+// product cards: lift on hover, the second photo fades in, buttons answer the click
+.sf-card, .sf-pre { transition: box-shadow .2s, border-color .2s, transform .2s $sf-ease; animation: sf-rise .35s $sf-ease both; }
+.sf-card--skeleton { animation: none; }
+@media (hover: hover) {
+  .sf-card:not(.sf-card--skeleton):hover, .sf-pre:hover { transform: translateY(-3px); }
+  .sf-card:hover .sf-img img, .sf-pre:hover .sf-img img { transform: scale(1.04); }
+  .sf-img.has-alt:hover .sf-img__alt, .sf-card:hover .sf-img.has-alt .sf-img__alt, .sf-pre:hover .sf-img.has-alt .sf-img__alt { opacity: 1; }
+}
+.sf-img img { transition: transform .45s $sf-ease, opacity .3s; }
+.sf-img__alt { position: absolute; inset: 0; opacity: 0; background: var(--surface2); }
+.sf-card__chip { position: absolute; right: 8px; bottom: 8px; max-width: calc(100% - 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; color: var(--text); background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(4px); box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  &--closing { color: #fff; background: var(--red); } }
+.sf-grid--compact .sf-card__chip { font-size: 9px; padding: 2px 5px; right: 6px; bottom: 6px; }
+.sf-card__off + .sf-card__chip { max-width: calc(100% - 70px); }
+.sf-buy { transition: filter .15s, background .2s, transform .08s; &:active { transform: scale(.97); } &.is-added { animation: sf-added .4s $sf-ease; } }
+.sf-mini__add.is-added { animation: sf-added .4s $sf-ease; }
+@keyframes sf-added { 40% { transform: scale(1.05); } }
+.sf-card__wish.is-on, .sf-row__wish.is-on, .sf-pp__ghost.is-on .sf-red { animation: sf-heart .45s $sf-ease; }
+@keyframes sf-heart { 30% { transform: scale(1.3); } 60% { transform: scale(.92); } }
+.sf-pp__ghost .sf-red { display: inline-block; }
+
+// product page
+.sf-dot--pulse { animation: sf-pulse 1.6s ease-out infinite; }
+@keyframes sf-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); } 100% { box-shadow: 0 0 0 7px transparent; } }
+.sf-pp__closing { margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--red); }
+.sf-pp__added { animation: sf-rise .3s $sf-ease; }
+.sf-pp__perks li.is-good { border-color: color-mix(in srgb, var(--teal) 45%, var(--border)); background: color-mix(in srgb, var(--teal) 8%, var(--surface)); b { color: var(--teal); } }
+
+// cart drawer: the meter celebrates, and a few add-ons that reach free shipping
+.sf-ship-meter.is-done { background: color-mix(in srgb, var(--teal) 12%, var(--surface)); color: var(--teal);
+  .sf-ship-meter__bar i { background: var(--teal); } }
+.sf-ship-meter__bar i { transition: width .5s $sf-ease, background .3s; }
+.sf-cart-line { animation: sf-rise .25s $sf-ease; }
+.sf-picks { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px dashed var(--border); }
+.sf-picks__title { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sf-pick { display: flex; align-items: center; gap: 10px;
+  &__open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 0; text-align: left; color: var(--text); }
+  &__name { font-size: 13px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  &__open:hover .sf-pick__name { text-decoration: underline; }
+  &__add { flex: none; border: 1px solid var(--primary); background: var(--surface); color: var(--primary); border-radius: 9px; padding: 6px 10px; font-size: 12.5px; font-weight: 800;
+    transition: background .15s, color .15s, transform .08s; &:hover { background: var(--primary); color: var(--on-primary); } &:active { transform: scale(.95); } } }
+@media (max-width: 480px) {
+  .sf-cart-btn { padding: 9px 12px; }
+  .sf-cart-btn__label { display: none; }
+  .sf-trust { gap: 8px; li { padding: 10px; align-items: flex-start; } b { white-space: normal; font-size: 12.5px; } div { font-size: 11.5px; } }
+}

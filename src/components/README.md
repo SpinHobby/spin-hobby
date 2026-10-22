@@ -70,6 +70,7 @@ src/components/
 | `ProgressBar`, `Spinner`, `Skeleton` | Progress; "working on it"; a loading placeholder | `tone`/`note`; `size`; `width`/`height` |
 | `Avatar` | A round photo, or initials | `src`, `size` |
 | `useToast`, `useTheme`, `useEscape` | A short message; light/dark; close on Escape | |
+| `useSlidingIndicator` | The highlight that glides to the chosen tab (used by the side panel, Tabs, SegmentedControl) | `axis`: `x` or `y` |
 
 Open each file for the details: every component explains its props at the top.
 

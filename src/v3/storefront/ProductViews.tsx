@@ -3,6 +3,7 @@ import type { MouseEvent, ReactNode } from "react";
 import type { Product } from "../types";
 import { productPath } from "./data";
 import { isCutout, photo } from "../photo";
+import { closingLabel } from "./nudges";
 
 export interface CardActions {
   currency: Currency;
@@ -24,13 +25,24 @@ export function ProductLink({ p, a, className = "", label, children }: { p: Prod
   return <a href={productPath(p)} className={`sf-open ${className}`} onClick={open} aria-label={label}>{children}</a>;
 }
 
-export function ProductImage({ p, className = "", label = true }: { p: Product; className?: string; label?: boolean }) {
+/** The product's first photo. With `hover`, a second photo (if there is one) fades in when a mouse rests on it. */
+export function ProductImage({ p, className = "", label = true, hover = false }: { p: Product; className?: string; label?: boolean; hover?: boolean }) {
   const src = p.images[0];
+  const alt = hover ? p.images[1] : undefined;
   return (
-    <div className={`sf-img ${src ? "" : "sh-ph"} ${className}`}>
+    <div className={`sf-img ${src ? "" : "sh-ph"} ${alt ? "has-alt" : ""} ${className}`}>
       {src ? <img {...photo(src, 480, isCutout(p, src))} alt={p.name} loading="lazy" /> : label && <span className="sf-img__ph" aria-hidden>[ product image ]</span>}
+      {alt && <img className="sf-img__alt" {...photo(alt, 480, isCutout(p, alt))} alt="" loading="lazy" aria-hidden />}
     </div>
   );
+}
+
+/** A small corner chip with a real reason to look: a pre-order that closes soon, or a place in this week's ranking. */
+function Highlight({ p }: { p: Product }) {
+  const closing = normalizeStatus(p.status) === "pre" ? closingLabel(p.orderByDate) : null;
+  if (closing) return <span className="sf-card__chip sf-card__chip--closing">⏳ {closing}</span>;
+  if (p.rank && p.rank <= 5 && normalizeStatus(p.status) !== "out") return <span className="sf-card__chip">🔥 #{p.rank} this week</span>;
+  return null;
 }
 
 function Thumb({ p, size }: { p: Product; size: number }) {
@@ -58,9 +70,10 @@ export function ProductCard({ p, a }: { p: Product; a: CardActions }) {
   return (
     <article className={`sf-card ${s === "out" ? "is-dim" : ""}`}>
       <div className="sf-card__media">
-        <ProductLink p={p} a={a} className="sf-card__open" label={p.name}><ProductImage p={p} /></ProductLink>
+        <ProductLink p={p} a={a} className="sf-card__open" label={p.name}><ProductImage p={p} hover /></ProductLink>
         <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>{meta.badge}</span>
         {off > 0 && <span className="sf-card__off">-{off}%</span>}
+        <Highlight p={p} />
         <button type="button" className={`sf-card__wish ${wished ? "is-on" : ""}`} onClick={() => a.onWish(p)}
           aria-pressed={wished} aria-label={wished ? `Remove ${p.name} from wishlist` : `Add ${p.name} to wishlist`}>
           {wished ? "♥" : "♡"}
@@ -110,12 +123,14 @@ export function PreorderCard({ p, a }: { p: Product; a: CardActions }) {
   return (
     <article className="sf-pre">
       <ProductLink p={p} a={a} className="sf-pre__media" label={p.name}>
-        <ProductImage p={p} />
+        <ProductImage p={p} hover />
         <span className="sh-badge sf-card__badge" style={{ background: "var(--blue)" }}>PRE-ORDER</span>
+        <Highlight p={p} />
       </ProductLink>
       <div className="sf-pre__body">
         <ProductLink p={p} a={a} className="sf-pre__name">{p.name}</ProductLink>
         <strong>{money(p.priceCents, a.currency)}</strong>
+        {discountPct(p) > 0 && <s className="sf-muted">{money(p.compareAtCents, a.currency)}</s>}
         <span className="sf-muted">Release {monthLabel(p.releaseMonth)}</span>
         {p.orderByDate && <span className="sf-pre__by">Order by {dayLabel(p.orderByDate)}</span>}
       </div>
