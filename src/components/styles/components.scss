@@ -2,10 +2,12 @@
 // Each rule has its new name (ui-...) and the admin's older name (ad-...), so existing admin markup keeps working.
 // Use the components in this folder (PanelLayout, Card, DataTable, Field...) rather than these classes directly.
 
+// The side panel's brand row and the top bar share one height, so their bottom lines meet across the page.
 .ui-panel,
 .ad {
   display: flex;
   min-height: 100vh;
+  --ui-bar-h: 64px;
 }
 :where(.ui-panel, .ad) a {
   color: var(--blue);
@@ -112,7 +114,9 @@ html[data-theme="dark"] .ad {
   height: 100vh;
   z-index: 20;
   &__brand {
-    padding: 18px 18px 14px;
+    height: var(--ui-bar-h);
+    flex: none;
+    padding: 0 18px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -216,15 +220,19 @@ html[data-theme="dark"] .ad {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--border);
-  padding: 12px 24px;
+  min-height: var(--ui-bar-h);
+  padding: 8px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
   h1 {
     font-size: 22px;
+    line-height: 1.2;
     margin: 0;
     flex: 1;
     min-width: 144px;
@@ -1453,7 +1461,7 @@ $ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .ui-top,
   .ad-top {
-    padding: 10px 16px;
+    padding: 8px 16px;
     gap: 10px;
     h1 {
       font-size: 20px;
