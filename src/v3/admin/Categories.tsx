@@ -125,8 +125,8 @@ export function CategoriesScreen({ ctx }: { ctx: Ctx }) {
               Add standard categories
             </button>
             <span className="ad-muted ad-sm" style={{ display: "block", marginTop: 8 }}>
-              Figures, Model Kits, Character Goods, Trading Cards, Books & Media, Toys & Puzzles, with subcategories, laid out like
-              AmiAmi’s. You can rename or delete any of them.
+              Figures (incl. Kuji Prize Figures), Character Goods, Trading Cards, Books & Media, Toys & Puzzles, with subcategories, laid
+              out like AmiAmi’s. You can rename or delete any of them.
             </span>
           </div>
         )}
