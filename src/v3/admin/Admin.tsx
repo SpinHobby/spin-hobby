@@ -20,6 +20,7 @@ import { useAuth, useTheme, useToast } from "../hooks";
 import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
 import { SCREENS, useAdminData, type Screen } from "./data";
+import { AccountsScreen } from "./Accounts";
 import { AuditScreen } from "./Audit";
 import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
@@ -40,12 +41,12 @@ export default function Admin() {
   const isOwner = auth.user?.role === "owner";
   // Audit is only for owners and the staff the owner allowed (the API checks too)
   const canAudit = isOwner || !!auth.user?.canAudit;
-  const screens: Screen[] = canAudit ? [...SCREENS, "Audit"] : SCREENS;
+  const screens: Screen[] = [...SCREENS, ...(canAudit ? (["Audit"] as const) : []), ...(isOwner ? (["Accounts"] as const) : [])];
   const { data, setData, reload } = useAdminData(isStaff);
 
   const [screen, setScreenState] = useState<Screen>(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1));
-    return (SCREENS as string[]).includes(hash) || hash === "Audit" ? (hash as Screen) : "Dashboard";
+    return (SCREENS as string[]).includes(hash) || hash === "Audit" || hash === "Accounts" ? (hash as Screen) : "Dashboard";
   });
   const [productFilter, setProductFilter] = useState("All");
   const [orderTab, setOrderTab] = useState("All");
@@ -160,6 +161,12 @@ export default function Admin() {
       {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
       {screen === "Settings" && <SettingsScreen ctx={ctx} />}
       {screen === "Audit" && (canAudit ? <AuditScreen ctx={ctx} /> : <p className="ad-muted">Ask the owner for access to Audit.</p>)}
+      {screen === "Accounts" &&
+        (isOwner ? (
+          <AccountsScreen ctx={ctx} myId={auth.user?.id ?? null} />
+        ) : (
+          <p className="ad-muted">Only owners can manage accounts.</p>
+        ))}
     </PanelLayout>
   );
 }

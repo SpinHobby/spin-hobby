@@ -14,7 +14,17 @@ import type {
 } from "../types";
 
 export type Screen =
-  "Dashboard" | "Products" | "Imports" | "Photos" | "Descriptions" | "Categories" | "Orders" | "Homepage" | "Settings" | "Audit";
+  | "Dashboard"
+  | "Products"
+  | "Imports"
+  | "Photos"
+  | "Descriptions"
+  | "Categories"
+  | "Orders"
+  | "Homepage"
+  | "Settings"
+  | "Audit"
+  | "Accounts";
 export const SCREENS: Screen[] = [
   "Dashboard",
   "Products",
