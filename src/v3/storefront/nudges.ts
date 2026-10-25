@@ -1,7 +1,7 @@
 // Small, honest nudges that help shoppers decide: how far they are from free shipping, and how long a pre-order stays open.
 // Everything here comes from real data (the cart, the store's settings, the product's order-by date). Never invent urgency
 // (fake timers, "12 people are viewing this"): shoppers notice, and it costs the shop their trust.
-import { money, storeFormat, type Currency } from "../format";
+import { price, storeFormat, type Currency } from "../format";
 
 /** Cents still needed for free shipping (0 once reached, or when the store has no threshold). */
 export function shippingGap(subtotalCents: number) {
@@ -12,7 +12,7 @@ export function shippingGap(subtotalCents: number) {
 /** The toast after adding to the cart: says how close the cart now is to free shipping, or that it just got there. */
 export function addedMessage(base: string, beforeCents: number, afterCents: number, currency: Currency) {
   const gap = shippingGap(afterCents);
-  if (gap > 0) return `${base} · ${money(gap, currency)} away from free shipping`;
+  if (gap > 0) return `${base} · ${price(gap, currency)} away from free shipping`;
   if (shippingGap(beforeCents) > 0) return `${base} · you've unlocked free shipping 🎉`;
   return base;
 }

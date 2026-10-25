@@ -6,7 +6,7 @@ import {
   dayLabel,
   discountPct,
   handlingLabel,
-  money,
+  price,
   monthLabel,
   normalizeStatus,
   STATUS_META,
@@ -19,7 +19,7 @@ import { SITE_URL, useDocumentHead } from "../seo";
 import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
-import { ProductCard, type CardActions } from "./ProductViews";
+import { ProductCard, type CardActions, PriceTag } from "./ProductViews";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
@@ -555,9 +555,8 @@ function BuyBox({
 
       <div className="sf-pp__pricebox">
         <div className="sf-pp__price">
-          <strong>{money(p.priceCents, a.currency)}</strong>
-          {a.currency === "USD" && <span className="sf-muted sf-small">approx.</span>}
-          {off > 0 && <s>{money(p.compareAtCents, a.currency)}</s>}
+          <PriceTag cents={p.priceCents} currency={a.currency} />
+          {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
           {off > 0 && <span className="sf-pp__off">Save {off}%</span>}
         </div>
         <div className="sf-pp__status" style={{ color: meta.color }}>
@@ -619,7 +618,7 @@ function BuyBox({
               </button>
             </div>
             <button type="button" className="sf-buy sf-pp__cta" onClick={add}>
-              {buyLabel} · {money(p.priceCents * n, a.currency)}
+              {buyLabel} · {price(p.priceCents * n, a.currency)}
             </button>
           </div>
         )}
@@ -665,7 +664,7 @@ function BuyBox({
                 <b>Free shipping over {freeShippingLabel()}</b>
                 <span>
                   {cartSubtotal > 0 || justAdded
-                    ? `${money(gapWith, a.currency)} to go${justAdded || room === 0 ? "" : " with this item"}`
+                    ? `${price(gapWith, a.currency)} to go${justAdded || room === 0 ? "" : " with this item"}`
                     : "Tracked, across Canada & the US"}
                 </span>
               </>
@@ -701,7 +700,7 @@ function BuyBox({
         <div className="sf-pp__sticky" aria-hidden={buyVisible}>
           <div>
             <b>{p.name}</b>
-            <span>{money(p.priceCents, a.currency)}</span>
+            <span>{price(p.priceCents, a.currency)}</span>
           </div>
           <button type="button" className="sf-buy" onClick={add}>
             {buyLabel}
@@ -722,7 +721,7 @@ function Details({ p, currency }: { p: Product; currency: Currency }) {
     ["Order by", normalizeStatus(p.status) === "pre" && p.orderByDate ? dayLabel(p.orderByDate) : ""],
     ["JAN code", p.janCode ?? ""],
     ["Limit", p.maxPerCustomer ? `${p.maxPerCustomer} per customer` : ""],
-    ["Price", `${money(p.priceCents, currency)}${currency === "USD" ? " (approx.)" : ""}`],
+    ["Price", `${price(p.priceCents, currency)}${currency === "USD" ? ` (estimate; you're charged ${price(p.priceCents)})` : ""}`],
   ];
   const shown = rows.filter(([, v]) => v);
   return (

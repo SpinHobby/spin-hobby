@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./support.scss";
-import { handlingLabel, money } from "../format";
+import { handlingLabel, price } from "../format";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE, SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
@@ -49,7 +49,7 @@ export default function Support() {
   }, [hash]);
 
   const shipping = config
-    ? `Standard shipping is ${money(config.shippingStandardCents)} and express is ${money(config.shippingExpressCents)}. Orders of ${money(config.freeShippingThresholdCents)} or more ship free. All prices are in CAD (you can browse in USD, but you're charged in CAD).`
+    ? `Standard shipping is ${price(config.shippingStandardCents)} and express is ${price(config.shippingExpressCents)}. Orders of ${price(config.freeShippingThresholdCents)} or more ship free. All prices are in CAD (you can browse in USD, but you're charged in CAD).`
     : "Shipping costs are shown in your cart before you pay, and larger orders ship free.";
 
   return (

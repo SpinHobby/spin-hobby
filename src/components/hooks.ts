@@ -59,6 +59,100 @@ export function prefersReducedMotion() {
 }
 
 /**
+ * Swapping a list for a new one (another tab's products) as "old fades out, new rises in" instead of the old list sitting there until
+ * the new one pops in. `key` names what is being shown (the address); `content` is the data on screen (the items array). When `key`
+ * changes, `phase` is "leaving" until `content` is replaced (put `ui-leaving` on the list then), and "slow" if that takes a while
+ * (show a loading placeholder instead). `round` goes up each time new content arrives: use it as the list's `key` so every item
+ * plays its entrance again (with `ui-stagger` on the list, one after another).
+ */
+export function useContentSwap(key: unknown, content: unknown, { slowAfter = 400, giveUpAfter = 5000 } = {}) {
+  const [phase, setPhase] = useState<"shown" | "leaving" | "slow">("shown");
+  const [round, setRound] = useState(0);
+  const shownKey = useRef(key);
+  const stale = useRef<unknown>(undefined);
+  useLayoutEffect(() => {
+    if (shownKey.current === key) return;
+    shownKey.current = key;
+    stale.current = content;
+    setPhase("leaving");
+    // only a change of `key` starts a swap; `content` is read as it is at that moment
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  useLayoutEffect(() => {
+    if (phase === "shown" || content === stale.current) return;
+    setPhase("shown");
+    setRound((r) => r + 1);
+  }, [content, phase]);
+  const waiting = phase !== "shown";
+  useEffect(() => {
+    if (!waiting) return;
+    const slow = window.setTimeout(() => setPhase((p) => (p === "leaving" ? "slow" : p)), slowAfter);
+    const giveUp = window.setTimeout(() => setPhase("shown"), giveUpAfter); // nothing new came (an error, or the same data)
+    return () => {
+      window.clearTimeout(slow);
+      window.clearTimeout(giveUp);
+    };
+  }, [waiting, slowAfter, giveUpAfter]);
+  return { phase, round };
+}
+
+/**
+ * A scrolling box without a scrollbar: its top and bottom edges fade out while there is more to scroll that way, which says "more
+ * here" more quietly than a bar. Put the returned ref on the box and the `ui-scroll-fade` class on it (styles/motion.scss).
+ */
+export function useScrollFade<T extends HTMLElement>() {
+  const cleanup = useRef<(() => void) | null>(null);
+  return useCallback((el: T | null) => {
+    cleanup.current?.();
+    cleanup.current = null;
+    if (!el) return;
+    const update = () => {
+      el.toggleAttribute("data-fade-top", el.scrollTop > 2);
+      el.toggleAttribute("data-fade-bottom", el.scrollTop + el.clientHeight < el.scrollHeight - 2);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    // the box or what's inside it changes size (a window resize, a section opening)
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    ro?.observe(el);
+    for (const child of Array.from(el.children)) ro?.observe(child);
+    cleanup.current = () => {
+      el.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, []);
+}
+
+/**
+ * A short fade-and-rise on the element each time `key` changes (a new page or section), so the change reads as moving somewhere
+ * rather than a flash. Put the returned `ref` on the content that changes, not on what stays put (the header, a sidebar). The first
+ * showing doesn't animate. `rise` is how far it travels up, in pixels.
+ */
+export function useEnterAnimation<T extends HTMLElement>(key: unknown, rise = 10) {
+  const ref = useRef<T>(null);
+  const first = useRef(true);
+  useLayoutEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const el = ref.current;
+    if (!el?.animate || prefersReducedMotion()) return;
+    el.animate(
+      [
+        { opacity: 0, transform: `translateY(${rise}px)` },
+        { opacity: 1, transform: "none" },
+      ],
+      {
+        duration: 320,
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+      },
+    );
+  }, [key, rise]);
+  return ref;
+}
+
+/**
  * A highlight that glides to the chosen item of a list (the side panel's tabs, Tabs, SegmentedControl). Put `ref` on the list, mark
  * the chosen item with `data-on="true"`, and render `<span className="ui-ind ..." style={style} />` inside the list. `axis` is the
  * direction the list runs. The first placement doesn't animate (`ready` turns on after it), so nothing slides in from a corner.

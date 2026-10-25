@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { prefersReducedMotion, useSlidingIndicator } from "../hooks";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEnterAnimation, useSlidingIndicator } from "../hooks";
 import "../styles/tokens.scss";
 import "../styles/components.scss";
 
@@ -54,27 +54,18 @@ export function PanelLayout<K extends string>({
 }) {
   const [navOpen, setNavOpen] = useState(false);
   const ind = useSlidingIndicator<HTMLElement>(active, "y");
-  // The new tab's content eases in (a short fade and rise), so switching feels like moving, not flashing.
-  const content = useRef<HTMLElement>(null);
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    if (prefersReducedMotion()) return;
-    content.current?.animate?.(
-      [
-        { opacity: 0, transform: "translateY(8px)" },
-        { opacity: 1, transform: "none" },
-      ],
-      { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" },
-    );
+  // Whenever the tab changes (a click here, or the page switching it, e.g. a dashboard tile opening Orders), the new content starts at
+  // the top and eases in with a short fade and rise, so switching feels like moving, not flashing. Pages don't need to do either.
+  const content = useEnterAnimation<HTMLElement>(active, 8);
+  const shown = useRef(active);
+  useLayoutEffect(() => {
+    if (shown.current === active) return;
+    shown.current = active;
+    window.scrollTo({ top: 0 });
   }, [active]);
   const select = (key: K) => {
     onSelect(key);
     setNavOpen(false);
-    window.scrollTo({ top: 0 });
   };
   return (
     <div className="sh ui-panel">

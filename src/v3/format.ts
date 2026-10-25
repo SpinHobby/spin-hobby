@@ -10,6 +10,23 @@ export function handlingLabel() {
   return a === b ? `${a} day${a === 1 ? "" : "s"}` : `${a}–${b} days`;
 }
 
+/**
+ * A price as shoppers see it, always with its currency so nobody has to guess which dollars these are: "$55.00 CAD". In USD it is
+ * "≈ $40.15 USD": only an estimate (the Bank of Canada's latest daily rate, sent by the API in /checkout/config; the backup rate
+ * in Settings if the bank can't be reached), because orders are always charged in CAD. `code: false` leaves the code off (a struck-out old price right beside the real one). Staff screens use `money`.
+ */
+export function price(cents: number | null | undefined, currency: Currency = "CAD", { code = true } = {}) {
+  const p = priceParts(cents, currency);
+  return code ? `${p.approx ? "≈ " : ""}${p.amount} ${p.code}` : p.amount;
+}
+/** The pieces of `price`, for showing the currency code smaller than the amount (PriceTag). */
+export function priceParts(cents: number | null | undefined, currency: Currency = "CAD") {
+  const value = (cents ?? 0) / 100;
+  const approx = currency === "USD";
+  return { approx, amount: `$${(approx ? value * storeFormat.fxCadUsd : value).toFixed(2)}`, code: currency };
+}
+
+/** A plain price for staff screens ("$55.00", "US$40.15"). Shoppers see `price`, which names the currency. */
 export function money(cents: number | null | undefined, currency: Currency = "CAD", fx = storeFormat.fxCadUsd) {
   const value = (cents ?? 0) / 100;
   const converted = currency === "USD" ? value * fx : value;

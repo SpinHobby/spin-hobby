@@ -1,12 +1,13 @@
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
-import { greetingName, money, normalizeStatus, storeFormat, type Currency } from "../format";
+import { greetingName, price, normalizeStatus, storeFormat, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
 import type { CartLine } from "./data";
 import { isCutout, photo } from "../photo";
 import type { ProductPage as ProductList } from "../types";
+import { PriceTag } from "./ProductViews";
 
 /**
  * Up to three products that would take the cart to free shipping: in stock, not in the cart already, and priced to just cover what's
@@ -81,7 +82,7 @@ export function CartDrawer({
                 <span>
                   {remaining > 0 ? (
                     <>
-                      Add <b>{money(remaining, currency)}</b> for free shipping
+                      Add <b>{price(remaining, currency)}</b> for free shipping
                     </>
                   ) : (
                     <b>You've unlocked free shipping 🎉</b>
@@ -114,7 +115,7 @@ export function CartDrawer({
                       </button>
                     </div>
                   </div>
-                  <strong>{money(l.unitPriceCents * l.quantity, currency)}</strong>
+                  <PriceTag cents={l.unitPriceCents * l.quantity} currency={currency} />
                 </div>
               ))}
               {picks.length > 0 && (
@@ -131,7 +132,7 @@ export function CartDrawer({
                         <span className="sf-pick__name">{p.name}</span>
                       </button>
                       <button type="button" className="sf-pick__add" onClick={() => onAdd(p)} aria-label={`Add ${p.name} to cart`}>
-                        + {money(p.priceCents, currency)}
+                        + {price(p.priceCents, currency)}
                       </button>
                     </div>
                   ))}
@@ -141,11 +142,15 @@ export function CartDrawer({
             <div className="sf-cart-foot">
               <div className="sf-cart-foot__row">
                 <span>Subtotal</span>
-                <strong>{money(subtotal, currency)}</strong>
+                <PriceTag cents={subtotal} currency={currency} />
               </div>
-              <span className="sf-muted">Shipping and taxes are calculated at checkout. Charged in CAD.</span>
+              <span className="sf-muted">
+                {currency === "USD"
+                  ? `USD prices are estimates: you're charged ${price(subtotal)} in Canadian dollars, plus shipping and taxes at checkout.`
+                  : "Shipping and taxes are calculated at checkout."}
+              </span>
               <a href="/checkout" className="sh-btn sf-cart-foot__cta sf-center">
-                🔒 Secure checkout · {money(subtotal, currency)}
+                🔒 Secure checkout · {price(subtotal, currency)}
               </a>
               <span className="sf-muted sf-center">Secure payment with PayPal or card. Your cart is saved on this device.</span>
             </div>

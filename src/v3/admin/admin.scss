@@ -1009,25 +1009,8 @@
 // ---- loading skeleton
 .ad-skeletons {
   display: grid;
-  padding: 6px 0;
-}
-.ad-skel {
-  height: 60px;
-  margin: 6px 16px;
-  border-radius: 10px;
-  background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-  background-size: 200% 100%;
-  animation: ad-shimmer 1.2s infinite linear;
-}
-@keyframes ad-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ad-skel {
-    animation: none;
-  }
+  gap: 12px;
+  padding: 12px 16px;
 }
 
 // ---- filter chips, tags and the folded filter panel
@@ -1105,11 +1088,6 @@
     height: 20px;
     accent-color: var(--primary);
   }
-}
-.ad-cards .ad-skel {
-  margin: 0;
-  height: 104px;
-  border-radius: 14px;
 }
 .ad-cards .ad-empty {
   grid-column: 1 / -1;
@@ -2269,12 +2247,8 @@
 }
 .ad-jobprogress__spinner {
   flex: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  border-top-color: #3fbf92;
-  animation: ad-spin 0.8s linear infinite;
+  display: inline-flex;
+  color: #3fbf92;
 }
 .ad-jobprogress__main {
   flex: 1;
@@ -2301,16 +2275,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-@keyframes ad-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ad-jobprogress__spinner {
-    animation-duration: 2.4s;
-  }
 }
 .ad-imports__dupes {
   font-size: 13px;
