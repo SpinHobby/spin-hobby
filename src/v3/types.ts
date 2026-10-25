@@ -124,6 +124,8 @@ export interface AppUser {
   email: string;
   role: Role;
   firstName?: string | null;
+  /** May open Admin > Audit: every owner, and staff the owner allowed. */
+  canAudit?: boolean;
 }
 
 export type OrderStatus = "pending" | "paid" | "preorder_reserved" | "fulfilled" | "shipped" | "cancelled" | "refunded";

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, completeOAuthRedirect, getSession, onSessionChange, signOut, type Session } from "../lib/api";
+import { api, completeOAuthRedirect, getSession, onSessionChange, refreshSessionUser, signOut, type Session } from "../lib/api";
 import type { AppUser } from "./types";
 
 // general-purpose hooks live with the shared components; kept importable from here for the existing pages
@@ -17,7 +17,7 @@ export function useAuth() {
       .then(() =>
         getSession()
           ? api<{ user: AppUser }>("/auth/me")
-              .then(() => undefined)
+              .then((me) => refreshSessionUser(me.user)) // a role or Audit permission may have changed since sign-in
               .catch(() => undefined)
           : undefined,
       )

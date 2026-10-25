@@ -45,6 +45,11 @@ export function getSession() {
   return session;
 }
 
+/** Keeps the saved account up to date (a role or permission changed since sign-in), without signing in again. */
+export function refreshSessionUser(user: AppUser) {
+  if (session && JSON.stringify(session.user) !== JSON.stringify(user)) setSession({ ...session, user });
+}
+
 export function onSessionChange(fn: (s: Session | null) => void) {
   listeners.add(fn);
   return () => {
