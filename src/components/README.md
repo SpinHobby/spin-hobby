@@ -17,8 +17,8 @@ import { PanelLayout, Card, Toolbar, SearchInput, DataTable, Drawer, Form, TextF
 ```
 src/components/
   index.ts          everything below, importable from one place
-  hooks.ts          useToast, useEscape, useTheme
-  layout/           PanelLayout, PanelStatus, Card, CardGrid, Stats
+  hooks.ts          useToast, useEscape, useTheme, useSlidingIndicator, useEnterAnimation, useContentSwap, useScrollFade
+  layout/           PanelLayout, PanelStatus, Card, CardGrid, Stats, Collapse, ScrollRow
   navigation/       Tabs
   actions/          Button, LinkButton, IconButton
   inputs/           Form, Field, TextField, SelectField, TextareaField, FormRow, SectionLabel        (Form.tsx)
@@ -28,7 +28,8 @@ src/components/
   overlays/         Drawer, Dialog, ConfirmDialog, Menu
   feedback/         Banner, EmptyState, Skeleton, Spinner, ProgressBar, StatusBadge
   display/          Avatar, Tag
-  styles/           tokens.scss (the shop's colours, fonts, base controls), components.scss (these pieces)
+  styles/           tokens.scss (the shop's colours, fonts, base controls), components.scss (these pieces),
+                    motion.scss (Collapse, ScrollRow, content swaps, scroll fades; light enough for the shop to load)
   showcase/         the /ui-kit page
 ```
 
@@ -36,9 +37,11 @@ src/components/
 
 | Piece | What it is | Options worth knowing |
 | --- | --- | --- |
-| `PanelLayout` | Tabs on the left, a bar on top, the content; a ☰ menu on phones | `tabs` (with `badge` counts), `footer`, `topActions`, `banner`, `toast` |
+| `PanelLayout` | Tabs on the left, a bar on top, the content; a ☰ menu on phones. Changing `active` (from a tab or from your own code) scrolls to the top and eases the new content in, so pages don't animate it themselves | `tabs` (with `badge` counts), `footer`, `topActions`, `banner`, `toast` |
 | `PanelStatus` | A dot and a short status line at the bottom of the tabs | `color` |
 | `Card` | A rounded box, with an optional title row and action | `title`, `action`, `padded` (for text and forms) |
+| `ScrollRow` | A sideways row of cards with ‹ › buttons that glide to the next set; faded edges instead of a scrollbar; phones swipe | `label` (required), `className` (lay the cards out there) |
+| `Collapse` | Content that slides open and shut (subcategories, "More details"); hidden from the keyboard while shut | `open` |
 | `CardGrid`, `Stats` | Cards side by side; summary numbers in a row | `Stats` items can have `note` and `onClick` |
 | `Tabs` | Tabs inside a page (Details / Messages / History) | `variant`: `underline` or `pills`; `count`, `disabled` per tab |
 | `Button` | The shop's button | `variant`: `primary` (one per screen), `ghost`, `danger`, `gold`; `size`: `sm`/`md`/`lg`; `icon`, `loading`, `fullWidth` |
@@ -70,7 +73,10 @@ src/components/
 | `ProgressBar`, `Spinner`, `Skeleton` | Progress; "working on it"; a loading placeholder | `tone`/`note`; `size`; `width`/`height` |
 | `Avatar` | A round photo, or initials | `src`, `size` |
 | `useToast`, `useTheme`, `useEscape` | A short message; light/dark; close on Escape | |
-| `useSlidingIndicator` | The highlight that glides to the chosen tab (used by the side panel, Tabs, SegmentedControl) | `axis`: `x` or `y` |
+| `useSlidingIndicator` | The highlight that glides to the chosen tab (used by the side panel, Tabs, SegmentedControl, the shop's section tabs and categories) | `axis`: `x` or `y` |
+| `useEnterAnimation` | A short fade-and-rise each time a key changes (a new page or section); put it on the part that changes | `rise` in pixels |
+| `useContentSwap` | Replacing a list with another (a tab's products): the old fades out, the new rises in one by one; a placeholder if it's slow. Pair with the `ui-leaving` and `ui-stagger` classes | `slowAfter`, `giveUpAfter` (ms) |
+| `useScrollFade` | A scrolling box without a scrollbar: its edges fade while there's more that way. Pair with the `ui-scroll-fade` class | |
 
 Open each file for the details: every component explains its props at the top.
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Spinner } from "../../components";
 
 /** m:ss (or h:mm:ss) since `from`. */
 const elapsed = (from: string | null, now: number) => {
@@ -30,7 +31,9 @@ export function JobProgress({ progress, step, startedAt }: { progress: number | 
       aria-valuenow={pct}
       aria-label={step ?? "Being worked on"}
     >
-      <span className="ad-jobprogress__spinner" aria-hidden="true" />
+      <span className="ad-jobprogress__spinner" aria-hidden="true">
+        <Spinner size="sm" />
+      </span>
       <div className="ad-jobprogress__main">
         <div className="ad-jobprogress__bar">
           <span style={{ width: `${Math.max(pct, 2)}%` }} />

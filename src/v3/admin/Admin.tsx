@@ -56,8 +56,7 @@ export default function Admin() {
     setScreenState(next);
     if (extra?.productFilter) setProductFilter(extra.productFilter);
     if (extra?.orderTab) setOrderTab(extra.orderTab);
-    window.history.replaceState(null, "", `#${next}`);
-    window.scrollTo({ top: 0 });
+    window.history.replaceState(null, "", `#${next}`); // PanelLayout scrolls to the top and eases the new screen in
   }, []);
 
   // Sidebar badges come straight from the server's dashboard numbers.

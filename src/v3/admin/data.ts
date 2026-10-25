@@ -57,6 +57,8 @@ export interface AdminData {
   slides: HeroSlide[];
   events: StoreEvent[];
   settings: StoreSettings;
+  /** The Bank of Canada rate the shop uses for US dollar estimates; null when it can't be reached (`fx_cad_usd` is used then). */
+  liveFx: { cadUsd: number; date: string } | null;
   readiness: Readiness | null;
   categories: ShopCategory[];
   /** What the storefront hero shows when no custom slides exist (from GET /homepage). */
@@ -89,6 +91,7 @@ export function useAdminData(enabled: boolean) {
     slides: [],
     events: [],
     settings: DEFAULT_SETTINGS,
+    liveFx: null,
     readiness: null,
     categories: [],
     previewSlides: [],
@@ -108,7 +111,7 @@ export function useAdminData(enabled: boolean) {
       api<{ items: Order[] }>("/admin/orders?limit=100"),
       api<{ slides: HeroSlide[] }>("/admin/homepage/slides"),
       api<{ events: StoreEvent[] }>("/admin/events"),
-      api<{ settings: StoreSettings }>("/admin/settings"),
+      api<{ settings: StoreSettings; liveFx?: { cadUsd: number; date: string } | null }>("/admin/settings"),
       api<{ readiness: Readiness }>("/admin/square/readiness"),
       api<{ categories: ShopCategory[] }>("/admin/categories"),
       api<Homepage>("/homepage"),
@@ -126,6 +129,7 @@ export function useAdminData(enabled: boolean) {
         slides: val(slides)?.slides ?? [],
         events: val(events)?.events ?? [],
         settings: val(settings)?.settings ?? DEFAULT_SETTINGS,
+        liveFx: val(settings)?.liveFx ?? null,
         readiness: val(readiness)?.readiness ?? null,
         categories: val(categories)?.categories ?? [],
         previewSlides: (val(home)?.slides ?? []) as HeroSlide[],

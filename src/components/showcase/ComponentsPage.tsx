@@ -6,6 +6,8 @@ import {
   Card,
   CardGrid,
   CheckboxField,
+  Collapse,
+  ScrollRow,
   ConfirmDialog,
   DataTable,
   Dialog,
@@ -144,6 +146,7 @@ const Row = ({ children }: { children: ReactNode }) => (
 
 function LayoutTab() {
   const [view, setView] = useState("details");
+  const [more, setMore] = useState(false);
   return (
     <>
       <Sample
@@ -152,8 +155,31 @@ function LayoutTab() {
       >
         <p style={{ margin: 0 }}>
           Props: <code>tabs</code>, <code>active</code>, <code>onSelect</code>, <code>title</code>, <code>tag</code>, <code>footer</code>{" "}
-          (PanelStatus lines), <code>topActions</code>, <code>banner</code>, <code>toast</code>.
+          (PanelStatus lines), <code>topActions</code>, <code>banner</code>, <code>toast</code>. Changing <code>active</code> scrolls to the
+          top and eases the new tab in by itself: switch tabs on the left to see it.
         </p>
+      </Sample>
+      <Sample
+        name="Collapse"
+        note="Content that slides open and shut instead of jumping (a category's subcategories, “More details”). Shut content can't be tabbed to."
+      >
+        <div>
+          <LinkButton onClick={() => setMore((m) => !m)}>{more ? "Hide details" : "More details"}</LinkButton>
+        </div>
+        <Collapse open={more}>
+          <p style={{ margin: "8px 0 0" }}>
+            Ships in 2–3 days from Toronto. Pre-orders are charged when they arrive, and you can cancel any time before that.
+          </p>
+        </Collapse>
+      </Sample>
+      <Sample name="ScrollRow" note="A sideways row of cards. ‹ › glide to the next set of whole cards and hide at the ends; phones swipe.">
+        <ScrollRow label="Sample cards">
+          {Array.from({ length: 14 }, (_, i) => (
+            <Card key={i} padded>
+              <b>Card {i + 1}</b>
+            </Card>
+          ))}
+        </ScrollRow>
       </Sample>
       <Stats
         items={[
