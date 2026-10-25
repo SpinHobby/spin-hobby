@@ -18,7 +18,7 @@ import { PanelLayout, Card, Toolbar, SearchInput, DataTable, Drawer, Form, TextF
 src/components/
   index.ts          everything below, importable from one place
   hooks.ts          useToast, useEscape, useTheme, useSlidingIndicator, useEnterAnimation, useContentSwap, useScrollFade
-  layout/           PanelLayout, PanelStatus, Card, CardGrid, Stats, Collapse
+  layout/           PanelLayout, PanelStatus, Card, CardGrid, Stats, Collapse, ScrollRow
   navigation/       Tabs
   actions/          Button, LinkButton, IconButton
   inputs/           Form, Field, TextField, SelectField, TextareaField, FormRow, SectionLabel        (Form.tsx)
@@ -29,7 +29,7 @@ src/components/
   feedback/         Banner, EmptyState, Skeleton, Spinner, ProgressBar, StatusBadge
   display/          Avatar, Tag
   styles/           tokens.scss (the shop's colours, fonts, base controls), components.scss (these pieces),
-                    motion.scss (Collapse, content swaps, scroll fades; light enough for the shop to load)
+                    motion.scss (Collapse, ScrollRow, content swaps, scroll fades; light enough for the shop to load)
   showcase/         the /ui-kit page
 ```
 
@@ -40,6 +40,7 @@ src/components/
 | `PanelLayout` | Tabs on the left, a bar on top, the content; a ☰ menu on phones. Changing `active` (from a tab or from your own code) scrolls to the top and eases the new content in, so pages don't animate it themselves | `tabs` (with `badge` counts), `footer`, `topActions`, `banner`, `toast` |
 | `PanelStatus` | A dot and a short status line at the bottom of the tabs | `color` |
 | `Card` | A rounded box, with an optional title row and action | `title`, `action`, `padded` (for text and forms) |
+| `ScrollRow` | A sideways row of cards with ‹ › buttons that glide to the next set; faded edges instead of a scrollbar; phones swipe | `label` (required), `className` (lay the cards out there) |
 | `Collapse` | Content that slides open and shut (subcategories, "More details"); hidden from the keyboard while shut | `open` |
 | `CardGrid`, `Stats` | Cards side by side; summary numbers in a row | `Stats` items can have `note` and `onClick` |
 | `Tabs` | Tabs inside a page (Details / Messages / History) | `variant`: `underline` or `pills`; `count`, `disabled` per tab |

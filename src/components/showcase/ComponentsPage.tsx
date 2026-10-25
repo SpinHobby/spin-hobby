@@ -7,6 +7,7 @@ import {
   CardGrid,
   CheckboxField,
   Collapse,
+  ScrollRow,
   ConfirmDialog,
   DataTable,
   Dialog,
@@ -170,6 +171,15 @@ function LayoutTab() {
             Ships in 2–3 days from Toronto. Pre-orders are charged when they arrive, and you can cancel any time before that.
           </p>
         </Collapse>
+      </Sample>
+      <Sample name="ScrollRow" note="A sideways row of cards. ‹ › glide to the next set of whole cards and hide at the ends; phones swipe.">
+        <ScrollRow label="Sample cards">
+          {Array.from({ length: 14 }, (_, i) => (
+            <Card key={i} padded>
+              <b>Card {i + 1}</b>
+            </Card>
+          ))}
+        </ScrollRow>
       </Sample>
       <Stats
         items={[

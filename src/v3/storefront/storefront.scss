@@ -924,9 +924,7 @@ h1.sf-hero__eyebrow {
   grid-auto-flow: column;
   grid-auto-columns: minmax(170px, 190px);
   gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scrollbar-width: thin;
+  padding-bottom: 6px; // scrolls inside ScrollRow (‹ › buttons, faded edges)
   scroll-snap-type: x proximity;
 }
 .sf-pre {

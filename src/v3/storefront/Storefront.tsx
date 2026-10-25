@@ -8,6 +8,7 @@ import { eventDateShort, isPastEvent } from "../events/dates";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
 import { useContentSwap, useEnterAnimation, useScrollFade, useSlidingIndicator } from "../../components/hooks";
 import "../../components/styles/motion.scss";
+import { ScrollRow } from "../../components/layout/ScrollRow";
 import { useDocumentHead } from "../seo";
 import type { Product } from "../types";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
@@ -355,7 +356,7 @@ export default function Storefront() {
   const activeNav = !wishOnly && !productId && !filters.query && !filters.series ? filters.nav : null;
   const navInd = useSlidingIndicator<HTMLElement>(activeNav);
   const pageRef = useEnterAnimation<HTMLDivElement>(productId ?? "shop");
-  const mainRef = useEnterAnimation<HTMLElement>(location.pathname);
+  const mainRef = useEnterAnimation<HTMLElement>(location.pathname, 0); // a fade only: the titles bring their own rise
   // Changing tab, category, search or wishlist: the old products fade out, then the new ones rise in one after another.
   const swap = useContentSwap(`${location.pathname}|${wishOnly}|${filters.query}`, results.items);
   const listMotion = `ui-stagger ${swap.phase !== "shown" ? "ui-leaving" : results.loading ? "is-refreshing" : ""}`;
@@ -675,11 +676,11 @@ export default function Storefront() {
                           See all →
                         </button>
                       </div>
-                      <div className="sf-pre-row">
+                      <ScrollRow className="sf-pre-row" label="New pre-orders">
                         {preorders.map((p) => (
                           <PreorderCard key={p.id} p={p} a={actions} />
                         ))}
-                      </div>
+                      </ScrollRow>
                     </section>
                   )}
 
@@ -713,7 +714,7 @@ export default function Storefront() {
               )}
 
               {page && !wishOnly && (
-                <header className="sf-landing">
+                <header key={location.pathname} className="sf-landing ui-title-in">
                   <nav className="sf-crumbs" aria-label="Breadcrumb">
                     <a
                       href="/"
@@ -750,11 +751,13 @@ export default function Storefront() {
 
               <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
                 <div className="sf-shop__head">
-                  <h2 id="shop-title" className="sh-display">
+                  <h2 key={shopTitle} id="shop-title" className="sh-display ui-title-in">
                     <span className={page && !wishOnly && !filters.query ? "sh-visually-hidden" : ""}>
                       {page && !wishOnly ? `Shop ${page.h1.toLowerCase()}` : shopTitle}
                     </span>{" "}
-                    <span className="sf-count">{results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}</span>
+                    <span key={results.loading ? "" : results.total} className="sf-count">
+                      {results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}
+                    </span>
                   </h2>
                   <div className="sf-shop__tools">
                     <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>

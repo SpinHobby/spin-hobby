@@ -6,6 +6,7 @@
 export { PanelLayout, PanelStatus, type PanelTab } from "./layout/PanelLayout";
 export { Card, CardGrid, Stats } from "./layout/Card";
 export { Collapse } from "./layout/Collapse";
+export { ScrollRow } from "./layout/ScrollRow";
 // navigation
 export { Tabs, type TabItem } from "./navigation/Tabs";
 // actions
