@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./checkout.scss";
 import { api } from "../../lib/api";
-import { money } from "../format";
+import { price } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
@@ -309,7 +309,7 @@ export default function Checkout() {
   const itemCount = cart.lines.reduce((n, l) => n + l.quantity, 0);
   const threshold = config?.freeShippingThresholdCents ?? 7500;
   const subtotal = quote?.subtotalCents ?? cart.subtotal;
-  const totalLabel = quote ? money(quote.totalCents) : "—";
+  const totalLabel = quote ? price(quote.totalCents) : "—";
 
   if (cart.lines.length === 0) {
     return (
@@ -413,7 +413,7 @@ export default function Checkout() {
               <h3>Delivery</h3>
               <div className="co-methods">
                 {(["standard", "express"] as const).map((m) => {
-                  const price = m === "express" ? config?.shippingExpressCents : subtotal >= threshold ? 0 : config?.shippingStandardCents;
+                  const cost = m === "express" ? config?.shippingExpressCents : subtotal >= threshold ? 0 : config?.shippingStandardCents;
                   return (
                     <label key={m} className={`co-method ${method === m ? "is-active" : ""}`}>
                       <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} />
@@ -421,12 +421,12 @@ export default function Checkout() {
                         <b>{m === "express" ? "Express" : "Standard"}</b>
                         <span>{m === "express" ? "2–3 business days, tracked" : "5–7 business days, tracked"}</span>
                       </span>
-                      <b className="co-method__price">{price === undefined ? "—" : price === 0 ? "Free" : money(price)}</b>
+                      <b className="co-method__price">{cost === undefined ? "—" : cost === 0 ? "Free" : price(cost)}</b>
                     </label>
                   );
                 })}
               </div>
-              {method === "standard" && freeLeft > 0 && <p className="co-note">Add {money(freeLeft)} more for free standard shipping.</p>}
+              {method === "standard" && freeLeft > 0 && <p className="co-note">Add {price(freeLeft)} more for free standard shipping.</p>}
             </section>
 
             <section className="co-section" aria-labelledby="co-h-pay">
@@ -581,7 +581,7 @@ export default function Checkout() {
                           </button>
                         </div>
                       </div>
-                      <b className="co-line__price">{money(unit * l.quantity)}</b>
+                      <b className="co-line__price">{price(unit * l.quantity)}</b>
                     </div>
                   );
                 })}
@@ -606,7 +606,7 @@ export default function Checkout() {
                     <b>You've unlocked free standard shipping 🎉</b>
                   ) : (
                     <>
-                      Add <b>{money(threshold - subtotal)}</b> more for free standard shipping
+                      Add <b>{price(threshold - subtotal)}</b> more for free standard shipping
                     </>
                   )}
                 </span>
@@ -615,12 +615,12 @@ export default function Checkout() {
                 </div>
               </div>
               <div className="co-totals">
-                <Row label="Subtotal" value={money(subtotal)} />
+                <Row label="Subtotal" value={price(subtotal)} />
                 <Row
                   label={`Shipping (${method === "express" ? "Express" : "Standard"})`}
-                  value={quote ? (quote.shippingCents ? money(quote.shippingCents) : "Free") : "—"}
+                  value={quote ? (quote.shippingCents ? price(quote.shippingCents) : "Free") : "—"}
                 />
-                <Row label="Tax" value={quote ? money(quote.taxCents) : "—"} />
+                <Row label="Tax" value={quote ? price(quote.taxCents) : "—"} />
                 <Row label="Total" value={totalLabel} strong />
                 {quoting && <p className="co-note">Updating totals…</p>}
               </div>

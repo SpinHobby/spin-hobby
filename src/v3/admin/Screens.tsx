@@ -30,7 +30,7 @@ import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
 import { photo } from "../photo";
-import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Toolbar, type Column } from "../../components";
+import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Skeleton, Toolbar, type Column } from "../../components";
 import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
 import { EbayListing } from "./EbayListing";
@@ -602,7 +602,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
     !data && !error ? (
       <div className="ad-skeletons" aria-hidden>
         {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="ad-skel" />
+          <Skeleton key={i} height={60} />
         ))}
       </div>
     ) : error && !data ? (
@@ -2239,8 +2239,20 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
               <span>Low-stock threshold</span>
               <input className="sh-input" inputMode="numeric" {...field("low")} />
             </label>
+            <div className="ad-kv">
+              <span>CAD → USD rate</span>
+              <span>
+                {ctx.data.liveFx ? (
+                  <>
+                    <b>{ctx.data.liveFx.cadUsd}</b> from the Bank of Canada ({dayLabel(ctx.data.liveFx.date)}), updated by itself
+                  </>
+                ) : (
+                  <span className="ad-muted">Bank of Canada can't be reached right now, so the backup rate below is used</span>
+                )}
+              </span>
+            </div>
             <label className="ad-kv">
-              <span>CAD → USD display rate</span>
+              <span>Backup rate (if the bank can't be reached)</span>
               <input className="sh-input" inputMode="decimal" {...field("fx")} />
             </label>
             <div className="ad-kv">
@@ -2251,7 +2263,7 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
               </span>
             </div>
           </section>
-          <SettingsPreview form={form} />
+          <SettingsPreview form={form} liveFx={ctx.data.liveFx?.cadUsd ?? null} />
           {ctx.isOwner && (
             <div className="ad-save-bar">
               {dirty && <span className="ad-muted ad-sm">Unsaved changes</span>}
@@ -2269,16 +2281,16 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
   );
 }
 
-function SettingsPreview({ form }: { form: ReturnType<typeof toForm> }) {
+function SettingsPreview({ form, liveFx }: { form: ReturnType<typeof toForm>; liveFx: number | null }) {
   const free = Number(form.free);
-  const fx = Number(form.fx);
+  const fx = liveFx ?? Number(form.fx);
   const days = form.hMin === form.hMax ? form.hMin : `${form.hMin}–${form.hMax}`;
   const low = Number(form.low);
   return (
     <StorefrontPreview label="How shoppers see these settings">
       <div className="ad-preview__bar">
-        <span style={{ color: "var(--gold)" }}>●</span> Free shipping on orders $
-        {Number.isFinite(free) ? (Number.isInteger(free) ? free : free.toFixed(2)) : "—"}+ · Canada &amp; US
+        <span style={{ color: "var(--gold)" }}>●</span> Free shipping on orders over $
+        {Number.isFinite(free) ? (Number.isInteger(free) ? free : free.toFixed(2)) : "—"} CAD · Canada &amp; US
       </div>
       <div className="ad-preview__lines">
         <span style={{ color: "var(--teal)" }}>In stock · ships in {days} days</span>
@@ -2287,7 +2299,7 @@ function SettingsPreview({ form }: { form: ReturnType<typeof toForm> }) {
           <span className="ad-muted">(LOW STOCK at {Number.isFinite(low) ? low : "—"} or fewer)</span>
         </span>
         <span>
-          $100.00 CAD shows as <b>US${Number.isFinite(fx) ? (100 * fx).toFixed(2) : "—"}</b> when a shopper picks USD
+          $100.00 CAD shows as <b>≈ ${Number.isFinite(fx) ? (100 * fx).toFixed(2) : "—"} USD</b> when a shopper picks USD (charged in CAD)
         </span>
       </div>
     </StorefrontPreview>

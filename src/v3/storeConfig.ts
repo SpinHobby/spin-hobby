@@ -57,5 +57,5 @@ export function useStoreConfig() {
 
 export function freeShippingLabel() {
   const dollars = storeFormat.freeShippingThresholdCents / 100;
-  return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)}`;
+  return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)} CAD`;
 }

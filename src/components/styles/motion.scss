@@ -1,0 +1,107 @@
+// Motion pieces that pages outside the panel (the shop) use too, kept apart from components.scss so they don't pull in the whole
+// panel look. Everything here stops for people who ask their device for less motion.
+$ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+// Collapse: the rows animate from 0 to the content's own height (no measuring), then the content fades in. No transform on the
+// content: it would make positions inside it read wrong mid-slide (offsetTop), which a sliding highlight around it relies on.
+// `visibility` switches after the closing slide, so hidden content can't be tabbed to.
+.ui-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.28s $ease-out,
+    visibility 0s 0.28s;
+  &.is-open {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition:
+      grid-template-rows 0.28s $ease-out,
+      visibility 0s;
+  }
+}
+.ui-collapse__inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.15s;
+  .ui-collapse.is-open > & {
+    opacity: 1;
+    transition: opacity 0.25s 0.05s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-collapse,
+  .ui-collapse__inner {
+    transition: none !important;
+  }
+}
+
+// Content swap (useContentSwap): the old list fades out quickly while the new one loads...
+.ui-leaving {
+  opacity: 0 !important;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease-out,
+    transform 0.14s ease-out;
+}
+// ...then the new items rise in one after another (capped, so a long list doesn't keep you waiting).
+// Doubled class: wins over an item's own entrance animation whatever order the styles load in.
+@keyframes ui-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.ui-stagger.ui-stagger > * {
+  animation: ui-rise 0.34s $ease-out backwards;
+}
+@for $i from 2 through 12 {
+  .ui-stagger.ui-stagger > :nth-child(#{$i}) {
+    animation-delay: #{($i - 1) * 30}ms;
+  }
+}
+.ui-stagger.ui-stagger > :nth-child(n + 13) {
+  animation-delay: 360ms;
+}
+
+// Scroll fade (useScrollFade): no scrollbar; an edge fades out while there is more to scroll that way.
+@property --ui-fade-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --ui-fade-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+.ui-scroll-fade {
+  overflow-y: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ui-fade-top), #000 calc(100% - var(--ui-fade-bottom)), transparent 100%);
+  transition:
+    --ui-fade-top 0.2s,
+    --ui-fade-bottom 0.2s;
+  &[data-fade-top] {
+    --ui-fade-top: 32px;
+  }
+  &[data-fade-bottom] {
+    --ui-fade-bottom: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-leaving,
+  .ui-scroll-fade {
+    transition: none !important;
+  }
+  .ui-stagger.ui-stagger > * {
+    animation: none !important;
+  }
+}

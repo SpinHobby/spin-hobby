@@ -1,4 +1,15 @@
-import { dayLabel, discountPct, money, monthLabel, normalizeStatus, STATUS_META, statusLabel, statusShort, type Currency } from "../format";
+import {
+  dayLabel,
+  discountPct,
+  price,
+  priceParts,
+  monthLabel,
+  normalizeStatus,
+  STATUS_META,
+  statusLabel,
+  statusShort,
+  type Currency,
+} from "../format";
 import type { MouseEvent, ReactNode } from "react";
 import type { Product } from "../types";
 import { productPath } from "./data";
@@ -130,8 +141,8 @@ export function ProductCard({ p, a }: { p: Product; a: CardActions }) {
           </ProductLink>
         </h3>
         <div className="sf-card__price">
-          <strong>{money(p.priceCents, a.currency)}</strong>
-          {off > 0 && <s>{money(p.compareAtCents, a.currency)}</s>}
+          <PriceTag cents={p.priceCents} currency={a.currency} />
+          {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
         </div>
         <span className="sf-card__status" style={{ color: meta.color }}>
           {statusLabel(p)}
@@ -168,8 +179,8 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
         </div>
       </div>
       <div className="sf-row__price">
-        <strong>{money(p.priceCents, a.currency)}</strong>
-        {off > 0 && <s>{money(p.compareAtCents, a.currency)}</s>}
+        <PriceTag cents={p.priceCents} currency={a.currency} />
+        {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
       </div>
       <button type="button" className={`sf-buy sf-buy--inline ${btn.cls}`} onClick={btn.onClick}>
         {btn.label}
@@ -201,8 +212,8 @@ export function PreorderCard({ p, a }: { p: Product; a: CardActions }) {
         <ProductLink p={p} a={a} className="sf-pre__name">
           {p.name}
         </ProductLink>
-        <strong>{money(p.priceCents, a.currency)}</strong>
-        {discountPct(p) > 0 && <s className="sf-muted">{money(p.compareAtCents, a.currency)}</s>}
+        <PriceTag cents={p.priceCents} currency={a.currency} />
+        {discountPct(p) > 0 && <s className="sf-muted">{price(p.compareAtCents, a.currency, { code: false })}</s>}
         <span className="sf-muted">Release {monthLabel(p.releaseMonth)}</span>
         {p.orderByDate && <span className="sf-pre__by">Order by {dayLabel(p.orderByDate)}</span>}
       </div>
@@ -239,11 +250,25 @@ export function MiniRow({ p, a, rank, quickAdd }: { p: Product; a: CardActions; 
           onClick={() => a.onAdd(p)}
           aria-label={`Add ${p.name} to cart`}
         >
-          {added ? "Added ✓" : `${money(p.priceCents, a.currency)} +`}
+          {added ? "Added ✓" : `${price(p.priceCents, a.currency)} +`}
         </button>
       ) : (
-        <span className="sf-mini__price">{money(p.priceCents, a.currency)}</span>
+        <span className="sf-mini__price">{price(p.priceCents, a.currency)}</span>
       )}
     </div>
+  );
+}
+
+/** A shopper-facing price with its currency in smaller type: "$55.00 CAD", or "≈ $40.15 USD" (an estimate; checkout is in CAD). */
+export function PriceTag({ cents, currency }: { cents: number; currency: Currency }) {
+  const p = priceParts(cents, currency);
+  return (
+    <strong
+      className="sf-price"
+      title={p.approx ? "An estimate in US dollars. You're charged in Canadian dollars at checkout." : "Canadian dollars"}
+    >
+      {p.approx && "≈ "}
+      {p.amount} <span className="sf-price__code">{p.code}</span>
+    </strong>
   );
 }

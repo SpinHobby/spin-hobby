@@ -5,6 +5,7 @@
 // layout
 export { PanelLayout, PanelStatus, type PanelTab } from "./layout/PanelLayout";
 export { Card, CardGrid, Stats } from "./layout/Card";
+export { Collapse } from "./layout/Collapse";
 // navigation
 export { Tabs, type TabItem } from "./navigation/Tabs";
 // actions
@@ -27,4 +28,4 @@ export { Banner, EmptyState, Skeleton, Spinner, ProgressBar, StatusBadge } from 
 export { Avatar } from "./display/Avatar";
 export { Tag } from "./display/Tag";
 // hooks
-export { useToast, useEscape, useTheme, type Theme } from "./hooks";
+export { useToast, useEscape, useTheme, useSlidingIndicator, useEnterAnimation, useContentSwap, useScrollFade, type Theme } from "./hooks";
