@@ -124,6 +124,9 @@ export async function api<T>(path: string, init: ApiRequest = {}): Promise<T> {
       const next = await refreshSession();
       if (next) return request<T>(path, init, next.accessToken);
     }
+    // The owner suspended or banned this account: carry on as a guest; the error says why and until when.
+    const code = (error as { payload?: { code?: string } }).payload?.code;
+    if (token && (code === "account_suspended" || code === "account_banned")) setSession(null);
     throw error;
   }
 }

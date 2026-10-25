@@ -2966,3 +2966,43 @@
   gap: 12px;
   padding: 6px 0;
 }
+
+// ---- Accounts (owner only)
+.ad-acct__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+.ad-acct {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ad-acct__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  dt {
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+  }
+}
+.ad-acct__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.ad-acct__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
