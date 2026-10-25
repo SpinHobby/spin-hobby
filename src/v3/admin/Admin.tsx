@@ -20,6 +20,7 @@ import { useAuth, useTheme, useToast } from "../hooks";
 import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
 import { SCREENS, useAdminData, type Screen } from "./data";
+import { AuditScreen } from "./Audit";
 import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
 import { PhotosScreen } from "./PhotoQueue";
@@ -37,11 +38,14 @@ export default function Admin() {
   const { toast, flash } = useToast();
   const isStaff = auth.user?.role === "staff" || auth.user?.role === "owner";
   const isOwner = auth.user?.role === "owner";
+  // Audit is only for owners and the staff the owner allowed (the API checks too)
+  const canAudit = isOwner || !!auth.user?.canAudit;
+  const screens: Screen[] = canAudit ? [...SCREENS, "Audit"] : SCREENS;
   const { data, setData, reload } = useAdminData(isStaff);
 
   const [screen, setScreenState] = useState<Screen>(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1));
-    return (SCREENS as string[]).includes(hash) ? (hash as Screen) : "Dashboard";
+    return (SCREENS as string[]).includes(hash) || hash === "Audit" ? (hash as Screen) : "Dashboard";
   });
   const [productFilter, setProductFilter] = useState("All");
   const [orderTab, setOrderTab] = useState("All");
@@ -98,7 +102,7 @@ export default function Admin() {
     <PanelLayout
       tag="ADMIN"
       navLabel="Admin"
-      tabs={SCREENS.map((n) => ({ key: n, label: n, badge: n === "Orders" ? toShipCount : n === "Products" ? lowCount : 0 }))}
+      tabs={screens.map((n) => ({ key: n, label: n, badge: n === "Orders" ? toShipCount : n === "Products" ? lowCount : 0 }))}
       active={screen}
       onSelect={(n) => go(n)}
       title={screen}
@@ -155,6 +159,7 @@ export default function Admin() {
       {screen === "Orders" && <OrdersScreen ctx={ctx} />}
       {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
       {screen === "Settings" && <SettingsScreen ctx={ctx} />}
+      {screen === "Audit" && (canAudit ? <AuditScreen ctx={ctx} /> : <p className="ad-muted">Ask the owner for access to Audit.</p>)}
     </PanelLayout>
   );
 }

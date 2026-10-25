@@ -13,7 +13,8 @@ import type {
   StoreSettings,
 } from "../types";
 
-export type Screen = "Dashboard" | "Products" | "Imports" | "Photos" | "Descriptions" | "Categories" | "Orders" | "Homepage" | "Settings";
+export type Screen =
+  "Dashboard" | "Products" | "Imports" | "Photos" | "Descriptions" | "Categories" | "Orders" | "Homepage" | "Settings" | "Audit";
 export const SCREENS: Screen[] = [
   "Dashboard",
   "Products",
