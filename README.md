@@ -5,6 +5,8 @@ SCSS. The API it talks to is the separate `spin-hobby-server` repo.
 
 ## Run it on your computer
 
+Setting up from scratch, with the API and the editor too: [SETUP.md](SETUP.md) covers all three repos.
+
 1. Start the API with sample data: in the `spin-hobby-server` folder, `npm run dev:local` (its `docs/INTERNS.md` explains the first-time setup). Wait for
    it to say it is ready.
 2. Here: `npm ci`, then `npm run dev`, and open http://localhost:3000. The admin is at http://localhost:3000/admin (sign in with the test account
