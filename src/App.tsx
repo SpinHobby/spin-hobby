@@ -9,6 +9,7 @@ import { isOn } from "./features";
 
 // The admin bundle is only downloaded by staff visiting /admin.
 const Admin = lazy(() => import("./v3/admin/Admin"));
+const Account = lazy(() => import("./v3/account/Account"));
 const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
           <Route path="/events" element={<Events />} />
+          {!import.meta.env.PROD && <Route path="/account" element={<Account />} />}
         </Route>
         <Route
           path="/reset-password"
