@@ -3014,3 +3014,565 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 .sf-tree__name {
   text-decoration: none;
 }
+
+// ------------------------------------------------------------ Shop playlist (ShopPlaylist.tsx)
+// Nav buttons in the empty space at the end of the section tabs; the player is a card floating over the page that can be dragged
+// anywhere. YouTube's rules: the video stays visible and at least 200 × 200, and nothing is drawn over it.
+$sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+// the row holding the section tabs (which scroll on small screens) and, beside them, the music buttons (which don't, so the
+// play button's glow can spill over the navbar instead of being clipped by the scrolling tabs)
+.sf-navrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  .sf-nav {
+    flex: 1;
+    min-width: 0;
+  }
+  > .sf-music-btn,
+  > .sf-music-nav {
+    flex: none;
+    margin-left: auto;
+  }
+}
+.sf-music-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  .sf-music-btn {
+    margin-left: 0;
+  }
+}
+.sf-navrow .sf-music-btn {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px; // the same height side by side, and never taller than the tabs
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s,
+    background-color 0.2s,
+    color 0.15s,
+    transform 0.15s;
+  &:hover {
+    border-color: var(--gold);
+  }
+  &:active {
+    transform: scale(0.94);
+  }
+}
+// previous / next beside play/pause: round icon buttons the same height as the rest
+.sf-navrow .sf-music-btn--icon {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+  animation: sf-music-pop 0.4s $sf-music-ease;
+}
+.sf-skipicon {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  flex: none;
+}
+.sf-volicon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+// the play/pause button pops in when the player opens, and glows gold while music plays
+.sf-navrow .sf-music-btn--pp {
+  padding: 0 10px;
+  animation: sf-music-pop 0.4s $sf-music-ease;
+  &.is-on {
+    border-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 16%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 45%, transparent);
+    animation:
+      sf-music-pop 0.4s $sf-music-ease,
+      sf-music-glow 2.4s ease-out infinite;
+  }
+}
+@keyframes sf-music-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-12deg);
+  }
+}
+@keyframes sf-music-glow {
+  0% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--gold) 50%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--gold) 25%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow:
+      0 0 0 14px transparent,
+      0 0 28px 22px transparent;
+  }
+}
+
+// play ⇄ pause (its own class name: the product page already uses sf-pp): the two icons swap with a spin and a scale, so the change reads as one movement
+.sf-playicon {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+    transition:
+      transform 0.35s $sf-music-ease,
+      opacity 0.25s;
+  }
+  .sf-playicon__pause {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.4);
+  }
+  &.is-playing {
+    .sf-playicon__play {
+      opacity: 0;
+      transform: rotate(90deg) scale(0.4);
+    }
+    .sf-playicon__pause {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+// three bars that bounce while music plays and settle when it stops
+.sf-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 12px;
+  height: 12px;
+  i {
+    flex: 1;
+    height: 30%;
+    border-radius: 1px;
+    background: var(--gold);
+    transition: height 0.3s;
+  }
+  &.is-on i {
+    animation: sf-eq 0.9s ease-in-out infinite;
+    &:nth-child(2) {
+      animation-delay: -0.3s;
+    }
+    &:nth-child(3) {
+      animation-delay: -0.6s;
+    }
+  }
+}
+@keyframes sf-eq {
+  0%,
+  100% {
+    height: 25%;
+  }
+  50% {
+    height: 100%;
+  }
+}
+
+// the floating card
+.sf-player {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 10px 10px;
+  border-radius: 16px;
+  // see-through, so the page shows behind it; more solid while the pointer is on it. The video itself stays fully opaque.
+  background: color-mix(in srgb, var(--surface) 15%, transparent);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition:
+    width 0.35s $sf-music-ease,
+    background-color 0.25s,
+    box-shadow 0.2s,
+    scale 0.2s;
+  animation: sf-player-in 0.35s $sf-music-ease;
+  &:hover,
+  &:focus-within,
+  &.is-dragging {
+    background: color-mix(in srgb, var(--surface) 55%, transparent);
+  }
+  &.is-playing {
+    border-color: color-mix(in srgb, var(--gold) 40%, var(--border));
+  }
+  &.is-dragging {
+    scale: 1.02;
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.45);
+    user-select: none;
+    .sf-player__video iframe {
+      pointer-events: none; // the video would swallow the pointer mid-drag
+    }
+  }
+  // minimized: just the video at YouTube's smallest allowed size (200 × 200) under a thin strip (grip, expand, close); it keeps
+  // playing or paused as it was. Play/pause stays in the navbar.
+  &.is-mini {
+    width: 216px;
+    padding: 4px 8px 8px;
+    gap: 4px;
+    .sf-player__head {
+      gap: 4px;
+    }
+    .sf-player__icon {
+      width: 26px;
+      height: 26px;
+      font-size: 13px;
+    }
+  }
+}
+@keyframes sf-player-in {
+  from {
+    opacity: 0;
+    scale: 0.92;
+  }
+}
+.sf-player__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: grab;
+  touch-action: none; // a finger drags the card instead of scrolling the page
+  .is-dragging & {
+    cursor: grabbing;
+  }
+}
+.sf-player__grip {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+  }
+}
+.sf-player__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+.sf-player__head-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.sf-player__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text2);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
+  &:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  &:active {
+    transform: scale(0.9);
+  }
+}
+.sf-player__video {
+  height: 200px; // YouTube's smallest allowed player is 200 × 200
+  min-width: 200px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  transition: height 0.35s $sf-music-ease;
+  iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+}
+.sf-player__now {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  min-height: 34px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  span {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+}
+.sf-player__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sf-player__pp {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #1d2a53;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.3s;
+  .sf-playicon {
+    width: 20px;
+    height: 20px;
+  }
+  &:hover {
+    transform: scale(1.06);
+  }
+  &:active {
+    transform: scale(0.92);
+  }
+  &.is-on {
+    animation: sf-music-glow 2.4s ease-out infinite;
+  }
+}
+// volume and the playlist button, under the controls
+.sf-player__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sf-player__volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  .sf-volrange {
+    width: 110px;
+  }
+}
+// the volume slider (card and navbar pop-up)
+.sf-volrange {
+  width: 120px;
+  height: 4px;
+  appearance: none;
+  border-radius: 99px;
+  background: linear-gradient(to right, var(--gold) var(--level, 70%), var(--border) var(--level, 70%));
+  cursor: pointer;
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.15s;
+  }
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--text);
+  }
+  &:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+  }
+}
+// navbar volume: the slider drops down below the button while hovered or focused
+.sf-music-vol {
+  position: relative;
+  display: inline-flex;
+}
+.sf-music-vol__pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -6px) scale(0.96);
+  transition:
+    opacity 0.18s,
+    transform 0.22s $sf-music-ease;
+  // a bridge over the gap, so moving the pointer down to the slider doesn't close it
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -12px;
+    height: 12px;
+  }
+  .sf-music-vol:hover &,
+  .sf-music-vol:focus-within & {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+}
+.sf-music-vol__value {
+  min-width: 2ch;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text2);
+  text-align: right;
+}
+.sf-player__shuffle {
+  position: relative;
+  &.is-on {
+    color: var(--gold);
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 3px;
+      left: 50%;
+      width: 4px;
+      height: 4px;
+      margin-left: -2px;
+      border-radius: 50%;
+      background: var(--gold);
+    }
+  }
+}
+.sf-player__list-btn {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: none;
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+  &:hover,
+  &.is-on {
+    border-color: var(--gold);
+    color: var(--text);
+  }
+}
+.sf-player__list {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 0;
+  max-height: min(260px, 40vh);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    &:hover {
+      background: var(--surface2);
+    }
+    &.is-current {
+      background: color-mix(in srgb, var(--gold) 14%, transparent);
+    }
+  }
+  img {
+    width: 56px;
+    height: 42px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex: none;
+    background: var(--surface2);
+  }
+  span {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+  b,
+  small {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  b {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  small {
+    font-size: 11px;
+    color: var(--muted);
+  }
+}
+// phones: play/pause and a small × in the navbar; previous / next stay in the player card
+@media (max-width: 640px) {
+  .sf-navrow .sf-music-btn--icon,
+  .sf-music-vol,
+  .sf-music-nav__close-label {
+    display: none;
+  }
+}
+@media (min-width: 641px) {
+  .sf-music-nav__close-x {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-navrow .sf-music-btn--pp,
+  .sf-player,
+  .sf-player__pp,
+  .sf-eq i {
+    animation: none !important;
+  }
+}

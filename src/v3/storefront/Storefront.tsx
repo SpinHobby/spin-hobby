@@ -33,6 +33,7 @@ import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
 import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
+import { ShopPlaylistNav, ShopPlaylistPlayer } from "./ShopPlaylist";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
@@ -65,7 +66,7 @@ export default function Storefront() {
   const cart = useCart();
   const wishlist = useWishlist(!!auth.session, flash);
   const [currency, setCurrency] = useLocalState<Currency>("spinhobby-currency", "CAD");
-  useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
+  const config = useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
 
   const [filters, setFilters] = useState<Filters>({
     nav: "Home",
@@ -531,25 +532,34 @@ export default function Storefront() {
             </button>
           </div>
         </div>
-        <nav ref={navInd.ref} className="sf-wrap sf-nav" aria-label="Shop sections">
-          <span className={`sf-nav__ind ${navInd.ready ? "is-ready" : ""}`} style={navInd.style} aria-hidden />
-          {NAV.map((n) => (
-            <a
-              key={n}
-              href={sectionPath(n)}
-              className={activeNav === n ? "is-active" : ""}
-              data-on={activeNav === n}
-              aria-current={filters.nav === n && !productId ? "page" : undefined}
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-                e.preventDefault();
-                setNav(n);
-              }}
-            >
-              {n}
-            </a>
-          ))}
-        </nav>
+        {/* the tabs scroll on small screens; the music buttons sit beside them, outside the scroll, so their glow isn't clipped */}
+        <div className="sf-wrap sf-navrow">
+          <nav ref={navInd.ref} className="sf-nav" aria-label="Shop sections">
+            <span className={`sf-nav__ind ${navInd.ready ? "is-ready" : ""}`} style={navInd.style} aria-hidden />
+            {NAV.map((n) => (
+              <a
+                key={n}
+                href={sectionPath(n)}
+                className={activeNav === n ? "is-active" : ""}
+                data-on={activeNav === n}
+                aria-current={filters.nav === n && !productId ? "page" : undefined}
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  e.preventDefault();
+                  setNav(n);
+                }}
+              >
+                {n}
+              </a>
+            ))}
+          </nav>
+          {config?.musicPlaylistId && (
+            <>
+              <ShopPlaylistNav />
+              <ShopPlaylistPlayer playlistId={config.musicPlaylistId} />
+            </>
+          )}
+        </div>
       </header>
 
       <div ref={pageRef}>

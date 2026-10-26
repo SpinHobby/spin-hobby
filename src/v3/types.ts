@@ -216,6 +216,8 @@ export interface StoreSettings {
   handling_days_max: number;
   maintenance_mode: boolean;
   maintenance_message: string | null;
+  /** The storefront's Shop playlist (a YouTube playlist id); null hides the button. */
+  music_playlist_id?: string | null;
 }
 
 export interface Readiness {

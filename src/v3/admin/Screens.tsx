@@ -2098,7 +2098,12 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
       ctx.flash("Handling max must be at least the min");
       return;
     }
-    const patch: Partial<StoreSettings> = { ...numeric, maintenance_message: form.maintenanceMessage.trim() || null };
+    const patch: Partial<StoreSettings> = {
+      ...numeric,
+      maintenance_message: form.maintenanceMessage.trim() || null,
+      // the API takes the playlist's address or id and keeps the id (blank turns the button off)
+      music_playlist_id: form.playlist.trim() || null,
+    };
     setSaving(true);
     try {
       await put(patch);
@@ -2262,6 +2267,14 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                 <input className="sh-input" inputMode="numeric" aria-label="Maximum days" {...field("hMax")} />
               </span>
             </div>
+            <label className="ad-kv">
+              <span>Shop playlist (YouTube)</span>
+              <input className="sh-input" placeholder="https://www.youtube.com/playlist?list=…" {...field("playlist")} />
+            </label>
+            <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+              Paste a YouTube playlist's address to show a "Shop playlist" button on the storefront. Nothing plays until a shopper presses
+              it, and the player stays visible, as YouTube requires. Use playlists of official uploads. Leave blank to hide the button.
+            </p>
           </section>
           <SettingsPreview form={form} liveFx={ctx.data.liveFx?.cadUsd ?? null} />
           {ctx.isOwner && (
@@ -2316,5 +2329,6 @@ function toForm(s: StoreSettings) {
     hMin: String(s.handling_days_min),
     hMax: String(s.handling_days_max),
     maintenanceMessage: s.maintenance_message ?? "",
+    playlist: s.music_playlist_id ?? "",
   };
 }

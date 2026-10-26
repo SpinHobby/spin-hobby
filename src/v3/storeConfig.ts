@@ -19,6 +19,8 @@ export interface StoreConfig {
   fxCadUsd: number;
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
+  /** The Shop playlist button's YouTube playlist (null: no button). */
+  musicPlaylistId?: string | null;
   /** The shop background behind every transparent product photo (null: plain white). */
   productBackground?: { id: string; url: string } | null;
 }
