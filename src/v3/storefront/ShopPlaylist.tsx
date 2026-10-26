@@ -2,9 +2,10 @@ import { useState } from "react";
 
 /**
  * The storefront's "Shop playlist": a button at the end of the section tabs that opens a small YouTube player docked in the corner.
- * Nothing plays until the shopper presses the button, the player stays visible while it plays (YouTube's embed rules: no hidden or
- * shrunken players), and closing it stops the music. The owner picks the playlist in Admin > Settings; without one, nothing shows.
- * Uses YouTube's privacy-enhanced address, so no YouTube cookies are set until the shopper plays something.
+ * The player opens paused: music only starts when the shopper presses YouTube's play button (music starting by itself annoys
+ * people). It stays visible while it plays (YouTube's embed rules: no hidden or shrunken players), and closing it stops the music.
+ * The owner picks the playlist in Admin > Settings; without one, nothing shows. Uses YouTube's privacy-enhanced address, so no
+ * YouTube cookies are set until the shopper plays something.
  */
 export function ShopPlaylist({ playlistId }: { playlistId: string }) {
   const [open, setOpen] = useState(false);
@@ -17,7 +18,7 @@ export function ShopPlaylist({ playlistId }: { playlistId: string }) {
         aria-controls="sf-music"
         onClick={() => setOpen((o) => !o)}
       >
-        <span aria-hidden>{open ? "♪" : "🎧"}</span> {open ? "Playing" : "Shop playlist"}
+        <span aria-hidden>🎧</span> {open ? "Close player" : "Shop playlist"}
       </button>
       {open && (
         <aside id="sf-music" className="sf-music" aria-label="Shop playlist">
@@ -29,12 +30,14 @@ export function ShopPlaylist({ playlistId }: { playlistId: string }) {
           </div>
           <iframe
             className="sf-music__player"
-            src={`https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(playlistId)}&autoplay=1&rel=0`}
+            src={`https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(playlistId)}&rel=0`}
             title="Shop playlist (YouTube)"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="encrypted-media; picture-in-picture"
             referrerPolicy="strict-origin-when-cross-origin"
           />
-          <span className="sf-music__note">Music from YouTube · closing the player stops it</span>
+          <span className="sf-music__note">
+            Press <b>▶</b> on the video to start. Closing the player stops the music.
+          </span>
         </aside>
       )}
     </>
