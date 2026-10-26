@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { ShopTab } from "./ShopTab";
 import {
   Avatar,
   Banner,
@@ -52,7 +53,7 @@ import {
  * /ui-kit (local and staging only): every shared building block, live, with made-up data. Open it next to your code when building a page
  * like the admin (an account page, a settings page): copy what you need from here, and see src/components/README.md for how to use each one.
  */
-type Tab = "layout" | "buttons" | "forms" | "choices" | "lists" | "overlays" | "feedback" | "example";
+type Tab = "layout" | "buttons" | "forms" | "choices" | "lists" | "overlays" | "feedback" | "shop" | "example";
 const TABS: { key: Tab; label: string; badge?: number }[] = [
   { key: "layout", label: "Layout & cards" },
   { key: "buttons", label: "Buttons & menus" },
@@ -61,6 +62,7 @@ const TABS: { key: Tab; label: string; badge?: number }[] = [
   { key: "lists", label: "Lists & tables" },
   { key: "overlays", label: "Drawers & dialogs" },
   { key: "feedback", label: "Messages & status" },
+  { key: "shop", label: "Shop cards" },
   { key: "example", label: "Example page", badge: 2 },
 ];
 
@@ -120,6 +122,7 @@ export default function ComponentsPage() {
       {tab === "lists" && <ListsTab onDone={flash} />}
       {tab === "overlays" && <OverlaysTab onDone={flash} />}
       {tab === "feedback" && <FeedbackTab onToast={() => flash("A toast: a short message that goes away by itself")} />}
+      {tab === "shop" && <ShopTab onDone={flash} />}
       {tab === "example" && <ExampleTab onSaved={flash} />}
     </PanelLayout>
   );

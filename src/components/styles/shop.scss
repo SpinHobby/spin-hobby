@@ -1,0 +1,213 @@
+// The shop's shared cards (components/shop/ProductCards.tsx). The vertical card, the pre-order card and the rows keep their
+// styles in v3/storefront/storefront.scss (`sf-card`, `sf-pre`, `sf-row`, `sf-mini`); this file adds the horizontal card and its
+// action buttons, made from the same parts: the same surface, border, corner radius, badges, prices and buttons.
+$ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+// ---- horizontal card: photo on the left, details in the middle, price on the right, buttons along the bottom
+.sf-hcard {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s,
+    transform 0.2s $ease;
+  &:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-card);
+  }
+  &.is-dim {
+    opacity: 0.6;
+  }
+}
+.sf-hcard__media {
+  position: relative;
+  align-self: stretch;
+  background: var(--surface2);
+  .sf-card__open,
+  .sf-img {
+    height: 100%;
+  }
+  .sf-img {
+    aspect-ratio: auto;
+    min-height: 168px;
+  }
+}
+.sf-hcard__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "info price"
+    "actions actions";
+  align-content: space-between;
+  gap: 12px 20px;
+  padding: 14px 16px 14px 18px;
+}
+.sf-hcard__info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+.sf-hcard__name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  a {
+    color: inherit;
+    text-decoration: none;
+    &:hover {
+      color: var(--blue);
+    }
+  }
+}
+.sf-hcard__status {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.sf-hcard__meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sf-hcard__price {
+  grid-area: price;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+  strong {
+    font-size: 19px;
+    font-weight: 800;
+  }
+  s {
+    font-size: 12px;
+    color: var(--muted);
+  }
+}
+.sf-hcard__actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  .sf-buy {
+    padding: 8px 18px;
+    border-radius: 99px;
+  }
+}
+.sf-hcard__end {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
+}
+// the corner chip ("closes in 3 days", "#2 this week") sits in the text column on this card
+.sf-card__chip--inline {
+  position: static;
+  max-width: 100%;
+  margin-top: 4px;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: var(--surface2);
+  &.sf-card__chip--closing {
+    background: var(--red);
+  }
+}
+
+// ---- the quiet buttons a page adds to a horizontal card ("Add a note", "Move", share, remove)
+.sf-card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background-color 0.15s,
+    transform 0.1s;
+  &:hover {
+    border-color: var(--primary);
+    color: var(--text);
+  }
+  &:active {
+    transform: scale(0.95);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  &--icon {
+    width: 34px;
+    padding: 0;
+    font-size: 15px;
+  }
+  &.is-wished {
+    color: var(--red);
+    border-color: color-mix(in srgb, var(--red) 40%, var(--border));
+  }
+}
+
+// ---- phones: a smaller photo, the price under the name, buttons wrapping
+@media (max-width: 560px) {
+  .sf-hcard {
+    grid-template-columns: 104px minmax(0, 1fr);
+  }
+  .sf-hcard__media .sf-img {
+    min-height: 104px;
+  }
+  .sf-hcard__body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "info"
+      "price"
+      "actions";
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .sf-hcard__price {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .sf-hcard__name {
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-hcard,
+  .sf-card-action {
+    transition: none;
+  }
+}
+
+// ---- /ui-kit's Shop tab: how the samples are laid out (a grid of vertical cards, a column of horizontal ones)
+.ui-kit-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.ui-kit-shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
