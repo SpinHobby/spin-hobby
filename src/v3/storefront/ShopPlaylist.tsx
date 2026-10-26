@@ -136,13 +136,26 @@ const controls = {
     player = null;
     set({ open: false, playing: false, listOpen: false, ids: [], index: 0 });
   },
+  /** Minimized is a slim bar with no video, so the music pauses first (YouTube: no sound without the video showing). */
+  minimize: () => {
+    player?.pauseVideo?.();
+    set({ minimized: true, listOpen: false });
+  },
+  expand: () => set({ minimized: false }),
   toggle: () => {
     if (!player) return;
-    if (state.playing) player.pauseVideo();
-    else player.playVideo();
+    if (state.playing) return player.pauseVideo();
+    set({ minimized: false }); // the video comes back before the music does
+    player.playVideo();
   },
-  next: () => player?.nextVideo?.(),
-  previous: () => player?.previousVideo?.(),
+  next: () => {
+    set({ minimized: false });
+    player?.nextVideo?.();
+  },
+  previous: () => {
+    set({ minimized: false });
+    player?.previousVideo?.();
+  },
   playAt: (i: number) => player?.playVideoAt?.(i),
   volume: (volume: number) => {
     player?.setVolume?.(volume);
@@ -372,7 +385,9 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
               } else e.target.playVideo();
             },
             onStateChange: (e: { data: number }) => {
-              set({ playing: e.data === PLAYING || e.data === BUFFERING });
+              const playing = e.data === PLAYING || e.data === BUFFERING;
+              // never sound with the video folded away: if it plays somehow while minimized, show it again
+              set({ playing, ...(playing && state.minimized ? { minimized: false } : {}) });
               syncOrder();
             },
             onError: () => setError("This track can't play here. Skipping…"),
@@ -485,7 +500,18 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
         >
           ⠿
         </span>
-        {!m.minimized && (
+        {m.minimized ? (
+          // the slim bar: play (brings the video back and resumes) and the track it will resume
+          <>
+            <button type="button" className="sf-player__pp sf-player__pp--bar" onClick={controls.toggle} aria-label="Play">
+              <PlayPauseIcon playing={false} />
+            </button>
+            <span className="sf-player__bar-title" title={now?.title}>
+              {now ? now.title : "Shop playlist"}
+              <small>Paused · press play to bring the video back</small>
+            </span>
+          </>
+        ) : (
           <span className="sf-player__title">
             <Equalizer on={m.playing} />
             <b>Shop playlist</b>
@@ -495,8 +521,8 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
           <button
             type="button"
             className="sf-player__icon"
-            onClick={() => set({ minimized: !m.minimized, listOpen: false })}
-            aria-label={m.minimized ? "Expand the player" : "Minimize the player"}
+            onClick={m.minimized ? controls.expand : controls.minimize}
+            aria-label={m.minimized ? "Show the video" : "Minimize (pauses the music)"}
           >
             {m.minimized ? "⤢" : "–"}
           </button>
@@ -515,35 +541,36 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
         </div>
       )}
 
-      <div className="sf-player__controls">
-        {!m.minimized && (
+      {!m.minimized && (
+        <div className="sf-player__controls">
+          {!m.minimized && (
+            <button
+              type="button"
+              className={`sf-player__icon sf-player__shuffle ${m.shuffle ? "is-on" : ""}`}
+              onClick={controls.shuffle}
+              aria-pressed={m.shuffle}
+              aria-label="Shuffle"
+              title={m.shuffle ? "Shuffle is on" : "Shuffle is off"}
+            >
+              <ShuffleIcon />
+            </button>
+          )}
+          <button type="button" className="sf-player__icon" onClick={controls.previous} aria-label="Previous track">
+            <SkipIcon back />
+          </button>
           <button
             type="button"
-            className={`sf-player__icon sf-player__shuffle ${m.shuffle ? "is-on" : ""}`}
-            onClick={controls.shuffle}
-            aria-pressed={m.shuffle}
-            aria-label="Shuffle"
-            title={m.shuffle ? "Shuffle is on" : "Shuffle is off"}
+            className={`sf-player__pp ${m.playing ? "is-on" : ""}`}
+            onClick={controls.toggle}
+            aria-label={m.playing ? "Pause" : "Play"}
           >
-            <ShuffleIcon />
+            <PlayPauseIcon playing={m.playing} />
           </button>
-        )}
-        <button type="button" className="sf-player__icon" onClick={controls.previous} aria-label="Previous track">
-          <SkipIcon back />
-        </button>
-        <button
-          type="button"
-          className={`sf-player__pp ${m.playing ? "is-on" : ""}`}
-          onClick={controls.toggle}
-          aria-label={m.playing ? "Pause" : "Play"}
-        >
-          <PlayPauseIcon playing={m.playing} />
-        </button>
-        <button type="button" className="sf-player__icon" onClick={controls.next} aria-label="Next track">
-          <SkipIcon />
-        </button>
-        {m.minimized && volume}
-      </div>
+          <button type="button" className="sf-player__icon" onClick={controls.next} aria-label="Next track">
+            <SkipIcon />
+          </button>
+        </div>
+      )}
 
       {!m.minimized && (
         <div className="sf-player__row">
