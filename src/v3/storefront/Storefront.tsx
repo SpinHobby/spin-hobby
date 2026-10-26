@@ -33,6 +33,7 @@ import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
 import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
+import { ShopPlaylist } from "./ShopPlaylist";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
@@ -65,7 +66,7 @@ export default function Storefront() {
   const cart = useCart();
   const wishlist = useWishlist(!!auth.session, flash);
   const [currency, setCurrency] = useLocalState<Currency>("spinhobby-currency", "CAD");
-  useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
+  const config = useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
 
   const [filters, setFilters] = useState<Filters>({
     nav: "Home",
@@ -549,6 +550,7 @@ export default function Storefront() {
               {n}
             </a>
           ))}
+          {config?.musicPlaylistId && <ShopPlaylist playlistId={config.musicPlaylistId} />}
         </nav>
       </header>
 

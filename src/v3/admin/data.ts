@@ -48,6 +48,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   handling_days_max: 3,
   maintenance_mode: false,
   maintenance_message: null,
+  music_playlist_id: null,
 };
 
 export interface AdminData {
