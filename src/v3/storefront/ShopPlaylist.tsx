@@ -249,6 +249,23 @@ function Equalizer({ on }: { on: boolean }) {
   );
 }
 
+/** The volume slider (in the card, and in the navbar's volume pop-up). */
+function VolumeSlider({ level }: { level: number }) {
+  return (
+    <input
+      type="range"
+      className="sf-volrange"
+      min={0}
+      max={100}
+      step={1}
+      value={level}
+      aria-label="Volume"
+      style={{ ["--level" as string]: `${level}%` }}
+      onChange={(e: ChangeEvent<HTMLInputElement>) => controls.volume(Number(e.target.value))}
+    />
+  );
+}
+
 // ---------------------------------------------------------------- the nav buttons
 
 /** In the section tabs: "Shop playlist" opens and plays; once open, previous, play/pause, next and "Close player". */
@@ -277,6 +294,22 @@ export function ShopPlaylistNav() {
       <button type="button" className="sf-music-btn sf-music-btn--icon" onClick={controls.next} aria-label="Next track">
         <SkipIcon />
       </button>
+      {/* volume: the button mutes; hovering or tabbing to it shows the slider */}
+      <span className="sf-music-vol">
+        <button
+          type="button"
+          className="sf-music-btn sf-music-btn--icon"
+          onClick={controls.mute}
+          aria-label={m.muted || m.volume === 0 ? "Unmute" : "Mute"}
+          aria-pressed={m.muted}
+        >
+          <VolumeIcon level={m.muted ? 0 : m.volume} />
+        </button>
+        <span className="sf-music-vol__pop">
+          <VolumeSlider level={m.muted ? 0 : m.volume} />
+          <span className="sf-music-vol__value">{m.muted ? 0 : m.volume}</span>
+        </span>
+      </span>
       <button type="button" className="sf-music-btn" onClick={controls.close} aria-label="Close player">
         <span className="sf-music-nav__close-x" aria-hidden>
           ×
@@ -426,18 +459,7 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
       >
         <VolumeIcon level={level} />
       </button>
-      {!m.minimized && (
-        <input
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          value={level}
-          aria-label="Volume"
-          style={{ ["--level" as string]: `${level}%` }}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => controls.volume(Number(e.target.value))}
-        />
-      )}
+      {!m.minimized && <VolumeSlider level={level} />}
     </span>
   );
   return (

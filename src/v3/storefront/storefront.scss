@@ -3200,9 +3200,9 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   padding: 8px 10px 10px;
   border-radius: 16px;
   // see-through, so the page shows behind it; more solid while the pointer is on it. The video itself stays fully opaque.
-  background: color-mix(in srgb, var(--surface) 58%, transparent);
-  backdrop-filter: blur(14px) saturate(1.3);
-  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  background: color-mix(in srgb, var(--surface) 35%, transparent);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
   border: 1px solid var(--border);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
   display: flex;
@@ -3217,7 +3217,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   &:hover,
   &:focus-within,
   &.is-dragging {
-    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
   }
   &.is-playing {
     border-color: color-mix(in srgb, var(--gold) 40%, var(--border));
@@ -3374,37 +3374,89 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  input[type="range"] {
+  .sf-volrange {
     width: 110px;
-    height: 4px;
-    appearance: none;
-    border-radius: 99px;
-    background: linear-gradient(to right, var(--gold) var(--level, 70%), var(--border) var(--level, 70%));
-    cursor: pointer;
-    &::-webkit-slider-thumb {
-      appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--text);
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-      transition: transform 0.15s;
-    }
-    &::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
-      border: 0;
-      border-radius: 50%;
-      background: var(--text);
-    }
-    &:hover::-webkit-slider-thumb {
-      transform: scale(1.2);
-    }
-    &:focus-visible {
-      outline: 2px solid var(--primary);
-      outline-offset: 4px;
-    }
   }
+}
+// the volume slider (card and navbar pop-up)
+.sf-volrange {
+  width: 120px;
+  height: 4px;
+  appearance: none;
+  border-radius: 99px;
+  background: linear-gradient(to right, var(--gold) var(--level, 70%), var(--border) var(--level, 70%));
+  cursor: pointer;
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.15s;
+  }
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--text);
+  }
+  &:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+  }
+}
+// navbar volume: the slider drops down below the button while hovered or focused
+.sf-music-vol {
+  position: relative;
+  display: inline-flex;
+}
+.sf-music-vol__pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -6px) scale(0.96);
+  transition:
+    opacity 0.18s,
+    transform 0.22s $sf-music-ease;
+  // a bridge over the gap, so moving the pointer down to the slider doesn't close it
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -12px;
+    height: 12px;
+  }
+  .sf-music-vol:hover &,
+  .sf-music-vol:focus-within & {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+}
+.sf-music-vol__value {
+  min-width: 2ch;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text2);
+  text-align: right;
 }
 .sf-player__shuffle {
   position: relative;
@@ -3501,6 +3553,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 // phones: play/pause and a small × in the navbar; previous / next stay in the player card
 @media (max-width: 640px) {
   .sf-navrow .sf-music-btn--icon,
+  .sf-music-vol,
   .sf-music-nav__close-label {
     display: none;
   }
