@@ -3037,7 +3037,8 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  height: 32px; // the same height side by side, and never taller than the tabs
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 99px;
   font-size: 13px;
@@ -3056,7 +3057,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 // the play/pause button pops in when the player opens, and glows gold while music plays
 .sf-nav .sf-music-btn--pp {
-  padding: 6px 10px;
+  padding: 0 10px;
   animation: sf-music-pop 0.4s $sf-music-ease;
   &.is-on {
     border-color: var(--gold);
@@ -3083,8 +3084,8 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 
-// play ⇄ pause: the two icons swap with a spin and a scale, so the change reads as one movement
-.sf-pp {
+// play ⇄ pause (its own class name: the product page already uses sf-pp): the two icons swap with a spin and a scale, so the change reads as one movement
+.sf-playicon {
   position: relative;
   display: inline-block;
   width: 18px;
@@ -3099,16 +3100,16 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
       transform 0.35s $sf-music-ease,
       opacity 0.25s;
   }
-  .sf-pp__pause {
+  .sf-playicon__pause {
     opacity: 0;
     transform: rotate(-90deg) scale(0.4);
   }
   &.is-playing {
-    .sf-pp__play {
+    .sf-playicon__play {
       opacity: 0;
       transform: rotate(90deg) scale(0.4);
     }
-    .sf-pp__pause {
+    .sf-playicon__pause {
       opacity: 1;
       transform: none;
     }
@@ -3302,7 +3303,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   transition:
     transform 0.15s,
     box-shadow 0.3s;
-  .sf-pp {
+  .sf-playicon {
     width: 20px;
     height: 20px;
   }

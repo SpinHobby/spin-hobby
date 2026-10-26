@@ -145,11 +145,11 @@ async function loadTitles(ids: string[]) {
 
 function PlayPauseIcon({ playing }: { playing: boolean }) {
   return (
-    <span className={`sf-pp ${playing ? "is-playing" : ""}`} aria-hidden>
-      <svg viewBox="0 0 24 24" className="sf-pp__play">
+    <span className={`sf-playicon ${playing ? "is-playing" : ""}`} aria-hidden>
+      <svg viewBox="0 0 24 24" className="sf-playicon__play">
         <path d="M8 5.5v13l11-6.5z" />
       </svg>
-      <svg viewBox="0 0 24 24" className="sf-pp__pause">
+      <svg viewBox="0 0 24 24" className="sf-playicon__pause">
         <rect x="6.5" y="5" width="4" height="14" rx="1.2" />
         <rect x="13.5" y="5" width="4" height="14" rx="1.2" />
       </svg>
@@ -209,7 +209,9 @@ function clamp(p: { x: number; y: number }, el: HTMLElement | null) {
 
 export function ShopPlaylistPlayer({ playlistId }: { playlistId: string }) {
   const m = useMusic();
-  return m.open ? createPortal(<PlayerCard playlistId={playlistId} />, document.body) : null;
+  // inside the shop's root (.sh.sf), not straight in <body>: the shop's colours and base styles are defined there
+  const root = typeof document === "undefined" ? null : (document.querySelector<HTMLElement>(".sh.sf") ?? document.body);
+  return m.open && root ? createPortal(<PlayerCard playlistId={playlistId} />, root) : null;
 }
 
 function PlayerCard({ playlistId }: { playlistId: string }) {
