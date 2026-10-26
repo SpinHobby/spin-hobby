@@ -136,26 +136,16 @@ const controls = {
     player = null;
     set({ open: false, playing: false, listOpen: false, ids: [], index: 0 });
   },
-  /** Minimized is a slim bar with no video, so the music pauses first (YouTube: no sound without the video showing). */
-  minimize: () => {
-    player?.pauseVideo?.();
-    set({ minimized: true, listOpen: false });
-  },
+  /** Minimized: just the video, at YouTube's smallest allowed size (200 × 200); playing or paused stays as it was. */
+  minimize: () => set({ minimized: true, listOpen: false }),
   expand: () => set({ minimized: false }),
   toggle: () => {
     if (!player) return;
-    if (state.playing) return player.pauseVideo();
-    set({ minimized: false }); // the video comes back before the music does
-    player.playVideo();
+    if (state.playing) player.pauseVideo();
+    else player.playVideo();
   },
-  next: () => {
-    set({ minimized: false });
-    player?.nextVideo?.();
-  },
-  previous: () => {
-    set({ minimized: false });
-    player?.previousVideo?.();
-  },
+  next: () => player?.nextVideo?.(),
+  previous: () => player?.previousVideo?.(),
   playAt: (i: number) => player?.playVideoAt?.(i),
   volume: (volume: number) => {
     player?.setVolume?.(volume);
@@ -385,9 +375,7 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
               } else e.target.playVideo();
             },
             onStateChange: (e: { data: number }) => {
-              const playing = e.data === PLAYING || e.data === BUFFERING;
-              // never sound with the video folded away: if it plays somehow while minimized, show it again
-              set({ playing, ...(playing && state.minimized ? { minimized: false } : {}) });
+              set({ playing: e.data === PLAYING || e.data === BUFFERING });
               syncOrder();
             },
             onError: () => setError("This track can't play here. Skipping…"),
@@ -500,18 +488,7 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
         >
           ⠿
         </span>
-        {m.minimized ? (
-          // the slim bar: play (brings the video back and resumes) and the track it will resume
-          <>
-            <button type="button" className="sf-player__pp sf-player__pp--bar" onClick={controls.toggle} aria-label="Play">
-              <PlayPauseIcon playing={false} />
-            </button>
-            <span className="sf-player__bar-title" title={now?.title}>
-              {now ? now.title : "Shop playlist"}
-              <small>Paused · press play to bring the video back</small>
-            </span>
-          </>
-        ) : (
+        {!m.minimized && (
           <span className="sf-player__title">
             <Equalizer on={m.playing} />
             <b>Shop playlist</b>
@@ -522,7 +499,7 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
             type="button"
             className="sf-player__icon"
             onClick={m.minimized ? controls.expand : controls.minimize}
-            aria-label={m.minimized ? "Show the video" : "Minimize (pauses the music)"}
+            aria-label={m.minimized ? "Expand the player" : "Minimize to the video"}
           >
             {m.minimized ? "⤢" : "–"}
           </button>
