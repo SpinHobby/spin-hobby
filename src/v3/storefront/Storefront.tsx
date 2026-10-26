@@ -33,7 +33,7 @@ import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
 import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
-import { ShopPlaylist } from "./ShopPlaylist";
+import { ShopPlaylistNav, ShopPlaylistPlayer } from "./ShopPlaylist";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
@@ -550,7 +550,12 @@ export default function Storefront() {
               {n}
             </a>
           ))}
-          {config?.musicPlaylistId && <ShopPlaylist playlistId={config.musicPlaylistId} />}
+          {config?.musicPlaylistId && (
+            <>
+              <ShopPlaylistNav />
+              <ShopPlaylistPlayer playlistId={config.musicPlaylistId} />
+            </>
+          )}
         </nav>
       </header>
 
