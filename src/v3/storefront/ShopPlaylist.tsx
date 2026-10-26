@@ -1,10 +1,11 @@
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
+  useReducer,
   useRef,
   useState,
   useSyncExternalStore,
+  type ChangeEvent,
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
@@ -14,14 +15,16 @@ import { Collapse } from "../../components/layout/Collapse";
 /**
  * The storefront's "Shop playlist" (the owner picks a YouTube playlist in Admin > Settings; without one, nothing shows).
  *
- * - ShopPlaylistNav, in the section tabs: "Shop playlist" opens the player and starts the music; then a play/pause button and
- *   "Close player" take its place.
- * - ShopPlaylistPlayer, a card floating over the page: the video, previous / play-pause / next, and the whole playlist. It can be
- *   minimized to the video alone and dragged anywhere (it remembers where).
+ * - ShopPlaylistNav, in the section tabs: "Shop playlist" opens the player and starts the music (shuffled); then previous,
+ *   play/pause, next and "Close player" take its place.
+ * - ShopPlaylistPlayer, a see-through card floating over the page: the video, the controls, volume, shuffle and the whole
+ *   playlist. It can be minimized to the video alone and dragged anywhere (it remembers where, and goes back there when the
+ *   playlist panel closes).
  *
- * YouTube's embed rules shape it: the video stays visible while it plays and never smaller than 200 × 200 (so "minimized" is a
- * 200 × 200 video, not a hidden one), nothing is drawn over the video, and our buttons drive YouTube's own player through its API.
- * Music only starts from a shopper's click. Uses YouTube's privacy-enhanced host.
+ * YouTube's embed rules shape it: the video stays visible while it plays, fully opaque and never smaller than 200 × 200 (so
+ * "minimized" is a 200 × 200 video, not a hidden one, and only the card around the video is see-through), nothing is drawn over
+ * the video, and our buttons drive YouTube's own player through its API. Music only starts from a shopper's click. Uses YouTube's
+ * privacy-enhanced host.
  */
 
 // ---------------------------------------------------------------- shared state (the nav and the card are in different places)
@@ -30,28 +33,56 @@ interface Track {
   title: string;
   author: string;
 }
-interface MusicState {
+interface Prefs {
+  volume: number;
+  muted: boolean;
+  shuffle: boolean;
+}
+interface MusicState extends Prefs {
   open: boolean;
   minimized: boolean;
   listOpen: boolean;
   playing: boolean;
-  /** The video ids of the playlist, in order (from YouTube's player once it loads). */
+  /** The video ids in play order (shuffled when shuffle is on), from YouTube's player once it loads. */
   ids: string[];
   index: number;
   tracks: Record<string, Track>;
-  /** The card's top-left corner on screen; null until it has been placed. */
+  /** Where the shopper put the card (top-left corner). It is shown kept on screen, without forgetting this spot. */
   pos: { x: number; y: number } | null;
 }
-const POS_KEY = "spinhobby-music-pos";
-const readPos = () => {
+
+/** Read and write a remembered setting; private browsing or blocked storage just means it isn't remembered. */
+function stored<T>(key: string, fallback: T, valid: (v: unknown) => boolean): T {
   try {
-    const p = JSON.parse(localStorage.getItem(POS_KEY) ?? "null");
-    return p && Number.isFinite(p.x) && Number.isFinite(p.y) ? (p as { x: number; y: number }) : null;
+    const v = JSON.parse(localStorage.getItem(key) ?? "null");
+    return valid(v) ? (v as T) : fallback;
   } catch {
-    return null;
+    return fallback;
   }
+}
+function remember(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* not remembered: fine */
+  }
+}
+const POS_KEY = "spinhobby-music-pos";
+const PREFS_KEY = "spinhobby-music-prefs";
+const isPos = (p: unknown) => !!p && Number.isFinite((p as { x: number }).x) && Number.isFinite((p as { y: number }).y);
+const isPrefs = (p: unknown) => !!p && typeof (p as Prefs).volume === "number" && typeof (p as Prefs).shuffle === "boolean";
+
+let state: MusicState = {
+  open: false,
+  minimized: false,
+  listOpen: false,
+  playing: false,
+  ids: [],
+  index: 0,
+  tracks: {},
+  pos: stored(POS_KEY, null, isPos),
+  ...stored<Prefs>(PREFS_KEY, { volume: 70, muted: false, shuffle: true }, isPrefs),
 };
-let state: MusicState = { open: false, minimized: false, listOpen: false, playing: false, ids: [], index: 0, tracks: {}, pos: readPos() };
 const listeners = new Set<() => void>();
 function set(patch: Partial<MusicState>) {
   state = { ...state, ...patch };
@@ -62,6 +93,7 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 const useMusic = () => useSyncExternalStore(subscribe, () => state);
+const savePrefs = () => remember(PREFS_KEY, { volume: state.volume, muted: state.muted, shuffle: state.shuffle });
 
 // ---------------------------------------------------------------- YouTube's player API
 
@@ -89,12 +121,20 @@ function loadApi() {
 const PLAYING = 1;
 const BUFFERING = 3;
 
+/** The play order and position as YouTube's player has them now (the order changes when shuffle is switched). */
+function syncOrder() {
+  if (!player) return;
+  const ids: string[] = player.getPlaylist?.() ?? [];
+  const index: number = player.getPlaylistIndex?.() ?? 0;
+  set({ index, ...(ids.length && ids.join() !== state.ids.join() ? { ids } : {}) });
+}
+
 const controls = {
   open: () => set({ open: true, minimized: false }),
   close: () => {
     player?.destroy?.();
     player = null;
-    set({ open: false, playing: false, listOpen: false });
+    set({ open: false, playing: false, listOpen: false, ids: [], index: 0 });
   },
   toggle: () => {
     if (!player) return;
@@ -104,6 +144,26 @@ const controls = {
   next: () => player?.nextVideo?.(),
   previous: () => player?.previousVideo?.(),
   playAt: (i: number) => player?.playVideoAt?.(i),
+  volume: (volume: number) => {
+    player?.setVolume?.(volume);
+    if (volume > 0 && state.muted) player?.unMute?.();
+    set({ volume, muted: volume === 0 ? state.muted : false });
+    savePrefs();
+  },
+  mute: () => {
+    const muted = !state.muted;
+    if (muted) player?.mute?.();
+    else player?.unMute?.();
+    set({ muted });
+    savePrefs();
+  },
+  shuffle: () => {
+    const shuffle = !state.shuffle;
+    player?.setShuffle?.(shuffle);
+    set({ shuffle });
+    savePrefs();
+    window.setTimeout(syncOrder, 300); // YouTube reorders the list a moment later
+  },
 };
 
 /** Titles come from YouTube's public oEmbed (no key), a few at a time, and are kept for the visit. */
@@ -141,7 +201,7 @@ async function loadTitles(ids: string[]) {
   }
 }
 
-// ---------------------------------------------------------------- the nav buttons
+// ---------------------------------------------------------------- icons
 
 function PlayPauseIcon({ playing }: { playing: boolean }) {
   return (
@@ -156,7 +216,29 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
     </span>
   );
 }
-
+const SkipIcon = ({ back = false }: { back?: boolean }) => (
+  <svg viewBox="0 0 24 24" className="sf-skipicon" aria-hidden style={back ? { transform: "scaleX(-1)" } : undefined}>
+    <path d="M5 6v12l9-6z" />
+    <rect x="15.5" y="6" width="3" height="12" rx="1" />
+  </svg>
+);
+function VolumeIcon({ level }: { level: number }) {
+  return (
+    <svg viewBox="0 0 24 24" className="sf-volicon" aria-hidden>
+      <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+      {level > 0 && <path d="M15 9.2a4 4 0 0 1 0 5.6" />}
+      {level > 50 && <path d="M17.6 6.8a7.5 7.5 0 0 1 0 10.4" />}
+      {level === 0 && <path d="M16 9.5l5 5m0-5-5 5" />}
+    </svg>
+  );
+}
+function ShuffleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="sf-volicon" aria-hidden>
+      <path d="M4 7h3.5c2 0 3 1 4 2.5l2 3c1 1.5 2 2.5 4 2.5H20m0 0-2.5-2.5M20 15l-2.5 2.5M4 17h3.5c1.2 0 2-.4 2.7-1M20 9h-2.5c-1.2 0-2 .4-2.7 1M20 9l-2.5-2.5M20 9l-2.5 2.5" />
+    </svg>
+  );
+}
 function Equalizer({ on }: { on: boolean }) {
   return (
     <span className={`sf-eq ${on ? "is-on" : ""}`} aria-hidden>
@@ -167,7 +249,9 @@ function Equalizer({ on }: { on: boolean }) {
   );
 }
 
-/** In the section tabs: "Shop playlist" opens and plays; once open, play/pause and "Close player". */
+// ---------------------------------------------------------------- the nav buttons
+
+/** In the section tabs: "Shop playlist" opens and plays; once open, previous, play/pause, next and "Close player". */
 export function ShopPlaylistNav() {
   const m = useMusic();
   if (!m.open)
@@ -178,6 +262,9 @@ export function ShopPlaylistNav() {
     );
   return (
     <span className="sf-music-nav">
+      <button type="button" className="sf-music-btn sf-music-btn--icon" onClick={controls.previous} aria-label="Previous track">
+        <SkipIcon back />
+      </button>
       <button
         type="button"
         className={`sf-music-btn sf-music-btn--pp ${m.playing ? "is-on" : ""}`}
@@ -187,8 +274,14 @@ export function ShopPlaylistNav() {
         <PlayPauseIcon playing={m.playing} />
         <Equalizer on={m.playing} />
       </button>
-      <button type="button" className="sf-music-btn" onClick={controls.close}>
-        Close player
+      <button type="button" className="sf-music-btn sf-music-btn--icon" onClick={controls.next} aria-label="Next track">
+        <SkipIcon />
+      </button>
+      <button type="button" className="sf-music-btn" onClick={controls.close} aria-label="Close player">
+        <span className="sf-music-nav__close-x" aria-hidden>
+          ×
+        </span>
+        <span className="sf-music-nav__close-label">Close player</span>
       </button>
     </span>
   );
@@ -197,8 +290,8 @@ export function ShopPlaylistNav() {
 // ---------------------------------------------------------------- the floating player
 
 const MARGIN = 12;
-/** Keeps the card on screen. */
-function clamp(p: { x: number; y: number }, el: HTMLElement | null) {
+/** Where to show the card so it is fully on screen, given where the shopper wants it. */
+function onScreen(p: { x: number; y: number }, el: HTMLElement | null) {
   const w = el?.offsetWidth ?? 340;
   const h = el?.offsetHeight ?? 300;
   return {
@@ -220,6 +313,7 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
   const mount = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [, remeasure] = useReducer((n: number) => n + 1, 0);
 
   // YouTube's player, made once per opening and kept while minimized (the same video just gets smaller)
   useEffect(() => {
@@ -235,14 +329,18 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
           height: "100%",
           playerVars: { listType: "playlist", list: playlistId, autoplay: 1, rel: 0, playsinline: 1 },
           events: {
-            onReady: (e: { target: YTPlayer }) => e.target.playVideo(), // the shopper's click asked for music
-            onStateChange: (e: { target: YTPlayer; data: number }) => {
-              const ids: string[] = e.target.getPlaylist?.() ?? [];
-              set({
-                playing: e.data === PLAYING || e.data === BUFFERING,
-                index: e.target.getPlaylistIndex?.() ?? 0,
-                ...(ids.length && ids.length !== state.ids.length ? { ids } : {}),
-              });
+            // the shopper's click asked for music: at their volume, from a random track when shuffling
+            onReady: (e: { target: YTPlayer }) => {
+              e.target.setVolume(state.volume);
+              if (state.muted) e.target.mute();
+              if (state.shuffle) {
+                e.target.setShuffle(true);
+                e.target.playVideoAt(0);
+              } else e.target.playVideo();
+            },
+            onStateChange: (e: { data: number }) => {
+              set({ playing: e.data === PLAYING || e.data === BUFFERING });
+              syncOrder();
             },
             onError: () => setError("This track can't play here. Skipping…"),
           },
@@ -273,64 +371,80 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
     return () => window.clearTimeout(t);
   }, [error]);
 
-  // first opening: bottom-right; afterwards wherever it was left, kept on screen when the window or card changes size
+  // Shown where the shopper put it, nudged on screen when it grows (the playlist opens) or the window shrinks, and back to
+  // their spot when it shrinks again. The spot itself only changes when they move it.
   useLayoutEffect(() => {
-    const place = () => {
-      const el = card.current;
-      const start = state.pos ?? { x: window.innerWidth, y: window.innerHeight };
-      set({ pos: clamp(start, el) });
-    };
-    place();
-    const ro = new ResizeObserver(place);
+    if (!state.pos) set({ pos: { x: window.innerWidth, y: window.innerHeight } }); // first time: bottom-right
+    const ro = new ResizeObserver(remeasure);
     if (card.current) ro.observe(card.current);
-    window.addEventListener("resize", place);
+    window.addEventListener("resize", remeasure);
     return () => {
       ro.disconnect();
-      window.removeEventListener("resize", place);
+      window.removeEventListener("resize", remeasure);
     };
   }, []);
-  const save = useCallback(() => {
-    try {
-      localStorage.setItem(POS_KEY, JSON.stringify(state.pos));
-    } catch {
-      /* not remembered: fine */
-    }
-  }, []);
+  const shown = m.pos ? onScreen(m.pos, card.current) : null;
+  const moveTo = (p: { x: number; y: number }) => set({ pos: onScreen(p, card.current) });
 
   // drag by the handle (mouse, pen or finger); the video ignores the pointer meanwhile so it can't swallow the drag
   const grab = useRef<{ dx: number; dy: number } | null>(null);
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
-    if ((e.target as HTMLElement).closest("button") || !state.pos) return;
-    grab.current = { dx: e.clientX - state.pos.x, dy: e.clientY - state.pos.y };
+    if ((e.target as HTMLElement).closest("button") || !shown) return;
+    grab.current = { dx: e.clientX - shown.x, dy: e.clientY - shown.y };
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
   };
   const onPointerMove = (e: PointerEvent<HTMLElement>) => {
-    if (!grab.current) return;
-    set({ pos: clamp({ x: e.clientX - grab.current.dx, y: e.clientY - grab.current.dy }, card.current) });
+    if (grab.current) moveTo({ x: e.clientX - grab.current.dx, y: e.clientY - grab.current.dy });
   };
   const onPointerUp = () => {
     if (!grab.current) return;
     grab.current = null;
     setDragging(false);
-    save();
+    remember(POS_KEY, state.pos);
   };
   // and by keyboard: arrows move it (Shift for bigger steps)
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     const step = e.shiftKey ? 96 : 24;
     const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
-    if (!d || !state.pos) return;
+    if (!d || !shown) return;
     e.preventDefault();
-    set({ pos: clamp({ x: state.pos.x + d[0], y: state.pos.y + d[1] }, card.current) });
-    save();
+    moveTo({ x: shown.x + d[0], y: shown.y + d[1] });
+    remember(POS_KEY, state.pos);
   };
 
   const now = currentId ? m.tracks[currentId] : undefined;
+  const level = m.muted ? 0 : m.volume;
+  const volume = (
+    <span className="sf-player__volume">
+      <button
+        type="button"
+        className="sf-player__icon"
+        onClick={controls.mute}
+        aria-label={m.muted || m.volume === 0 ? "Unmute" : "Mute"}
+        aria-pressed={m.muted}
+      >
+        <VolumeIcon level={level} />
+      </button>
+      {!m.minimized && (
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={level}
+          aria-label="Volume"
+          style={{ ["--level" as string]: `${level}%` }}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => controls.volume(Number(e.target.value))}
+        />
+      )}
+    </span>
+  );
   return (
     <aside
       ref={card}
       className={`sf-player ${m.minimized ? "is-mini" : ""} ${dragging ? "is-dragging" : ""} ${m.playing ? "is-playing" : ""}`}
-      style={m.pos ? { transform: `translate(${m.pos.x}px, ${m.pos.y}px)` } : { visibility: "hidden" }}
+      style={shown ? { transform: `translate(${shown.x}px, ${shown.y}px)` } : { visibility: "hidden" }}
       aria-label="Shop playlist"
     >
       <div
@@ -381,10 +495,20 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
 
       <div className="sf-player__controls">
         {!m.minimized && (
-          <button type="button" className="sf-player__icon" onClick={controls.previous} aria-label="Previous track">
-            ⏮
+          <button
+            type="button"
+            className={`sf-player__icon sf-player__shuffle ${m.shuffle ? "is-on" : ""}`}
+            onClick={controls.shuffle}
+            aria-pressed={m.shuffle}
+            aria-label="Shuffle"
+            title={m.shuffle ? "Shuffle is on" : "Shuffle is off"}
+          >
+            <ShuffleIcon />
           </button>
         )}
+        <button type="button" className="sf-player__icon" onClick={controls.previous} aria-label="Previous track">
+          <SkipIcon back />
+        </button>
         <button
           type="button"
           className={`sf-player__pp ${m.playing ? "is-on" : ""}`}
@@ -393,22 +517,25 @@ function PlayerCard({ playlistId }: { playlistId: string }) {
         >
           <PlayPauseIcon playing={m.playing} />
         </button>
-        {!m.minimized && (
-          <>
-            <button type="button" className="sf-player__icon" onClick={controls.next} aria-label="Next track">
-              ⏭
-            </button>
-            <button
-              type="button"
-              className={`sf-player__list-btn ${m.listOpen ? "is-on" : ""}`}
-              aria-expanded={m.listOpen}
-              onClick={() => set({ listOpen: !m.listOpen })}
-            >
-              Playlist{m.ids.length ? ` · ${m.ids.length}` : ""}
-            </button>
-          </>
-        )}
+        <button type="button" className="sf-player__icon" onClick={controls.next} aria-label="Next track">
+          <SkipIcon />
+        </button>
+        {m.minimized && volume}
       </div>
+
+      {!m.minimized && (
+        <div className="sf-player__row">
+          {volume}
+          <button
+            type="button"
+            className={`sf-player__list-btn ${m.listOpen ? "is-on" : ""}`}
+            aria-expanded={m.listOpen}
+            onClick={() => set({ listOpen: !m.listOpen })}
+          >
+            Playlist{m.ids.length ? ` · ${m.ids.length}` : ""}
+          </button>
+        </div>
+      )}
 
       {!m.minimized && (
         <Collapse open={m.listOpen}>

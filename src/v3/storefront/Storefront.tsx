@@ -532,31 +532,34 @@ export default function Storefront() {
             </button>
           </div>
         </div>
-        <nav ref={navInd.ref} className="sf-wrap sf-nav" aria-label="Shop sections">
-          <span className={`sf-nav__ind ${navInd.ready ? "is-ready" : ""}`} style={navInd.style} aria-hidden />
-          {NAV.map((n) => (
-            <a
-              key={n}
-              href={sectionPath(n)}
-              className={activeNav === n ? "is-active" : ""}
-              data-on={activeNav === n}
-              aria-current={filters.nav === n && !productId ? "page" : undefined}
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-                e.preventDefault();
-                setNav(n);
-              }}
-            >
-              {n}
-            </a>
-          ))}
+        {/* the tabs scroll on small screens; the music buttons sit beside them, outside the scroll, so their glow isn't clipped */}
+        <div className="sf-wrap sf-navrow">
+          <nav ref={navInd.ref} className="sf-nav" aria-label="Shop sections">
+            <span className={`sf-nav__ind ${navInd.ready ? "is-ready" : ""}`} style={navInd.style} aria-hidden />
+            {NAV.map((n) => (
+              <a
+                key={n}
+                href={sectionPath(n)}
+                className={activeNav === n ? "is-active" : ""}
+                data-on={activeNav === n}
+                aria-current={filters.nav === n && !productId ? "page" : undefined}
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  e.preventDefault();
+                  setNav(n);
+                }}
+              >
+                {n}
+              </a>
+            ))}
+          </nav>
           {config?.musicPlaylistId && (
             <>
               <ShopPlaylistNav />
               <ShopPlaylistPlayer playlistId={config.musicPlaylistId} />
             </>
           )}
-        </nav>
+        </div>
       </header>
 
       <div ref={pageRef}>
