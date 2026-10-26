@@ -8,6 +8,7 @@ import type { CartLine } from "./data";
 import { isCutout, photo } from "../photo";
 import type { ProductPage as ProductList } from "../types";
 import { PriceTag } from "./ProductViews";
+import { isOn } from "../../features";
 
 /**
  * Up to three products that would take the cart to free shipping: in stock, not in the cart already, and priced to just cover what's
@@ -308,7 +309,7 @@ export function AccountMenu({ email, user, onSignOut }: { email: string | null; 
                   Store admin ↗
                 </a>
               )}
-              {!import.meta.env.PRO && (
+              {isOn("account") && (
                 <a role="menuitem" href="/account">
                   Your Account
                 </a>

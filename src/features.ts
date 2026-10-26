@@ -14,6 +14,9 @@ const FEATURES = {
   ebayStore: { local: true, staging: true, production: false },
   /** /ui-kit: the shared building blocks (src/components) shown live, for whoever builds a new page. Not for shoppers. */
   uiKit: { local: true, staging: true, production: false },
+  /** /account (a shopper's own page: orders, wishlist...) and the "Your Account" link in the account menu: still being built, so on
+   *  staging for testing but not on the live site yet. */
+  account: { local: true, staging: true, production: false },
 } satisfies Record<string, Record<Environment, boolean>>;
 
 /** Whether a feature is on where this copy of the site is running. */
