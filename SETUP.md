@@ -11,6 +11,25 @@ Spin Hobby is three repos. This page takes a fresh laptop to all of them running
 You need **spin-hobby-server** and **spin-hobby** to work on the shop. Clone **gleamshelf** only to work on the editor itself: the admin
 already has a packed copy of it (see [The editor inside the admin](#the-editor-inside-the-admin)).
 
+## Quick start
+
+```bash
+# Node 22+ first, then clone the three repos side by side (step 1)
+
+# 1. The API: leave it running
+cd spin-hobby-server && npm ci && cp .env.intern .env && npm run dev:local   # http://localhost:8080
+
+# 2. The website and admin: a second terminal
+cd spin-hobby && npm ci && npm run dev                                       # http://localhost:3000/admin
+#    sign in: owner@spinhobby.test / spinhobby
+
+# 3. The editor, only to work on Gleamshelf itself: a third terminal
+cd gleamshelf && npm ci && npm run dev                                       # http://localhost:5180
+```
+
+That is everything except the AI photo tools, which need models downloaded once and one more process: see
+[AI features](#ai-features-optional).
+
 ## Before you start
 
 - **Node.js 22 or newer**: `node --version` should say `v22` or higher.
@@ -77,19 +96,50 @@ npm run dev
 Open http://localhost:5180: the editor on its own, with sample photos, Edit mode and 3D mode. This is where editor work happens; check it
 with `npm run typecheck && npm test`.
 
-The AI photo tools (cut-out, sticker removal, enlarging, the listing writer) need free models, downloaded separately and only when you want
-them. Each command shows the size and licence and asks first:
+## AI features (optional)
+
+`npm run dev` never downloads or starts an AI model. Without them, everything else works: the shop, and in the editor the adjustments, Edit
+mode, 3D mode (importing 3D models too) and saving. The AI buttons (cut-out, sticker removal, enlarging, the one-click chain, listings) say
+the app is not running or which model is missing.
+
+To use them, in the `gleamshelf` folder:
+
+**1. Download the models, once.** They are free; each command shows the source, size and licence and asks before downloading. They are kept
+outside git.
 
 ```bash
-npm run models                      # what is installed
-npm run models:install              # the cut-out model (115 MB); gleamshelf/docs/ONBOARDING.md lists the rest
+npm run models                                   # what is installed
+npm run models:install                           # cut-out (115 MB)
+npm run models:install -- lama-fp32              # removes stickers and lettering (208 MB)
+npm run models:install -- ppocr-det-v4           # finds text (5 MB)
+npm run models:install -- ppocr-rec-v4           # reads text (11 MB)
+npm run models:install -- realplksr-x4           # enlarging (30 MB)
+npm run vlm:setup                                # the vision model that reads boxes (about 6 GB), only for listings
+npm run search:setup                             # SearXNG, our own free web search, only for listings
+npm run python:setup                             # only for SAM (cutting out just the figure) and Stable Diffusion
 ```
 
-Two ways to use them, both optional:
+Install only what you need; `gleamshelf/docs/ONBOARDING.md` explains each one.
 
-- `npm run local:start`: the local AI app the editor talks to (it prints a pairing token to paste into the editor once).
-- `npm run connect -- <address> --code <code>` then `npm run worker`: turns photos uploaded in the admin (**Imports → Make drafts from photos**)
-  into drafts. The admin's **Imports → Connect the app** shows the address and code.
+**2. Run one more process,** next to `npm run dev`:
+
+```bash
+npm run local:start
+```
+
+It loads the downloaded models itself, and starts the heavy parts (the vision model, the Python model server) only when a job needs them,
+stopping them again when idle; there is nothing else to start. It prints a pairing token: paste it into the editor once and the AI buttons
+work. The editor finds the app by itself at `http://127.0.0.1:47321`. Use Chrome, Edge or Firefox: Safari does not let a page talk to it.
+
+**For the shop's photo drafts** (the admin's **Imports → Make drafts from photos**), run the worker instead of `local:start`: in the admin,
+**Imports → Connect the app** shows an address and a code, then
+
+```bash
+npm run connect -- <address> --code <code>
+npm run worker
+```
+
+The worker turns uploaded photos into drafts and proposes descriptions, starting the models it needs the same way.
 
 ## The editor inside the admin
 
@@ -113,6 +163,8 @@ When editor changes should reach the admin:
 | spin-hobby | `npm run lint && npm run format:check && npx tsc --noEmit` | Before pushing |
 | gleamshelf | `npm run dev` | The editor on its own |
 | gleamshelf | `npm run typecheck && npm test` | Before pushing |
+| gleamshelf | `npm run local:start` | The AI tools for the editor (after the models are downloaded) |
+| gleamshelf | `npm run worker` | The AI tools for the admin's photo drafts |
 
 **`npm ci` or `npm install`?** Use `npm ci`: it installs exactly what `package-lock.json` says and never changes it, so everyone has the
 same versions. Use `npm install` only when you add or upgrade a package on purpose (and commit the lock file it changes).
@@ -124,6 +176,8 @@ same versions. Use `npm install` only when you add or upgrade a package on purpo
 
 - **"Port already in use"**: something is still running on 8080, 3000 or 5180. Stop the old terminal (Ctrl C), or close what holds the port.
 - **The website shows no products or cannot sign in**: the API is not running, or not yet ready. Start step 2 first and wait for its box.
+- **The editor's AI buttons say the app is not running**: start `npm run local:start` in `gleamshelf` and paste its pairing token. If it
+  says a model is missing, download that one (`npm run models` lists them).
 - **`npm ci` complains about the Node version**: install Node 22 or newer (`node --version`).
 - **Anything else**: the instructions are wrong, not you. Tell us, and fix this page in your first pull request.
 
