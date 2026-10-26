@@ -28,8 +28,10 @@ src/components/
   overlays/         Drawer, Dialog, ConfirmDialog, Menu
   feedback/         Banner, EmptyState, Skeleton, Spinner, ProgressBar, StatusBadge
   display/          Avatar, Tag
+  shop/             ProductCard (vertical / horizontal), PreorderCard, ProductRow, MiniRow, CardAction, PriceTag  (ProductCards.tsx)
   styles/           tokens.scss (the shop's colours, fonts, base controls), components.scss (these pieces),
-                    motion.scss (Collapse, ScrollRow, content swaps, scroll fades; light enough for the shop to load)
+                    motion.scss (Collapse, ScrollRow, content swaps, scroll fades; light enough for the shop to load),
+                    shop.scss (the horizontal card and CardAction; the other cards' styles are in v3/storefront/storefront.scss)
   showcase/         the /ui-kit page
 ```
 
@@ -77,6 +79,47 @@ src/components/
 | `useEnterAnimation` | A short fade-and-rise each time a key changes (a new page or section); put it on the part that changes | `rise` in pixels |
 | `useContentSwap` | Replacing a list with another (a tab's products): the old fades out, the new rises in one by one; a placeholder if it's slow. Pair with the `ui-leaving` and `ui-stagger` classes | `slowAfter`, `giveUpAfter` (ms) |
 | `useScrollFade` | A scrolling box without a scrollbar: its edges fade while there's more that way. Pair with the `ui-scroll-fade` class | |
+
+## Shop pieces: product cards
+
+The shop's own cards, for any page that shows products (the homepage, a category, search, the wishlist, an account page). Unlike
+the pieces above, they take a real `Product` and the shop's `CardActions` (add to cart, wishlist, open the product), so they behave
+the same everywhere. See them live on `/ui-kit` → **Shop cards**, and the spec (sizes, behaviour, a wishlist example) in Figma:
+https://www.figma.com/design/ktDoGrb7ngNJb7U1mbJucY
+
+| Piece | What it is | Options worth knowing |
+| --- | --- | --- |
+| `ProductCard` | The main product card. `layout="vertical"` (default): photo on top, for grids. `layout="horizontal"`: photo on the left, price on the right, buttons along the bottom, for lists | horizontal only: `meta` (a line under the status), `actions` (more buttons, made with `CardAction`), `onRemove` (a bin instead of the heart) |
+| `CardAction` | A quiet pill button for a horizontal card's `actions` ("Add a note", "Move"), or a round icon button | `icon` + `label` (required with `icon`), `pressed` |
+| `PreorderCard` | The slim card in the homepage's New pre-orders row | |
+| `ProductRow` | One line in the shop's list view | |
+| `MiniRow` | A small line with a thumbnail (weekly ranking, just arrived) | `rank`, `quickAdd` |
+| `PriceTag` | A price with its currency ("$55.00 CAD", "≈ $40.15 USD") | `cents`, `currency` |
+
+**Recipe: a wishlist page.** One horizontal card per saved product; the page decides the extra line and buttons:
+
+```tsx
+import { CardAction, ProductCard } from "../../components/shop/ProductCards";
+
+{items.map((p) => (
+  <ProductCard
+    key={p.id}
+    p={p}
+    a={actions} // the shop's CardActions (the storefront builds one; see Storefront.tsx)
+    layout="horizontal"
+    meta={`Added ${dayLabel(p.addedAt)}`}
+    actions={
+      <>
+        <CardAction onClick={() => openNote(p)}>Add a note</CardAction>
+        <CardAction icon label={`Share ${p.name}`} onClick={() => share(p)}>↗</CardAction>
+      </>
+    }
+    onRemove={(p) => removeFromWishlist(p)}
+  />
+))}
+```
+
+Stack them with a 12 px gap (`display: flex; flex-direction: column; gap: 12px`). On a phone the card rearranges itself.
 
 Open each file for the details: every component explains its props at the top.
 
