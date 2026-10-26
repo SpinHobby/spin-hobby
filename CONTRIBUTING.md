@@ -74,8 +74,67 @@ this folder itself so `.vscode/` applies), so formatting only ever touches what 
 - **No new colours or sizes in a page:** use the tokens (`var(--primary)`, `var(--surface)`…).
 - **One primary button per screen;** `danger` for anything that deletes or refunds; every list says something when empty.
 - **Check phones (about 390 px wide) and dark mode** before asking for review.
-- **Features not ready for customers** go behind a flag in `src/features.ts` (on locally and on staging, off on the
-  live site).
+- **Features not ready for customers** go behind a feature flag: see [Feature flags](#feature-flags) below.
+
+## Feature flags
+
+A feature flag lets unfinished work be merged and tried on staging while the live site doesn't show it yet. The flags are
+one file, `src/features.ts`: one line per feature, saying where it is on.
+
+| Where | What it is |
+| --- | --- |
+| `local` | `npm run dev` on your own computer |
+| `staging` | https://spin-hobby-staging.netlify.app (test data, sandbox payments) |
+| `production` | spinhobby.com, the live site |
+
+**Use one when** a page or a piece of one isn't ready for customers but should be merged (so it doesn't drift away from
+`staging`) and tried by the team. **Don't use one** for settings (prices, shipping, the shop playlist: those belong in Admin
+→ Settings), for secrets, or to keep something private (see step 4).
+
+### Adding a flag
+
+1. **Add one line to `FEATURES`** in `src/features.ts`, with a comment saying what it hides and what it's waiting for. A new
+   feature is usually on locally and on staging, off on the live site:
+
+   ```ts
+   const FEATURES = {
+     // ...the existing flags
+     /** /gift-cards and the "Gift cards" link in the footer: waiting for the payment provider to support them. */
+     giftCards: { local: true, staging: true, production: false },
+   } satisfies Record<string, Record<Environment, boolean>>;
+   ```
+
+2. **Check it everywhere the feature shows up** with `isOn("giftCards")`. TypeScript only accepts names that are in the
+   file, so a typo won't compile.
+
+   ```tsx
+   import { isOn } from "./features"; // the path from your file to src/features.ts
+
+   // the route, in App.tsx
+   {isOn("giftCards") && <Route path="/gift-cards" element={<GiftCards />} />}
+
+   // and every link, button or menu item that leads to it
+   {isOn("giftCards") && <a href="/gift-cards">Gift cards</a>}
+   ```
+
+   Hiding the route but not the links leaves a dead link on the live site, so search for the path
+   (`git grep -n "/gift-cards"`) and wrap every place.
+
+3. **Don't check the environment yourself** (`import.meta.env.PROD`, `import.meta.env.DEV`, the hostname): staging is a
+   production build too, so those checks can't tell staging from the live site, and a typo in them (`PRO` for `PROD`)
+   compiles silently. `isOn` is the one place that knows.
+
+4. **A flag only hides things in the browser.** Anyone can read the website's code and call the API directly. If the
+   feature must not work on the live site (it changes data, costs money, shows private information), the API has to
+   refuse it too: the server keeps its own settings in `src/config` (see the server repo's `CONTRIBUTING.md`).
+
+### Turning it on, and removing it
+
+- **Turning a flag on or off** somewhere is a change to its line, made in a pull request like any other change. Turning it on
+  for `production` is the owner's decision.
+- **When the feature is live for good, remove the flag:** delete its line and every `isOn("…")` check (keep what was inside
+  them). Old flags pile up into code nobody dares touch. A flag's comment saying what it's waiting for makes this easy to
+  spot.
 
 ## Never
 

@@ -3,6 +3,9 @@
 The shop at [spinhobby.com](https://spinhobby.com): the storefront, checkout, and the staff admin (`/admin`). React, TypeScript and Vite, styled with
 SCSS. The API it talks to is the separate `spin-hobby-server` repo.
 
+**New here? Read [START-HERE.md](START-HERE.md) first:** setup, finding your way around, building a page, feature flags
+and making a pull request, in that order.
+
 ## Run it on your computer
 
 Setting up from scratch, with the API and the editor too: [SETUP.md](SETUP.md) covers all three repos.
