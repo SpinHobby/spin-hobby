@@ -268,29 +268,78 @@ export function useCart() {
 
 // ---------------------------------------------------------------- wishlist
 /** Local wishlist for guests; mirrored to /wishlist when signed in. */
-export function useWishlist(signedIn: boolean, onError: (message: string) => void) {
-  const [ids, setIds] = useLocalState<string[]>("spinhobby-wishlist-v3", []);
+/** Hearts saved by a guest, in this browser. (The name is kept so guests' existing hearts carry over.) */
+const GUEST_WISHLIST_KEY = "spinhobby-wishlist-v3";
+
+/**
+ * The shopper's wishlist (the ♡ on products).
+ *
+ * - **Guests**: kept in this browser, since there is no account to save it to.
+ * - **Signed in**: the account's list on the server is the one truth. A heart shows at once and the server is told; if the
+ *   server refuses, the heart goes back and the shopper is told why.
+ * - **Signing in** moves the guest's hearts into the account, then forgets the browser copy, so they show on every device.
+ * - **Signing out** clears what's shown and the browser copy, so the next person on a shared computer doesn't see them (the
+ *   account keeps them for next time).
+ */
+export function useWishlist(userId: string | null, onError: (message: string) => void) {
+  const [guest, setGuest] = useLocalState<string[]>(GUEST_WISHLIST_KEY, []);
+  const [account, setAccount] = useState<string[]>([]);
+  const guestNow = useRef(guest);
+  guestNow.current = guest;
+  const previousUser = useRef<string | null>(userId);
 
   useEffect(() => {
-    if (!signedIn) return;
-    api<{ items: Product[] }>("/wishlist")
-      .then((res) => setIds((local) => Array.from(new Set([...res.items.map((p) => p.id), ...local]))))
-      .catch(() => {
-        /* keep the local list */
-      });
-  }, [signedIn, setIds]);
+    const before = previousUser.current;
+    previousUser.current = userId;
+    if (!userId) {
+      setAccount([]);
+      if (before) setGuest([]); // just signed out
+      return;
+    }
+    let live = true;
+    (async () => {
+      const saved = (await api<{ items: Product[] }>("/wishlist")).items.map((p) => p.id);
+      // hearts made before signing in that the account doesn't have yet (a product that's gone is skipped)
+      const toMove = guestNow.current.filter((id) => !saved.includes(id));
+      const moved = await Promise.all(
+        toMove.map((id) =>
+          api("/wishlist", { method: "POST", body: JSON.stringify({ squareItemId: id }) })
+            .then(() => id)
+            .catch(() => null),
+        ),
+      );
+      if (!live) return;
+      setAccount([...moved.filter((id): id is string => id !== null), ...saved]);
+      setGuest([]);
+    })().catch(() => {
+      if (live) onError("Your wishlist couldn't be loaded. Try again in a moment.");
+    });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the account changes; the guest list is read at that moment
+  }, [userId]);
 
+  const ids = userId ? account : guest;
   const toggle = useCallback(
     (p: Product) => {
       const on = ids.includes(p.id);
-      setIds((current) => (on ? current.filter((id) => id !== p.id) : [...current, p.id]));
-      if (!signedIn) return;
+      const change = (list: string[]) => (on ? list.filter((id) => id !== p.id) : [p.id, ...list]);
+      if (!userId) {
+        setGuest(change);
+        return;
+      }
+      setAccount(change);
       const request = on
         ? api(`/wishlist/${encodeURIComponent(p.id)}`, { method: "DELETE" })
         : api("/wishlist", { method: "POST", body: JSON.stringify({ squareItemId: p.id }) });
-      request.catch((e: Error) => onError(e.message));
+      request.catch((e: Error) => {
+        // the server said no: show the heart as it really is
+        setAccount((list) => (on ? [p.id, ...list.filter((id) => id !== p.id)] : list.filter((id) => id !== p.id)));
+        onError(e.message);
+      });
     },
-    [ids, setIds, signedIn, onError],
+    [ids, userId, setGuest, onError],
   );
 
   const set = useMemo(() => new Set(ids), [ids]);

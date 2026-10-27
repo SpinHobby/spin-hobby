@@ -64,7 +64,7 @@ export default function Storefront() {
   const auth = useAuth();
   const store = useStorefront();
   const cart = useCart();
-  const wishlist = useWishlist(!!auth.session, flash);
+  const wishlist = useWishlist(auth.user?.id ?? null, flash);
   const [currency, setCurrency] = useLocalState<Currency>("spinhobby-currency", "CAD");
   const config = useStoreConfig(); // applies admin shipping / handling / FX settings to all copy
 
