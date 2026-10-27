@@ -10,6 +10,8 @@ import {
   type PointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { useStoreConfig } from "../storeConfig";
 import { Collapse } from "../../components/layout/Collapse";
 
 /**
@@ -336,11 +338,54 @@ function onScreen(p: { x: number; y: number }, el: HTMLElement | null) {
   };
 }
 
-export function ShopPlaylistPlayer({ playlistId }: { playlistId: string }) {
+/** The one container the player lives in: made once, straight in <body>, so changing pages never removes it. `sh` gives it the
+ *  shop's colours and fonts (light and dark), whatever page is showing. */
+let musicRoot: HTMLElement | null = null;
+function getMusicRoot() {
+  if (!musicRoot) {
+    musicRoot = document.createElement("div");
+    musicRoot.className = "sh sf-music-root";
+    document.body.appendChild(musicRoot);
+  }
+  return musicRoot;
+}
+
+/**
+ * The player, for the whole app: put it once in App.tsx, outside the routes. It reads the playlist from the shop's settings and
+ * keeps playing while the shopper moves between pages (the shop, /account, /support...). While it's open, clicks on links to
+ * other pages of the site switch pages in place instead of reloading (a reload would stop the music); ctrl/cmd-click, links that
+ * open a new tab and links to files behave as usual.
+ */
+export function ShopMusicHost() {
   const m = useMusic();
-  // inside the shop's root (.sh.sf), not straight in <body>: the shop's colours and base styles are defined there
-  const root = typeof document === "undefined" ? null : (document.querySelector<HTMLElement>(".sh.sf") ?? document.body);
-  return m.open && root ? createPortal(<PlayerCard playlistId={playlistId} />, root) : null;
+  const config = useStoreConfig();
+  const navigate = useNavigate();
+  const playlistId = config?.musicPlaylistId ?? null;
+
+  useEffect(() => {
+    if (!m.open) return;
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]");
+      if (!(a instanceof HTMLAnchorElement)) return;
+      if ((a.target && a.target !== "_self") || a.hasAttribute("download")) return;
+      const url = new URL(a.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (/\.[a-z0-9]+$/i.test(url.pathname)) return; // a file (sitemap.xml, a photo), not a page
+      if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return; // same page
+      e.preventDefault();
+      navigate(url.pathname + url.search + url.hash);
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [m.open, navigate]);
+
+  // the shop's owner switched the playlist off: close the player
+  useEffect(() => {
+    if (config && !playlistId && state.open) controls.close();
+  }, [config, playlistId]);
+
+  return m.open && playlistId ? createPortal(<PlayerCard playlistId={playlistId} />, getMusicRoot()) : null;
 }
 
 function PlayerCard({ playlistId }: { playlistId: string }) {

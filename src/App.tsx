@@ -6,6 +6,7 @@ import { loadStoreConfig, type StoreConfig } from "./v3/storeConfig";
 import SiteLayout from "./v3/SiteLayout";
 import { isRecoveryLink } from "./lib/api";
 import { isOn } from "./features";
+import { ShopMusicHost } from "./v3/storefront/ShopPlaylist";
 
 // The admin bundle is only downloaded by staff visiting /admin.
 const Admin = lazy(() => import("./v3/admin/Admin"));
@@ -46,12 +47,22 @@ export default function App() {
             }
           />
         )}
+        {/* The account page brings its own chrome (PanelLayout: side tabs and top bar), like the admin. */}
+        {isOn("account") && (
+          <Route
+            path="/account"
+            element={
+              <Suspense fallback={null}>
+                <Account />
+              </Suspense>
+            }
+          />
+        )}
         {/* Plain content pages share one header + footer; everything else brings its own chrome. */}
         <Route element={<SiteLayout />}>
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
           <Route path="/events" element={<Events />} />
-          {isOn("account") && <Route path="/account" element={<Account />} />}
         </Route>
         <Route
           path="/reset-password"
@@ -65,6 +76,8 @@ export default function App() {
         <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
         <Route path="/*" element={<GatedApp />} />
       </Routes>
+      {/* the shop playlist, outside the routes so it keeps playing from page to page */}
+      <ShopMusicHost />
     </BrowserRouter>
   );
 }
