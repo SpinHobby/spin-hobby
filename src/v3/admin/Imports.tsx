@@ -39,6 +39,10 @@ interface Draft {
     unsupported?: string[];
     sources?: string[];
     lookup?: { state: string; read: string | null; detail: string } | null;
+    /** How sure Gleamshelf's cut-out is (0-1) and how much of the product is still as photographed (0-1). */
+    quality?: { cutout: number; cutoutReasons: string[]; original: number } | null;
+    /** Gleamshelf's listing health: a score out of 100 and the top fixes. */
+    health?: { score: number; level: "good" | "fair" | "poor"; fixes: string[] } | null;
   };
 }
 interface ProductMatch {
@@ -234,8 +238,41 @@ function Evidence({ d }: { d: Draft }) {
   const lookup = d.details.lookup;
   const flags = d.details.flags ?? [];
   const sources = d.details.sources ?? [];
+  const quality = d.details.quality;
+  const health = d.details.health;
   return (
     <div className="ad-imports__evidence">
+      {(health || quality) && (
+        <div className={`ad-imports__health is-${health?.level ?? "fair"}`}>
+          {health && (
+            <span className="ad-imports__score" title="Listing health from Gleamshelf: title, description, category, picture and checks">
+              {health.score}
+            </span>
+          )}
+          <span>
+            {health && <b>{health.level === "good" ? "Ready to list" : health.level === "fair" ? "A few things to fix" : "Needs work"}</b>}
+            {quality && (
+              <span className="ad-muted ad-sm">
+                {health ? " · " : ""}
+                <span title={quality.cutoutReasons.join("; ") || "Nothing doubtful seen"}>
+                  cut-out {Math.round(quality.cutout * 100)}% sure
+                </span>
+                {" · "}
+                <span title="Share of the product that is still the photo's own detail; colour and light changes do not count">
+                  {Math.round(quality.original * 100)}% as photographed
+                </span>
+              </span>
+            )}
+          </span>
+          {health && health.fixes.length > 0 && (
+            <ol className="ad-sm">
+              {health.fixes.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
       {lookup && (
         <div className={`ad-imports__found is-${lookup.state}`}>
           <b>{lookup.state === "found" ? "✓ Product found online" : lookup.state === "off" ? "Web lookup off" : "✗ Not found online"}</b>
