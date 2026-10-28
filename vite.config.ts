@@ -15,6 +15,11 @@ export default defineConfig({
       "@": resolve(__dirname, "./src"),
     },
   },
+  // The editor package (vendor/gleamshelf-react-*.tgz) finds its WebAssembly files next to its own code with new URL(..., import.meta.url);
+  // pre-bundling would move that code into Vite's cache folder, where those files aren't.
+  optimizeDeps: {
+    exclude: ["@gleamshelf/react"],
+  },
   css: {
     preprocessorOptions: {
       scss: {

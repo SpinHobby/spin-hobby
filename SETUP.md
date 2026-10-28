@@ -148,11 +148,15 @@ The admin does not use the gleamshelf repo directly. It installs a packed copy k
 
 When editor changes should reach the admin:
 
-1. In `gleamshelf`, raise the version in `packages/react/package.json` (for example `0.3.0` to `0.4.0`).
+1. In `gleamshelf`, raise the version in `packages/react/package.json` (for example `0.4.0` to `0.5.0`).
 2. Pack it straight into this repo: `node scripts/pack-react.mjs ../spin-hobby/vendor`.
 3. Here: delete the old `.tgz` from `vendor/`, point `"@gleamshelf/react"` in `package.json` at the new file, run `npm install` (it updates
    `package-lock.json`), then `npm run build` to check.
 4. Commit the new `.tgz`, `package.json` and `package-lock.json` together.
+
+Always raise the version when packing again: npm keeps the first copy of a version it installed, so a second pack under the same version
+never reaches `node_modules`. Photo lab's engines are a `.wasm` file inside the package that it finds next to its own code, which is why
+`vite.config.ts` keeps `@gleamshelf/react` out of `optimizeDeps` (don't remove that line).
 
 ## Everyday commands
 
