@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { buildTree, indentLabel } from "../categoryTree";
 import type { ShopCategory } from "../types";
@@ -99,19 +99,37 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   const series = useSeriesList();
   const backgrounds = useBackgrounds();
 
-  const load = useCallback(async () => {
-    try {
-      const r = await api<{ imports: Draft[]; counts: Record<Status, number> }>(`/admin/imports?status=${status}`);
-      setDrafts(r.imports);
-      setCounts(r.counts);
-    } catch (e) {
-      ctx.flash(errMsg(e));
-    } finally {
-      setLoaded(true);
-    }
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const load = useCallback(
+    async (quiet = false) => {
+      try {
+        const r = await api<{ imports: Draft[]; counts: Record<Status, number> }>(`/admin/imports?status=${status}`);
+        setDrafts(r.imports);
+        setCounts(r.counts);
+      } catch (e) {
+        if (!quiet) ctx.flash(errMsg(e));
+      } finally {
+        setLoaded(true);
+      }
+    },
+    [status], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   useEffect(() => {
     void load();
+  }, [load]);
+  // Drafts the app sends while this page is open show up by themselves: looked for every 10 seconds while the page is in view, and at once on
+  // coming back to it. A card keeps what was typed into it (its key only changes when the app sends that photo again).
+  useEffect(() => {
+    const look = () => {
+      if (document.visibilityState === "visible") void load(true);
+    };
+    const timer = window.setInterval(look, 10_000);
+    document.addEventListener("visibilitychange", look);
+    window.addEventListener("focus", look);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", look);
+      window.removeEventListener("focus", look);
+    };
   }, [load]);
 
   return (
@@ -629,6 +647,14 @@ function DoneCard({ draft }: { draft: Draft }) {
         <div className="ad-muted ad-sm">
           {draft.status === "added" ? "Added to the shop" : `Rejected${draft.rejectReason ? `: ${draft.rejectReason}` : ""}`} ·{" "}
           {new Date(draft.createdAt).toLocaleDateString()}
+          {draft.status === "added" && draft.productId && (
+            <>
+              {" · "}
+              <a href={`/product/${encodeURIComponent(draft.productId)}`} target="_blank" rel="noreferrer">
+                View in the store ↗
+              </a>
+            </>
+          )}
         </div>
       </div>
     </section>
@@ -648,6 +674,25 @@ function ConnectPanel({ ctx }: { ctx: Ctx }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  // while a code is shown, the app using it is looked for every 3 seconds: once it has connected, the code (now used up) gives way to the app's name
+  const known = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!code) return;
+    known.current = new Set(apps.map((a) => a.id));
+    const timer = window.setInterval(async () => {
+      const r = await api<{ connections: Connection[] }>("/admin/imports/connections").catch(() => null);
+      if (!r) return;
+      const live = r.connections.filter((c) => !c.revoked);
+      setApps(live);
+      const fresh = live.find((c) => !known.current?.has(c.id));
+      if (fresh) {
+        setCode(null);
+        ctx.flash(`Connected: ${fresh.label}. Drafts it sends appear below.`);
+      }
+      if (Date.parse(code.expiresAt) < Date.now()) setCode(null);
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
   const show = async () => {
     try {
       setCode(await api<{ code: string; expiresAt: string; server: string }>("/admin/imports/pairing", { method: "POST" }));
