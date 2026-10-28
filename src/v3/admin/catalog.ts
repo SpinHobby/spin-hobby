@@ -241,6 +241,9 @@ export function densityFor(width: number): Density {
 }
 
 const PREFS_KEY = "spinhobby-admin-products";
+/** The Products list's "Per page" choices (the API allows up to 500). */
+export const PAGE_SIZES = [25, 50, 100, 500];
+
 export interface ProductPrefs {
   sort: Sort;
   pageSize: number;
@@ -250,7 +253,7 @@ export function loadPrefs(): ProductPrefs {
   try {
     const raw = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
     const okSort = raw?.sort && SORT_OPTIONS.some((o) => o.value === `${raw.sort.key}:${raw.sort.dir}`);
-    return { sort: okSort ? raw.sort : DEFAULT_SORT, pageSize: [25, 50, 100].includes(raw?.pageSize) ? raw.pageSize : 50 };
+    return { sort: okSort ? raw.sort : DEFAULT_SORT, pageSize: PAGE_SIZES.includes(raw?.pageSize) ? raw.pageSize : 50 };
   } catch {
     return { sort: DEFAULT_SORT, pageSize: 50 };
   }

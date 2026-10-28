@@ -16,6 +16,7 @@ import {
   filterQuery,
   filtersFromShortcut,
   loadPrefs,
+  PAGE_SIZES,
   savePrefs,
   STATE_META,
   useCatalog,
@@ -238,7 +239,6 @@ async function patchProduct(ctx: Ctx, id: string, body: Record<string, unknown>)
   await api(`/admin/products/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
 }
 
-const PAGE_SIZES = [25, 50, 100];
 const ago = (iso: string) => {
   const a = relativeAge(iso);
   return a === "just now" ? a : `${a} ago`;
