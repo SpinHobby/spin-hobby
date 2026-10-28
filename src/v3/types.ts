@@ -25,7 +25,12 @@ export interface Product {
   orderByDate: string | null;
   rank: number | null;
   maxPerCustomer: number | null;
+  /** Added: Square's date when Square knows the product, else when it reached our database (the admin list shows this one). */
   createdAt?: string | null;
+  /** Admin list: the day the product was added in Square (null for a product entered here and not moved to Square yet). */
+  squareCreatedAt?: string | null;
+  /** Admin list: when the product reached our database (its first sync, or the day it was entered here). */
+  addedHereAt?: string | null;
   // Admin-only enrichments (present on /admin/products).
   janCode?: string | null;
   /** The entry in the series list this product belongs to (admin catalog list). */

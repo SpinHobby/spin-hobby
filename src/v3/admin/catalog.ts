@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { api } from "../../lib/api";
+import { dateLabel } from "../format";
 import type { AdminState, Product } from "../types";
 
 // ---------------------------------------------------------------- states
@@ -39,6 +40,10 @@ export interface CatalogFilters {
   max: string;
   /** "" any time, or a number of hours: only products added or changed that recently. */
   changedWithin: "" | "24" | "168";
+  /** Added between these days (YYYY-MM-DD, both included; either may be ""), by Square's date or our database's. */
+  addedFrom: string;
+  addedTo: string;
+  addedBy: "square" | "here";
 }
 
 export const EMPTY_FILTERS: CatalogFilters = {
@@ -53,12 +58,16 @@ export const EMPTY_FILTERS: CatalogFilters = {
   min: "",
   max: "",
   changedWithin: "",
+  addedFrom: "",
+  addedTo: "",
+  addedBy: "square",
 };
 
 /** How many featured products the homepage shows (the same number the API uses). */
 export const FRONT_PAGE_SLOTS = 8;
 
-export type SortKey = "name" | "price" | "stock" | "category" | "status" | "updated" | "created" | "release" | "alerts" | "front";
+export type SortKey =
+  "name" | "price" | "stock" | "category" | "status" | "updated" | "created" | "added_here" | "release" | "alerts" | "front";
 export type SortDir = "asc" | "desc";
 export interface Sort {
   key: SortKey;
@@ -67,7 +76,8 @@ export interface Sort {
 export const DEFAULT_SORT: Sort = { key: "created", dir: "desc" };
 
 const SORT_LABELS: Record<SortKey, [asc: string, desc: string]> = {
-  created: ["Oldest added", "Newest added"],
+  created: ["Oldest added (Square's date)", "Newest added (Square's date)"],
+  added_here: ["Oldest added to our database", "Newest added to our database"],
   updated: ["Least recently updated", "Recently updated"],
   name: ["Name A–Z", "Name Z–A"],
   price: ["Price: low to high", "Price: high to low"],
@@ -102,6 +112,7 @@ export function activeFilterCount(f: CatalogFilters) {
     f.noPhoto,
     f.min.trim() || f.max.trim(),
     f.changedWithin,
+    f.addedFrom || f.addedTo,
   ].filter(Boolean).length;
 }
 
@@ -119,6 +130,18 @@ export function filtersFromShortcut(name: string): CatalogFilters | null {
     default:
       return null;
   }
+}
+
+/**
+ * A product's added date, saying whose it is: Square's when Square knows the product, else the day it reached our database.
+ * `title` gives both, for a tooltip.
+ */
+export function addedLabel(p: Pick<Product, "createdAt" | "squareCreatedAt" | "addedHereAt">) {
+  const when = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString() : "not known");
+  const title = `Added in Square: ${p.squareCreatedAt ? when(p.squareCreatedAt) : "not in Square yet"}\nAdded to our database: ${when(p.addedHereAt ?? p.createdAt)}`;
+  if (p.squareCreatedAt) return { text: `Added in Square ${dateLabel(p.squareCreatedAt)}`, short: dateLabel(p.squareCreatedAt), title };
+  if (p.createdAt) return { text: `Added here ${dateLabel(p.createdAt)}`, short: `${dateLabel(p.createdAt)} (here)`, title };
+  return null;
 }
 
 // ---------------------------------------------------------------- fetching
@@ -161,6 +184,11 @@ export function filterQuery(f: CatalogFilters, sort: Sort) {
   if (f.min.trim()) p.set("min", f.min.trim());
   if (f.max.trim()) p.set("max", f.max.trim());
   if (f.changedWithin) p.set("changedWithin", f.changedWithin);
+  if (f.addedFrom || f.addedTo) {
+    if (f.addedFrom) p.set("addedFrom", f.addedFrom);
+    if (f.addedTo) p.set("addedTo", f.addedTo);
+    p.set("addedBy", f.addedBy);
+  }
   return p.toString();
 }
 

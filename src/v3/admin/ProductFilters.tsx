@@ -12,6 +12,7 @@ import {
   type CatalogFilters,
   type Sort,
 } from "./catalog";
+import { dateLabel } from "../format";
 import type { AdminState } from "../types";
 import { useSeriesList } from "./seriesList";
 
@@ -29,7 +30,16 @@ interface Props {
 
 /** How many of the folded-away filters are on (the search box and status chips are always visible). */
 const hiddenFilterCount = (f: CatalogFilters) =>
-  [f.source, f.categoryId, f.seriesId, f.featured, f.alerts, f.min.trim() || f.max.trim(), f.changedWithin].filter(Boolean).length;
+  [
+    f.source,
+    f.categoryId,
+    f.seriesId,
+    f.featured,
+    f.alerts,
+    f.min.trim() || f.max.trim(),
+    f.changedWithin,
+    f.addedFrom || f.addedTo,
+  ].filter(Boolean).length;
 
 const CHANGED_OPTIONS: [CatalogFilters["changedWithin"], string][] = [
   ["", "Added or changed: any time"],
@@ -84,6 +94,17 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
   }
   if (filters.changedWithin)
     tags.push({ key: "changed", label: filters.changedWithin === "24" ? "Last 24 hours" : "Last 7 days", clear: { changedWithin: "" } });
+  if (filters.addedFrom || filters.addedTo) {
+    const by = filters.addedBy === "here" ? " (our database)" : "";
+    // a bare day read at noon, so no time zone moves it to the day before
+    const from = filters.addedFrom && dateLabel(`${filters.addedFrom}T12:00`);
+    const to = filters.addedTo && dateLabel(`${filters.addedTo}T12:00`);
+    tags.push({
+      key: "added",
+      label: `Added ${from && to ? `${from} – ${to}` : from ? `since ${from}` : `until ${to}`}${by}`,
+      clear: { addedFrom: "", addedTo: "" },
+    });
+  }
   if (filters.featured) tags.push({ key: "feat", label: "Featured", clear: { featured: false } });
   if (filters.alerts) tags.push({ key: "alerts", label: "Restock alerts", clear: { alerts: false } });
 
@@ -162,6 +183,38 @@ export function ProductFilters({ filters, onFilters, sort, onSort, counts, tree,
           aria-label="Maximum price"
           onChange={(e) => onFilters({ max: e.target.value.replace(/[^\d.]/g, "") })}
         />
+      </span>
+      <span
+        className="ad-date-filter"
+        title="Square's date is the day it was added in Square; a product entered here and not in Square yet uses the day it was entered."
+      >
+        <span className="ad-muted ad-sm">Added</span>
+        <input
+          type="date"
+          className="sh-input"
+          value={filters.addedFrom}
+          max={filters.addedTo || undefined}
+          aria-label="Added on or after"
+          onChange={(e) => onFilters({ addedFrom: e.target.value })}
+        />
+        <span className="ad-muted">–</span>
+        <input
+          type="date"
+          className="sh-input"
+          value={filters.addedTo}
+          min={filters.addedFrom || undefined}
+          aria-label="Added on or before"
+          onChange={(e) => onFilters({ addedTo: e.target.value })}
+        />
+        <select
+          className="sh-input"
+          value={filters.addedBy}
+          aria-label="Which added date"
+          onChange={(e) => onFilters({ addedBy: e.target.value as CatalogFilters["addedBy"] })}
+        >
+          <option value="square">Square's date</option>
+          <option value="here">Our database</option>
+        </select>
       </span>
       <div className="ad-checks">
         <label className="ad-check">
