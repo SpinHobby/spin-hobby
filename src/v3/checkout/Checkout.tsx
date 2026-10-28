@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./checkout.scss";
 import { api } from "../../lib/api";
@@ -8,7 +8,7 @@ import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { loadStoreConfig } from "../storeConfig";
-import { useCart } from "../storefront/data";
+import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { photo } from "../photo";
@@ -77,7 +77,11 @@ export default function Checkout() {
   const location = useLocation();
   useDocumentHead({ title: "Checkout | Spin Hobby", description: "Checkout", path: location.pathname, noindex: true });
   const auth = useAuth();
-  const cart = useCart();
+  // "Buy now" (/checkout/now) checks out its one item instead of the cart, and the cart is left as it is.
+  const buyingNow = location.pathname.startsWith(BUY_NOW_PATH);
+  const fullCart = useCart();
+  const single = useBuyNow();
+  const cart = buyingNow ? single : fullCart;
   const [email, setEmail] = useLocalState("spinhobby-checkout-email", "");
   const [ship, setShip] = useLocalState<Address>("spinhobby-checkout-address", EMPTY_ADDRESS);
   const [method, setMethod] = useState<"standard" | "express">("standard");
@@ -311,6 +315,8 @@ export default function Checkout() {
   const subtotal = quote?.subtotalCents ?? cart.subtotal;
   const totalLabel = quote ? price(quote.totalCents) : "—";
 
+  // Nothing left to buy now (paid already, or opened later): the cart's checkout instead.
+  if (buyingNow && cart.lines.length === 0) return <Navigate to="/checkout" replace />;
   if (cart.lines.length === 0) {
     return (
       <div className="sh co">
@@ -551,6 +557,18 @@ export default function Checkout() {
                   {itemCount} item{itemCount === 1 ? "" : "s"}
                 </span>
               </div>
+              {buyingNow && (
+                <p className="co-note co-buynow">
+                  Buying just this item. Your cart is kept for later
+                  {fullCart.count > 0 && (
+                    <>
+                      {" "}
+                      (<a href="/checkout">check out the cart instead</a>)
+                    </>
+                  )}
+                  .
+                </p>
+              )}
               <div className="co-lines">
                 {cart.lines.map((l) => {
                   // Quantities come straight from the cart so the steppers respond at once; prices from the server's quote once it lands.
