@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./support.scss";
-import { handlingLabel, price } from "../format";
+import { handlingLabel, price, storeFormat } from "../format";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE, SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
@@ -154,8 +154,9 @@ export default function Support() {
           <details id="payment">
             <summary>Is paying on the site safe?</summary>
             <p>
-              Payments are handled by Square and PayPal. Your card details go straight to them and are never stored on our servers. More in
-              our <Link to="/legal/privacy">Privacy Policy</Link>.
+              Payments are handled by {storeFormat.paypal ? "Square and PayPal" : "Square"}. Your card details go straight to{" "}
+              {storeFormat.paypal ? "them" : "Square"} and are never stored on our servers. More in our{" "}
+              <Link to="/legal/privacy">Privacy Policy</Link>.
             </p>
           </details>
         </div>

@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./storefront.scss";
-import { handlingLabel, price, normalizeStatus, type Currency } from "../format";
+import { handlingLabel, paymentLabel, price, normalizeStatus, type Currency } from "../format";
 import { EVENTS } from "../events/data";
 import { eventDateShort, isPastEvent } from "../events/dates";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
@@ -996,7 +996,7 @@ function TrustStrip() {
     { icon: "✦", title: "100% authentic", text: "Officially licensed goods only" },
     { icon: "🚚", title: `Free shipping over ${freeShippingLabel()}`, text: "Tracked, Canada & US" },
     { icon: "📦", title: `Ships in ${handlingLabel()}`, text: "Packed with care for collectors" },
-    { icon: "🔒", title: "Secure checkout", text: "Card or PayPal" },
+    { icon: "🔒", title: "Secure checkout", text: `Pay by ${paymentLabel()}` },
   ];
   return (
     <ul className="sf-trust" aria-label="Why shop with us">
