@@ -1607,6 +1607,12 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
             <span className="ad-strong">{money(it.unit_price_cents * it.quantity)}</span>
           </div>
         ))}
+        {!!o.discount_cents && (
+          <div className="ad-between ad-text2" style={{ paddingTop: 10, fontSize: 13.5 }}>
+            <span>Discount{o.discount_code ? ` (${o.discount_code})` : ""}</span>
+            <span>−{money(o.discount_cents)}</span>
+          </div>
+        )}
         <div className="ad-between ad-text2" style={{ paddingTop: 10, fontSize: 13.5 }}>
           <span>Shipping ({o.shipping_method === "express" ? "Express" : "Standard"})</span>
           <span>{o.shipping_cents ? money(o.shipping_cents) : "Free"}</span>
