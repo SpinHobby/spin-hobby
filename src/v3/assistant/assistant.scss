@@ -248,3 +248,8 @@
   color: var(--muted);
   font-size: 11px;
 }
+
+.sa-note a {
+  color: inherit;
+  text-decoration: underline;
+}
