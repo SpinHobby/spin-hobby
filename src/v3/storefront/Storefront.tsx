@@ -21,6 +21,8 @@ import {
   SORTS,
   productIdFromPath,
   productPath,
+  startBuyNow,
+  BUY_NOW_PATH,
   useCart,
   useProducts,
   useStorefront,
@@ -305,6 +307,12 @@ export default function Storefront() {
   const maxOff = home?.promos?.maxDiscountPct ?? 0;
   const storeEmpty = facets !== null && facets.total === 0;
 
+  /** "Buy now": checkout for just this item; the cart stays as it is for later. */
+  const buyNow = (p: Product, qty = 1) => {
+    startBuyNow(p, qty);
+    navigate(BUY_NOW_PATH);
+  };
+
   const actions: CardActions = {
     currency,
     inCart: (p) => cart.has(p.variationId),
@@ -324,6 +332,7 @@ export default function Storefront() {
         ),
       );
     },
+    onBuyNow: (p) => buyNow(p),
     onNotify: setNotify,
     onWish: wishlist.toggle,
     onOpen: openProduct,
@@ -572,6 +581,7 @@ export default function Storefront() {
               cartQty={cart.qtyOf}
               cartSubtotal={cart.subtotal}
               onAddQty={(p, qty) => cart.add(p, qty)}
+              onBuyNow={buyNow}
               onViewCart={() => setCartOpen(true)}
               onToast={flash}
               onCategory={(id) => setCategory(`id:${id}`)}

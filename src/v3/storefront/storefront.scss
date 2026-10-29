@@ -1358,6 +1358,20 @@ h1.sf-hero__eyebrow {
     padding: 9px 16px;
   }
 }
+// "Buy now": outlined, so "Add to cart" stays the main button; on a grid card it sits just under it
+.sf-buy--now {
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--primary);
+  &:hover {
+    background: var(--primary);
+    color: var(--on-primary);
+    filter: none;
+  }
+}
+.sf-card__foot .sf-buy--now {
+  margin-top: 6px;
+}
 
 .sf-list {
   overflow: hidden;
@@ -2270,6 +2284,7 @@ h1.sf-hero__eyebrow {
 }
 .sf-pp__buyrow {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .sf-pp__qty {
@@ -2306,6 +2321,13 @@ h1.sf-hero__eyebrow {
   flex: 1;
   min-height: 52px;
   font-size: 16px;
+  border-radius: 14px;
+}
+// "Buy now" gets its own full-width line under the quantity and "Add to cart"
+.sf-pp__now {
+  flex-basis: 100%;
+  min-height: 48px;
+  font-size: 15px;
   border-radius: 14px;
 }
 .sf-pp__added {

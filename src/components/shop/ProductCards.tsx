@@ -3,6 +3,8 @@
  * an account page). Each takes a `Product` and the shop's `CardActions` (add to cart, wishlist, open...). See README.md and
  * http://localhost:3000/ui-kit (Shop tab) for each one live.
  *
+ * - Each card's main button adds to the cart; with the page's `onBuyNow`, a "Buy now" button under it goes straight to checkout
+ *   with just that item (the cart is left as it is).
  * - ProductCard: the main card. `layout="vertical"` (default: the photo on top, for grids) or `layout="horizontal"` (the photo on
  *   the left, for lists like the wishlist), where `meta`, `actions` and `onRemove` add a page's own line and buttons.
  * - PreorderCard: the slim card in the homepage's "New pre-orders" row.
@@ -36,6 +38,8 @@ export interface CardActions {
   inCart: (p: Product) => boolean;
   wished: (p: Product) => boolean;
   onAdd: (p: Product) => void;
+  /** Straight to checkout with just this item, leaving the cart alone. Leave it out and cards show no "Buy now" button. */
+  onBuyNow?: (p: Product) => void;
   onNotify: (p: Product) => void;
   onWish: (p: Product) => void;
   onOpen: (p: Product) => void;
@@ -122,6 +126,23 @@ function buttonState(p: Product, a: CardActions) {
   return { label: s === "pre" ? "Pre-order" : "Add to cart", cls: "", onClick: () => a.onAdd(p) };
 }
 
+/** "Buy now" (like Amazon's): checkout for this one item. Not for sold-out items, or where the page gives no `onBuyNow`. */
+function BuyNow({ p, a, inline = false }: { p: Product; a: CardActions; inline?: boolean }) {
+  const s = normalizeStatus(p.status);
+  if (!a.onBuyNow || s === "out") return null;
+  const go = a.onBuyNow;
+  return (
+    <button
+      type="button"
+      className={`sf-buy sf-buy--now ${inline ? "sf-buy--inline" : ""}`}
+      onClick={() => go(p)}
+      aria-label={`Buy ${p.name} now`}
+    >
+      {s === "pre" ? "Pre-order now" : "Buy now"}
+    </button>
+  );
+}
+
 export interface ProductCardProps {
   p: Product;
   a: CardActions;
@@ -186,6 +207,7 @@ function VerticalCard({ p, a }: { p: Product; a: CardActions }) {
         <button type="button" className={`sf-buy ${btn.cls}`} onClick={btn.onClick}>
           {btn.label}
         </button>
+        <BuyNow p={p} a={a} />
       </div>
     </article>
   );
@@ -235,6 +257,7 @@ function HorizontalCard({ p, a, meta, actions, onRemove }: ProductCardProps) {
           <button type="button" className={`sf-buy sf-buy--inline ${btn.cls}`} onClick={btn.onClick}>
             {btn.label}
           </button>
+          <BuyNow p={p} a={a} inline />
           {actions}
           <span className="sf-hcard__end">
             {onRemove ? (
@@ -326,6 +349,7 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
       <button type="button" className={`sf-buy sf-buy--inline ${btn.cls}`} onClick={btn.onClick}>
         {btn.label}
       </button>
+      <BuyNow p={p} a={a} inline />
       <button
         type="button"
         className={`sf-row__wish ${a.wished(p) ? "is-on" : ""}`}

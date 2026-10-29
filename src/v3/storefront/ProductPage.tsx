@@ -73,6 +73,7 @@ export function ProductPage({
   cartQty,
   cartSubtotal,
   onAddQty,
+  onBuyNow,
   onViewCart,
   onCategory,
   onHome,
@@ -85,6 +86,7 @@ export function ProductPage({
   cartQty: (variationId: string) => number;
   cartSubtotal: number;
   onAddQty: (p: Product, qty: number) => void;
+  onBuyNow: (p: Product, qty: number) => void;
   onViewCart: () => void;
   onCategory: (categoryId: string) => void;
   onHome: () => void;
@@ -221,6 +223,7 @@ export function ProductPage({
           inCartQty={cartQty(p.variationId)}
           cartSubtotal={cartSubtotal}
           onAddQty={onAddQty}
+          onBuyNow={onBuyNow}
           onViewCart={onViewCart}
           onToast={onToast}
           onCategory={p.categoryId && tree.byId.has(p.categoryId) ? () => onCategory(p.categoryId!) : undefined}
@@ -471,6 +474,7 @@ function BuyBox({
   inCartQty,
   cartSubtotal,
   onAddQty,
+  onBuyNow,
   onViewCart,
   onToast,
   onCategory,
@@ -480,6 +484,7 @@ function BuyBox({
   inCartQty: number;
   cartSubtotal: number;
   onAddQty: (p: Product, qty: number) => void;
+  onBuyNow: (p: Product, qty: number) => void;
   onViewCart: () => void;
   onToast: (message: string) => void;
   onCategory?: () => void;
@@ -619,6 +624,9 @@ function BuyBox({
             </div>
             <button type="button" className="sf-buy sf-pp__cta" onClick={add}>
               {buyLabel} · {price(p.priceCents * n, a.currency)}
+            </button>
+            <button type="button" className="sf-buy sf-buy--now sf-pp__now" onClick={() => onBuyNow(p, n)}>
+              {s === "pre" ? "Pre-order now" : "Buy now"}
             </button>
           </div>
         )}
