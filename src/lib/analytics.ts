@@ -10,7 +10,9 @@ const optedOut = () => {
   const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
   return nav.doNotTrack === "1" || nav.globalPrivacyControl === true;
 };
-const counted = () => !location.pathname.startsWith("/admin") && !optedOut();
+// npm run dev sends nothing (VITE_ANALYTICS_IN_DEV=1 to try it), so local clicking doesn't fill the funnel with half its steps
+const inDev = import.meta.env.DEV && !import.meta.env.VITE_ANALYTICS_IN_DEV;
+const counted = () => !inDev && !location.pathname.startsWith("/admin") && !optedOut();
 
 const queue: { name: Step; productId?: string }[] = [];
 let timer: number | undefined;
@@ -64,7 +66,7 @@ function reportError(message: string, stack?: string) {
 
 /** Starts counting (a visit) and catching errors. Called once when the site opens. */
 export function startAnalytics() {
-  if (import.meta.env.DEV && !import.meta.env.VITE_ANALYTICS_IN_DEV) return; // npm run dev: nothing is sent
+  if (inDev) return;
   window.addEventListener("pagehide", flush);
   document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flush());
   if (counted()) countVisit();

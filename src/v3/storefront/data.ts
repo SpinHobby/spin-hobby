@@ -246,6 +246,7 @@ export const BUY_NOW_PATH = "/checkout/now";
  * caller goes to BUY_NOW_PATH, so checkout reads it on arrival.
  */
 export function startBuyNow(p: Product, qty = 1) {
+  track("add_to_cart", p.id); // the funnel's "added to cart" step, or checkouts would outnumber it
   try {
     localStorage.setItem(BUY_NOW_KEY, JSON.stringify([cartLine(p, qty)]));
   } catch {
