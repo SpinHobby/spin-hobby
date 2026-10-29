@@ -18,7 +18,7 @@ export interface LegalSection {
 
 export const LEGAL_ENTITY = "Spin Hobby";
 export const LEGAL_JURISDICTION = "the Province of Alberta, Canada";
-export const LAST_UPDATED = "October 21, 2026";
+export const LAST_UPDATED = "October 29, 2026";
 
 export const TERMS_SECTIONS: LegalSection[] = [
   {
@@ -149,6 +149,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
       "Order information: shipping and billing address, phone number, and order/purchase history.",
       "Payment information: handled directly by Square and/or PayPal. We do not receive or store your full card number.",
       "Support communications: anything you send us by email or through the Site's contact/support channels.",
+      "Shop assistant chats: if you use the AI shop assistant (the chat button), the questions you type and the answers it gives. They go to our server and to the shop's own computer, where an AI model writes the answer from our catalogue; they are not sent to an outside AI company. We don't save them: they are kept in memory only until the answer is given (a spoken answer for up to 10 minutes, so it can be played), and your browser keeps the conversation until you close the tab. Please don't share personal details in the chat; for questions about an order, contact us instead.",
       "Technical information: IP address, browser/device type, and basic usage data collected automatically to keep the Site secure and working correctly.",
     ],
   },
