@@ -211,6 +211,7 @@ interface SalesOrder {
   status: OrderStatus;
   provider: string;
   subtotal_cents: number;
+  discount_cents?: number;
   shipping_cents: number;
   tax_cents: number;
   total_cents: number;
@@ -225,6 +226,7 @@ interface SalesReport {
   totals: {
     orders: number;
     subtotalCents: number;
+    discountCents?: number;
     shippingCents: number;
     taxCents: number;
     grossCents: number;
@@ -282,6 +284,13 @@ function Sales() {
       { key: "paid", header: "Paid", width: "110px", render: (o) => shopDate(o.paid_at) },
       { key: "where", header: "Province", width: "90px", render: (o) => [o.province, o.country].filter(Boolean).join(", ") },
       { key: "sub", header: "Items", width: "90px", align: "right", render: (o) => money(o.subtotal_cents) },
+      {
+        key: "disc",
+        header: "Discount",
+        width: "90px",
+        align: "right",
+        render: (o) => (o.discount_cents ? `−${money(o.discount_cents)}` : ""),
+      },
       { key: "ship", header: "Shipping", width: "90px", align: "right", render: (o) => money(o.shipping_cents) },
       { key: "tax", header: "Tax", width: "80px", align: "right", render: (o) => money(o.tax_cents) },
       { key: "total", header: "Total", width: "90px", align: "right", render: (o) => <b>{money(o.total_cents)}</b> },
@@ -337,6 +346,7 @@ function Sales() {
         items={[
           { label: "Orders paid", value: t ? t.orders : "…" },
           { label: "Items", value: t ? money(t.subtotalCents) : "…" },
+          ...(t?.discountCents ? [{ label: "Discounts", value: `−${money(t.discountCents)}` }] : []),
           { label: "Shipping", value: t ? money(t.shippingCents) : "…" },
           { label: "Tax collected", value: t ? money(t.taxCents) : "…" },
           {
@@ -391,7 +401,7 @@ function downloadCsv(report: SalesReport) {
   const dollars = (cents: number) => (cents / 100).toFixed(2);
   const cell = (v: string | number) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   const rows = [
-    ["Order", "Paid at", "Status", "Payment", "Country", "Province", "Items", "Shipping", "Tax", "Total", "Refunded", "Email"],
+    ["Order", "Paid at", "Status", "Payment", "Country", "Province", "Items", "Discount", "Shipping", "Tax", "Total", "Refunded", "Email"],
     ...report.orders.map((o) => [
       o.id,
       o.paid_at,
@@ -400,6 +410,7 @@ function downloadCsv(report: SalesReport) {
       o.country ?? "",
       o.province ?? "",
       dollars(o.subtotal_cents),
+      dollars(o.discount_cents ?? 0),
       dollars(o.shipping_cents),
       dollars(o.tax_cents),
       dollars(o.total_cents),

@@ -3171,3 +3171,26 @@
 .ad-acct > .ui-tabs > button {
   padding-inline: 8px;
 }
+
+// ---------------------------------------------------------------- discount codes (Discounts.tsx)
+.ad-discount-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px 16px;
+  align-items: start;
+}
+.ad-discount-form__value {
+  display: grid;
+  gap: 8px;
+}
+.ad-discount-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ad-discount-form__error {
+  color: var(--red);
+  font-size: 14px;
+}

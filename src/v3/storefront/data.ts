@@ -1,3 +1,4 @@
+import { track } from "../../lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { normalizeStatus } from "../format";
@@ -265,6 +266,7 @@ function useLines(key: string) {
   const [lines, setLines] = useLocalState<CartLine[]>(key, []);
   const add = useCallback(
     (p: Product, qty = 1) => {
+      track("add_to_cart", p.id);
       setLines((current) => {
         const existing = current.find((l) => l.variationId === p.variationId);
         if (existing) {

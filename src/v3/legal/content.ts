@@ -175,6 +175,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     heading: "5. Cookies & Similar Technologies",
     body: [
       "We use essential cookies/local storage to keep you signed in, remember your cart, and remember preferences like your selected currency and light/dark theme. We don't use third-party advertising trackers.",
+      "We count visits, product views, add-to-carts and checkouts anonymously, as daily totals, to see how the shop is used. This uses no cookies and keeps nothing that identifies you. If your browser asks not to be tracked (Do Not Track or Global Privacy Control), nothing is counted. If the Site hits an error in your browser, the error message and the page address are sent to us so we can fix it.",
     ],
   },
   {

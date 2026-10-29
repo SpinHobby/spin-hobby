@@ -157,3 +157,121 @@
     font-weight: 600;
   }
 }
+
+// ---------------------------------------------------------------- order status (/order-status)
+.sp-lookup {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 12px;
+  align-items: end;
+  label {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text2);
+  }
+  .sh-btn {
+    min-height: 44px;
+  }
+}
+.sp-lookup__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--red);
+  font-size: 14px;
+  a {
+    color: var(--blue);
+  }
+}
+.sp-order__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  h2 {
+    margin: 0;
+  }
+}
+.sp-order__status {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 800;
+  background: var(--surface2);
+  color: var(--text2);
+  &.is-wait {
+    background: transparent;
+    color: var(--text);
+    box-shadow: inset 0 0 0 2px var(--gold);
+  }
+  &.is-good {
+    background: var(--teal);
+    color: var(--surface);
+  }
+}
+.sp-order__track a {
+  color: var(--blue);
+  font-weight: 700;
+}
+.sp-order__items {
+  list-style: none;
+  margin: 16px 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  li {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    font-size: 14px;
+  }
+  img,
+  .sp-order__noimg {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--surface2);
+  }
+  small {
+    color: var(--muted);
+  }
+}
+.sp-order__qty {
+  color: var(--text2);
+  white-space: nowrap;
+}
+.sp-order__totals {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+  font-size: 14px;
+  dt {
+    color: var(--text2);
+  }
+  dd {
+    margin: 0;
+    text-align: right;
+  }
+}
+.sp-order__timeline {
+  list-style: none;
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  display: grid;
+  gap: 4px;
+  span {
+    color: var(--muted);
+    margin-right: 6px;
+  }
+}
+@media (max-width: 560px) {
+  .sp-lookup {
+    grid-template-columns: 1fr;
+  }
+}

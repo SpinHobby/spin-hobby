@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
-import { greetingName, price, normalizeStatus, storeFormat, type Currency } from "../format";
+import { greetingName, paymentLabel, price, normalizeStatus, storeFormat, type Currency } from "../format";
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
 import type { CartLine } from "./data";
@@ -153,7 +153,7 @@ export function CartDrawer({
               <a href="/checkout" className="sh-btn sf-cart-foot__cta sf-center">
                 🔒 Secure checkout · {price(subtotal, currency)}
               </a>
-              <span className="sf-muted sf-center">Secure payment with PayPal or card. Your cart is saved on this device.</span>
+              <span className="sf-muted sf-center">Secure payment by {paymentLabel()}. Your cart is saved on this device.</span>
             </div>
           </>
         )}

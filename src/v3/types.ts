@@ -165,6 +165,9 @@ export interface Order {
   status: OrderStatus;
   provider: "paypal" | "square";
   subtotal_cents: number;
+  /** What a discount code took off (0 without one); total = subtotal - discount + shipping + tax. */
+  discount_code?: string | null;
+  discount_cents?: number;
   shipping_cents: number;
   tax_cents: number;
   total_cents: number;

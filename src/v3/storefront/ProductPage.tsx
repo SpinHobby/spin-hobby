@@ -1,3 +1,4 @@
+import { track } from "../../lib/analytics";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -111,6 +112,12 @@ export function ProductPage({
       live = false;
     };
   }, [id, initial]);
+
+  // one anonymous "product viewed" per product opened (src/lib/analytics.ts)
+  const viewedId = p?.id;
+  useEffect(() => {
+    if (viewedId) track("product_view", viewedId);
+  }, [viewedId]);
 
   // Related: same category, then same series, then featured. Uses the normal product search.
   const categoryId = p?.categoryId ?? null;

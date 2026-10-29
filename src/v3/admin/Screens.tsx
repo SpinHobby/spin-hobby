@@ -7,6 +7,7 @@ import { useEscape } from "../hooks";
 import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
+import { ShopperFunnel } from "./ShopperFunnel";
 import {
   activeFilterCount,
   DEFAULT_SORT,
@@ -231,6 +232,7 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
           </Card>
         </div>
       </div>
+      <ShopperFunnel />
     </>
   );
 }
@@ -1503,9 +1505,14 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
     }
     setBusy("refund");
     try {
-      const res = await api<{ status: Order["status"] }>(`/admin/orders/${o.id}/refund`, { method: "POST", body: "{}" });
+      const res = await api<{ status: Order["status"]; customerEmailed?: boolean }>(`/admin/orders/${o.id}/refund`, {
+        method: "POST",
+        body: "{}",
+      });
       update({ status: res.status });
-      ctx.flash(`Refund issued via ${provider}`);
+      ctx.flash(
+        `Refund issued via ${provider}${res.customerEmailed ? " · customer emailed" : " · no email sent (check the email settings)"}`,
+      );
       onClose();
     } catch (e) {
       ctx.flash(errMsg(e));
@@ -1604,6 +1611,12 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
             <span className="ad-strong">{money(it.unit_price_cents * it.quantity)}</span>
           </div>
         ))}
+        {!!o.discount_cents && (
+          <div className="ad-between ad-text2" style={{ paddingTop: 10, fontSize: 13.5 }}>
+            <span>Discount{o.discount_code ? ` (${o.discount_code})` : ""}</span>
+            <span>−{money(o.discount_cents)}</span>
+          </div>
+        )}
         <div className="ad-between ad-text2" style={{ paddingTop: 10, fontSize: 13.5 }}>
           <span>Shipping ({o.shipping_method === "express" ? "Express" : "Standard"})</span>
           <span>{o.shipping_cents ? money(o.shipping_cents) : "Free"}</span>
