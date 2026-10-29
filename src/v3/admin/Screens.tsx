@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
-import { dateLabel, dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
+import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
@@ -15,6 +15,7 @@ import {
   EMPTY_FILTERS,
   filterQuery,
   filtersFromShortcut,
+  addedLabel,
   loadPrefs,
   PAGE_SIZES,
   savePrefs,
@@ -253,6 +254,7 @@ const FIRST_DIR: Record<SortKey, SortDir> = {
   release: "asc",
   updated: "desc",
   created: "desc",
+  added_here: "desc",
   alerts: "desc",
   front: "asc",
 };
@@ -367,7 +369,7 @@ function ProductCardRow({
             {[
               place,
               p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}` : "",
-              p.createdAt ? `Added ${dateLabel(p.createdAt)}` : "",
+              addedLabel(p)?.text ?? "",
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -848,8 +850,8 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                   <span className="ad-text2 ad-sm c-rel">
                     {p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}
                   </span>
-                  <span className="ad-text2 ad-sm c-upd" title={p.createdAt ? new Date(p.createdAt).toLocaleString() : undefined}>
-                    {dateLabel(p.createdAt)}
+                  <span className="ad-text2 ad-sm c-upd" title={addedLabel(p)?.title}>
+                    {addedLabel(p)?.short ?? "—"}
                   </span>
                   <span onClick={(e) => e.stopPropagation()}>
                     <VisibilityToggle p={p} busy={visibilityBusy.has(p.id)} onToggle={() => toggleVisible(p)} />
