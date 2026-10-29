@@ -17,6 +17,7 @@ const Account = lazy(() => import("./v3/account/Account"));
 const Checkout = lazy(() => import("./v3/checkout/Checkout"));
 const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
+const OrderStatus = lazy(() => import("./v3/support/OrderStatus"));
 const Events = lazy(() => import("./v3/events/Events"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 // the shared building blocks shown live (local and staging only)
@@ -65,6 +66,7 @@ export default function App() {
         <Route element={<SiteLayout />}>
           <Route path="/legal/*" element={<Legal />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/order-status" element={<OrderStatus />} />
           <Route path="/events" element={<Events />} />
         </Route>
         <Route

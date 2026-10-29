@@ -1145,7 +1145,7 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
           <span className="sf-footer__h">Help</span>
           <Link to="/support#preorders">Pre-order policy</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
-          <Link to="/support#order-status">Order status</Link>
+          <Link to="/order-status">Order status</Link>
           <Link to="/support#contact">Contact</Link>
           <a href="/legal/terms">Terms of Service</a>
           <a href="/legal/privacy">Privacy Policy</a>

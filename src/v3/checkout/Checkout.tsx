@@ -790,7 +790,8 @@ function Success({ orderId, preorder, email }: { orderId: number; preorder: bool
           <b>{email || "your inbox"}</b>.
         </p>
         <p className="co-note">
-          Questions? Email <a href={`mailto:${SUPPORT_EMAIL}?subject=Order%20%23${orderId}`}>{SUPPORT_EMAIL}</a> with your order number.
+          Follow it any time on <a href={`/order-status?order=${orderId}`}>Order status</a>. Questions? Email{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}?subject=Order%20%23${orderId}`}>{SUPPORT_EMAIL}</a> with your order number.
         </p>
         <a href="/" className="sh-btn">
           Keep shopping
