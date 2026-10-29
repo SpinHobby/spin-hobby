@@ -1501,9 +1501,14 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
     }
     setBusy("refund");
     try {
-      const res = await api<{ status: Order["status"] }>(`/admin/orders/${o.id}/refund`, { method: "POST", body: "{}" });
+      const res = await api<{ status: Order["status"]; customerEmailed?: boolean }>(`/admin/orders/${o.id}/refund`, {
+        method: "POST",
+        body: "{}",
+      });
       update({ status: res.status });
-      ctx.flash(`Refund issued via ${provider}`);
+      ctx.flash(
+        `Refund issued via ${provider}${res.customerEmailed ? " · customer emailed" : " · no email sent (check the email settings)"}`,
+      );
       onClose();
     } catch (e) {
       ctx.flash(errMsg(e));
