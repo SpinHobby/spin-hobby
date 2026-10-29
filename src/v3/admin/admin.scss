@@ -3051,3 +3051,111 @@
     min-height: 0;
   }
 }
+
+// ---- An account's activity (Accounts drawer: orders, favourites)
+.ad-acts {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ad-acts__order + .ad-acts__order {
+  border-top: 1px solid var(--border);
+}
+.ad-acts__head {
+  display: grid;
+  grid-template-columns: 64px 100px minmax(0, 1fr) auto 84px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  &:hover,
+  .is-open > & {
+    background: var(--surface2);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+  }
+  @media (max-width: 560px) {
+    grid-template-columns: auto 1fr auto;
+    .ad-acts__what {
+      display: none;
+    }
+    > .ad-muted {
+      grid-column: 1 / -1;
+      order: 9;
+    }
+  }
+}
+.ad-acts__head > .sh-badge {
+  justify-self: start;
+}
+.ad-acts__what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ad-acts__total {
+  text-align: right;
+}
+.ad-acts__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 14px 14px;
+  background: var(--surface2);
+}
+.ad-acts__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  li {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+  }
+  img,
+  .ad-acts__noimg {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--surface);
+  }
+}
+.ad-acts__items--roomy {
+  gap: 4px;
+  li {
+    padding: 8px 0;
+  }
+  li + li {
+    border-top: 1px solid var(--border);
+  }
+}
+.ad-acts__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--border);
+  list-style: none;
+}
+// six tabs in the account drawer: a little tighter, so they all fit without scrolling
+.ad-acct > .ui-tabs > button {
+  padding-inline: 8px;
+}
