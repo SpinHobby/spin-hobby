@@ -14,6 +14,10 @@
     min-height: 0;
     background: transparent;
   }
+  // above Netlify's badge (64 px tall, bottom right) on *.netlify.app addresses
+  &.is-above-badge {
+    bottom: 84px;
+  }
 }
 
 .sa-button {

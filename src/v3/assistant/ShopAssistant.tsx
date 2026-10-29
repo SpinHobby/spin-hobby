@@ -29,6 +29,9 @@ interface Line {
 }
 
 const KEY = "spinhobby-assistant";
+/** Netlify shows its "Powered by Netlify" badge in the bottom right corner of every *.netlify.app address (staging, previews, not
+ *  spinhobby.com), above everything: the chat sits above it there. */
+const ABOVE_BADGE = typeof window !== "undefined" && window.location.hostname.endsWith(".netlify.app");
 const SOUND_KEY = "spinhobby-assistant-sound";
 
 function loadLines(): Line[] {
@@ -126,7 +129,7 @@ export default function ShopAssistant() {
 
   return (
     // "sh" brings the shop's colours and dark mode (tokens.scss); the widget is outside the storefront's own .sh
-    <div className={`sh sa${open ? " is-open" : ""}`}>
+    <div className={`sh sa${open ? " is-open" : ""}${ABOVE_BADGE ? " is-above-badge" : ""}`}>
       {open && (
         <section className="sa-panel" role="dialog" aria-label={`Chat with ${status.name}, the shop's AI assistant`}>
           <header className="sa-head">
