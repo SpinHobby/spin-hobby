@@ -8,6 +8,9 @@ import { isRecoveryLink } from "./lib/api";
 import { isOn } from "./features";
 import { ShopMusicHost } from "./v3/storefront/ShopPlaylist";
 
+// the shop assistant's chat button: only fetched where it is on (src/features.ts)
+const ShopAssistant = lazy(() => import("./v3/assistant/ShopAssistant"));
+
 // The admin bundle is only downloaded by staff visiting /admin.
 const Admin = lazy(() => import("./v3/admin/Admin"));
 const Account = lazy(() => import("./v3/account/Account"));
@@ -108,7 +111,19 @@ function GatedApp() {
           </Suspense>
         }
       />
-      <Route path="/*" element={<Storefront />} />
+      <Route
+        path="/*"
+        element={
+          <>
+            <Storefront />
+            {isOn("shopAssistant") && (
+              <Suspense fallback={null}>
+                <ShopAssistant />
+              </Suspense>
+            )}
+          </>
+        }
+      />
     </Routes>
   );
 }

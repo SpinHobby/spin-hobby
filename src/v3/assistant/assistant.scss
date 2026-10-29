@@ -1,0 +1,246 @@
+// The shop assistant's chat button and panel, bottom right on the storefront (under the drawers and dialogs, z-index 70).
+.sa {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  font-family: var(--font-ui);
+  // .sh (for the shop's colours) also makes a full-height page with a background: not for a floating button
+  &.sh {
+    min-height: 0;
+    background: transparent;
+  }
+}
+
+.sa-button {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  overflow: visible;
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  img,
+  > span {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: grid;
+    place-items: center;
+    font: 700 24px var(--font-display);
+  }
+  &:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+}
+.sa-dot {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--teal);
+  border: 2px solid var(--surface);
+}
+.is-talking {
+  animation: sa-talk 0.9s ease-in-out infinite;
+}
+@keyframes sa-talk {
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-talking {
+    animation: none;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+}
+
+.sa-panel {
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(600px, calc(100vh - 120px));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.sa-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sa-face {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface2);
+  display: grid;
+  place-items: center;
+  font: 700 18px var(--font-display);
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+.sa-who {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  line-height: 1.25;
+  b {
+    font-size: 15px;
+  }
+  small {
+    color: var(--muted);
+    font-size: 12px;
+  }
+}
+.sa-ai {
+  justify-self: start;
+  margin: 2px 0;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface2);
+  color: var(--text2);
+}
+.sa-sound,
+.sa-close,
+.sa-replay {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.sa-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 18px;
+}
+.sa-lines {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  > li {
+    display: grid;
+    gap: 6px;
+  }
+}
+.sa-hello {
+  color: var(--text2);
+  font-size: 14px;
+}
+.sa-q {
+  justify-self: end;
+  max-width: 85%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 14px;
+}
+.sa-a {
+  justify-self: start;
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface2);
+  font-size: 14px;
+  p {
+    margin: 0;
+  }
+  &.is-waiting {
+    margin: 0;
+    color: var(--muted);
+  }
+  &.is-failed {
+    color: var(--red);
+  }
+}
+.sa-products {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+  a {
+    color: var(--blue);
+    font-weight: 600;
+  }
+  span {
+    color: var(--muted);
+  }
+}
+.sa-replay {
+  margin-top: 6px;
+}
+.sa-ask {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 6px;
+  border-top: 1px solid var(--border);
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+  }
+  button {
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--on-primary);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+}
+.sa-note {
+  margin: 0;
+  padding: 0 14px 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
