@@ -1,11 +1,16 @@
-import { Card, PanelLayout } from "@/components";
+import { Pagination, Card, Button } from "@/components";
+import { useState } from "react";
 
 export function Wishlist() {
+  const [page, setPage] = useState(1);
+  const PAGE = 5;
+
   return (
-    <PanelLayout title="" tag="" navLabel="" tabs={[]} active="" onSelect={() => {}}>
-      <Card title="Cool">
-        <div>Cool!</div>
+    <>
+      <Card title="" className="sf-hero" padded>
+        <Button>Add all to cart</Button>
       </Card>
-    </PanelLayout>
+      <Pagination page={page} pageSize={PAGE} total={3} onPage={(newPage) => setPage(newPage)} />
+    </>
   );
 }
