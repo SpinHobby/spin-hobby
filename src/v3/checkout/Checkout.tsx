@@ -52,6 +52,12 @@ interface QuoteLine {
 interface Quote {
   lines: QuoteLine[];
   subtotalCents: number;
+  /** What the discount code took off the goods. */
+  discountCents: number;
+  /** The code that applied, or null. */
+  discount: { code: string; label: string } | null;
+  /** Why the typed code doesn't apply, or null. */
+  discountMessage: string | null;
   shippingCents: number;
   taxCents: number;
   totalCents: number;
@@ -95,6 +101,9 @@ export default function Checkout() {
   const [done, setDone] = useState<{ orderId: number; status: string } | null>(null);
   const orderIdRef = useRef<number | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false); // phones: the order summary folds away above the form
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState(""); // sent with every quote while it applies
+  const [codeMessage, setCodeMessage] = useState("");
 
   useEffect(() => {
     if (!email && auth.email) setEmail(auth.email);
@@ -127,8 +136,9 @@ export default function Checkout() {
       shippingMethod: method,
       country: ship.country,
       province: ship.province,
+      ...(appliedCode ? { discountCode: appliedCode } : {}),
     }),
-    [cart.lines, method, ship.country, ship.province],
+    [cart.lines, method, ship.country, ship.province, appliedCode],
   );
 
   useEffect(() => {
@@ -144,6 +154,11 @@ export default function Checkout() {
           if (active) {
             setQuote(q);
             setQuoteError("");
+            // a code that doesn't (or no longer) applies is dropped with its reason, so it never blocks paying
+            if (q.discountMessage) {
+              setCodeMessage(q.discountMessage);
+              setAppliedCode("");
+            } else if (q.discount) setCodeMessage("");
           }
         })
         .catch((e: Error) => {
@@ -303,7 +318,9 @@ export default function Checkout() {
   const regions = ship.country === "CA" ? PROVINCES : STATES;
   const show = (errs: Partial<Record<keyof Address, string>>, prefix: string, k: keyof Address) =>
     touched || blurred.has(`${prefix}.${k}`) ? errs[k] : undefined;
-  const freeLeft = config ? Math.max(config.freeShippingThresholdCents - (quote?.subtotalCents ?? cart.subtotal), 0) : 0;
+  // free shipping is judged on the goods after any discount (as the server prices it)
+  const goods = (quote?.subtotalCents ?? cart.subtotal) - (quote?.discountCents ?? 0);
+  const freeLeft = config ? Math.max(config.freeShippingThresholdCents - goods, 0) : 0;
 
   const shipOk = Object.keys(shipErrors).length === 0;
   const itemCount = cart.lines.reduce((n, l) => n + l.quantity, 0);
@@ -413,7 +430,7 @@ export default function Checkout() {
               <h3>Delivery</h3>
               <div className="co-methods">
                 {(["standard", "express"] as const).map((m) => {
-                  const cost = m === "express" ? config?.shippingExpressCents : subtotal >= threshold ? 0 : config?.shippingStandardCents;
+                  const cost = m === "express" ? config?.shippingExpressCents : goods >= threshold ? 0 : config?.shippingStandardCents;
                   return (
                     <label key={m} className={`co-method ${method === m ? "is-active" : ""}`}>
                       <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} />
@@ -602,20 +619,41 @@ export default function Checkout() {
               {quoteError && <div className="co-alert co-alert--error">{quoteError}</div>}
               <div className="co-meter">
                 <span>
-                  {subtotal >= threshold ? (
+                  {goods >= threshold ? (
                     <b>You've unlocked free standard shipping 🎉</b>
                   ) : (
                     <>
-                      Add <b>{price(threshold - subtotal)}</b> more for free standard shipping
+                      Add <b>{price(threshold - goods)}</b> more for free standard shipping
                     </>
                   )}
                 </span>
                 <div className="co-meter__bar">
-                  <i style={{ width: `${Math.min(subtotal / threshold, 1) * 100}%` }} />
+                  <i style={{ width: `${Math.min(goods / threshold, 1) * 100}%` }} />
                 </div>
               </div>
+              <DiscountBox
+                applied={quote?.discount ?? null}
+                value={codeInput}
+                onChange={setCodeInput}
+                message={codeMessage}
+                busy={quoting && !!appliedCode && !quote?.discount}
+                onApply={() => {
+                  const code = codeInput.trim();
+                  if (!code) return;
+                  setCodeMessage("");
+                  setAppliedCode(code);
+                }}
+                onRemove={() => {
+                  setAppliedCode("");
+                  setCodeInput("");
+                  setCodeMessage("");
+                }}
+              />
               <div className="co-totals">
                 <Row label="Subtotal" value={price(subtotal)} />
+                {!!quote?.discountCents && (
+                  <Row label={`Discount${quote.discount ? ` (${quote.discount.code})` : ""}`} value={`−${price(quote.discountCents)}`} />
+                )}
                 <Row
                   label={`Shipping (${method === "express" ? "Express" : "Standard"})`}
                   value={quote ? (quote.shippingCents ? price(quote.shippingCents) : "Free") : "—"}
@@ -639,6 +677,67 @@ export default function Checkout() {
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** "Discount code" in the order summary: type a code and apply it, or see the one that applies and remove it. */
+function DiscountBox({
+  applied,
+  value,
+  onChange,
+  message,
+  busy,
+  onApply,
+  onRemove,
+}: {
+  applied: { code: string; label: string } | null;
+  value: string;
+  onChange: (v: string) => void;
+  message: string;
+  busy: boolean;
+  onApply: () => void;
+  onRemove: () => void;
+}) {
+  if (applied)
+    return (
+      <div className="co-code is-applied">
+        <span>
+          ✓ <b>{applied.code}</b> · {applied.label}
+        </span>
+        <button type="button" className="co-link" onClick={onRemove}>
+          Remove
+        </button>
+      </div>
+    );
+  return (
+    <div className="co-code">
+      <form
+        className="co-code__row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onApply();
+        }}
+      >
+        <input
+          className="sh-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Discount code"
+          aria-label="Discount code"
+          autoCapitalize="characters"
+          autoComplete="off"
+          maxLength={40}
+        />
+        <button type="submit" className="sh-btn sh-btn--ghost" disabled={!value.trim() || busy}>
+          {busy ? "Checking…" : "Apply"}
+        </button>
+      </form>
+      {message && (
+        <p className="co-code__msg" role="alert">
+          {message}
+        </p>
+      )}
     </div>
   );
 }
