@@ -6,10 +6,13 @@ import { StagingBadge } from "./StagingBadge";
 import { ServerStatus } from "./ServerStatus";
 import { API_URL } from "./lib/api";
 import { wakeServer } from "./lib/serverStatus";
+import { startAnalytics } from "./lib/analytics";
 
 if (IS_STAGING) markStaging();
 // start a sleeping server waking as soon as the site opens, so the banner shows before the first click
 wakeServer(API_URL);
+// anonymous step counts and browser error reports (src/lib/analytics.ts)
+startAnalytics();
 
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./checkout.scss";
+import { track } from "../../lib/analytics";
 import { api } from "../../lib/api";
 import { price } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
@@ -84,6 +85,11 @@ export default function Checkout() {
   useDocumentHead({ title: "Checkout | Spin Hobby", description: "Checkout", path: location.pathname, noindex: true });
   const auth = useAuth();
   const cart = useCart();
+  // one anonymous "checkout opened" per visit to this page with something in the cart (src/lib/analytics.ts)
+  const hasItems = cart.lines.length > 0;
+  useEffect(() => {
+    if (hasItems) track("checkout_view");
+  }, [hasItems]);
   const [email, setEmail] = useLocalState("spinhobby-checkout-email", "");
   const [ship, setShip] = useLocalState<Address>("spinhobby-checkout-address", EMPTY_ADDRESS);
   const [method, setMethod] = useState<"standard" | "express">("standard");

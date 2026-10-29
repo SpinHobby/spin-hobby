@@ -1,3 +1,4 @@
+import { track } from "../../lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { normalizeStatus } from "../format";
@@ -225,6 +226,7 @@ export function useCart() {
   const [lines, setLines] = useLocalState<CartLine[]>("spinhobby-cart-v3", []);
   const add = useCallback(
     (p: Product, qty = 1) => {
+      track("add_to_cart", p.id);
       setLines((current) => {
         const existing = current.find((l) => l.variationId === p.variationId);
         const cap = purchaseCap(p);

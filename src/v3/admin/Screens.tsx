@@ -7,6 +7,7 @@ import { useEscape } from "../hooks";
 import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
+import { ShopperFunnel } from "./ShopperFunnel";
 import {
   activeFilterCount,
   DEFAULT_SORT,
@@ -229,6 +230,7 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
           </Card>
         </div>
       </div>
+      <ShopperFunnel />
     </>
   );
 }
