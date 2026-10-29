@@ -4,7 +4,7 @@ import { IS_STAGING } from "./staging";
 
 /**
  * A banner while the shop server is slow to answer or cannot be reached: on staging that is nearly always Render's free plan waking from sleep,
- * which takes up to a minute. It counts the seconds, so a person can tell waiting from broken, and goes away by itself once the server answers.
+ * which takes up to a minute; on the live site (which never sleeps) it is a slow moment, worded as one. It counts the seconds, so a person can tell waiting from broken, and goes away by itself once the server answers.
  */
 export function ServerStatus() {
   const [{ state, since }, setStatus] = useState<{ state: ServerState; since: number | null }>(serverState);
@@ -19,12 +19,25 @@ export function ServerStatus() {
 
   const seconds = since ? Math.max(0, Math.round((Date.now() - since) / 1000)) : 0;
   const long = seconds > 90;
-  const title = state === "slow" ? "Waking up the shop server…" : long ? "The shop server is not answering" : "Starting the shop server…";
-  const detail = long
-    ? "It has been more than a minute and a half. It may be down: try again in a few minutes, or check Render."
-    : IS_STAGING
-      ? "The staging server sleeps when nobody has used it for a while and takes up to a minute to wake. Pages load by themselves once it is up."
-      : "This usually takes a few seconds. Pages load by themselves once it answers.";
+  // Staging sleeps on Render's free plan, so there it is "waking up"; the live server doesn't sleep, so it never says that.
+  const title = long
+    ? IS_STAGING
+      ? "The shop server is not answering"
+      : "The shop isn't answering"
+    : state === "slow"
+      ? IS_STAGING
+        ? "Waking up the shop server…"
+        : "Taking longer than usual…"
+      : IS_STAGING
+        ? "Starting the shop server…"
+        : "Reconnecting to the shop…";
+  const detail = IS_STAGING
+    ? long
+      ? "It has been more than a minute and a half. It may be down: try again in a few minutes, or check Render."
+      : "The staging server sleeps when nobody has used it for a while and takes up to a minute to wake. Pages load by themselves once it is up."
+    : long
+      ? "Please try again in a few minutes."
+      : "Pages finish loading by themselves once it answers.";
   return (
     <div
       role="status"
