@@ -15,6 +15,8 @@ interface FoundOrder {
   createdAt: string;
   shippingMethod: string;
   subtotalCents: number;
+  discountCode?: string | null;
+  discountCents?: number;
   shippingCents: number;
   taxCents: number;
   totalCents: number;
@@ -183,6 +185,12 @@ function OrderCard({ order: o }: { order: FoundOrder }) {
       <dl className="sp-order__totals">
         <dt>Subtotal</dt>
         <dd>{price(o.subtotalCents)}</dd>
+        {!!o.discountCents && (
+          <>
+            <dt>Discount{o.discountCode ? ` (${o.discountCode})` : ""}</dt>
+            <dd>−{price(o.discountCents)}</dd>
+          </>
+        )}
         <dt>Shipping ({o.shippingMethod})</dt>
         <dd>{o.shippingCents ? price(o.shippingCents) : "Free"}</dd>
         <dt>Tax</dt>
