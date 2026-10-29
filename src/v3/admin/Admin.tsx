@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import "../../components/styles/tokens.scss";
 import "../storefront/storefront.scss"; // previews render real storefront components
 // the shared panel styles load before the admin's own, which refine a few of them
@@ -26,7 +26,11 @@ import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
 import { PhotosScreen } from "./PhotoQueue";
 import { DescriptionsScreen } from "./Descriptions";
+import { isOn } from "../../features";
 import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, SettingsScreen, type Ctx } from "./Screens";
+
+// Admin > Avatar: only fetched when opened (it brings Gleamshelf's editor package)
+const AvatarScreen = lazy(() => import("./AvatarScreen"));
 
 const LOGO = "/logo/logo%20cropped.png";
 
@@ -41,12 +45,20 @@ export default function Admin() {
   const isOwner = auth.user?.role === "owner";
   // Audit is only for owners and the staff the owner allowed (the API checks too)
   const canAudit = isOwner || !!auth.user?.canAudit;
-  const screens: Screen[] = [...SCREENS, ...(canAudit ? (["Audit"] as const) : []), ...(isOwner ? (["Accounts"] as const) : [])];
+  const showAvatar = isStaff && isOn("avatarStudio");
+  const screens: Screen[] = [
+    ...SCREENS,
+    ...(showAvatar ? (["Avatar"] as const) : []),
+    ...(canAudit ? (["Audit"] as const) : []),
+    ...(isOwner ? (["Accounts"] as const) : []),
+  ];
   const { data, setData, reload } = useAdminData(isStaff);
 
   const [screen, setScreenState] = useState<Screen>(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1));
-    return (SCREENS as string[]).includes(hash) || hash === "Audit" || hash === "Accounts" ? (hash as Screen) : "Dashboard";
+    return (SCREENS as string[]).includes(hash) || hash === "Audit" || hash === "Accounts" || (hash === "Avatar" && isOn("avatarStudio"))
+      ? (hash as Screen)
+      : "Dashboard";
   });
   const [productFilter, setProductFilter] = useState("All");
   const [orderTab, setOrderTab] = useState("All");
@@ -159,6 +171,11 @@ export default function Admin() {
       {screen === "Orders" && <OrdersScreen ctx={ctx} />}
       {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
       {screen === "Settings" && <SettingsScreen ctx={ctx} />}
+      {screen === "Avatar" && showAvatar && (
+        <Suspense fallback={<p className="ad-muted">Loading…</p>}>
+          <AvatarScreen />
+        </Suspense>
+      )}
       {screen === "Audit" && (canAudit ? <AuditScreen ctx={ctx} /> : <p className="ad-muted">Ask the owner for access to Audit.</p>)}
       {screen === "Accounts" &&
         (isOwner ? (

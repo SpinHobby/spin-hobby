@@ -3036,3 +3036,18 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+// Admin > Avatar: Gleamshelf's Avatar mode over the whole window, above the admin (it brings its own dark theme). Not .ad-avatar: that is
+// the round badge with a person's initials.
+.ad-live-avatar {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  > * {
+    flex: 1;
+    min-height: 0;
+  }
+}
