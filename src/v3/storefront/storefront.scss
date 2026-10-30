@@ -3719,3 +3719,13 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--text2);
   }
 }
+
+// An address with no page (Storefront.tsx notFound): a note above the shop
+.sf-notfound {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 14px;
+}

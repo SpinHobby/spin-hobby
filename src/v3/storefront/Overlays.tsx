@@ -32,7 +32,8 @@ function useShippingPicks(lines: CartLine[], remaining: number) {
   if (remaining <= 0) return together.filter((p) => !inCart.has(p.variationId));
   const seen = new Set<string>();
   const ok = [...together, ...pool].filter((p) => {
-    if (seen.has(p.id) || inCart.has(p.variationId) || !["in", "low"].includes(normalizeStatus(p.status))) return false;
+    if (seen.has(p.id) || inCart.has(p.variationId) || !["in", "low"].includes(normalizeStatus(p.status)) || !(p.priceCents > 0))
+      return false;
     seen.add(p.id);
     return true;
   });

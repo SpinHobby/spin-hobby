@@ -201,12 +201,19 @@ export default function Storefront() {
           ? seriesCopy(seriesName!, landing.slug)
           : null;
   const intro = homeCopy();
+  // An address the shop has no page for (a mistyped link, an old category): the shop is shown with a note, and search engines are told
+  // not to index it, so it can't sit in Google as a copy of the home page. Netlify answers every address with the app, so this is the 404.
+  const bare = location.pathname.replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+  const notFound =
+    !productId &&
+    ((!landing && !["/", "/shop", "/index"].includes(bare)) || (landing?.kind === "category" && tree.flat.length > 0 && !landingCategory));
   useDocumentHead({
     enabled: !productId,
-    title: page?.title ?? intro.title,
+    title: notFound ? "Page not found | Spin Hobby" : (page?.title ?? intro.title),
     description: page?.description ?? intro.description,
-    path: page ? (page.canonical ?? page.crumbs[page.crumbs.length - 1].path) : "/",
-    jsonLd: page ? breadcrumbJsonLd(page.crumbs) : null,
+    path: notFound ? bare : page ? (page.canonical ?? page.crumbs[page.crumbs.length - 1].path) : "/",
+    jsonLd: page && !notFound ? breadcrumbJsonLd(page.crumbs) : null,
+    noindex: notFound,
   });
 
   // Same split as the Events page. With nothing upcoming, show the latest events (newest first) so the strip isn't empty.
@@ -732,6 +739,11 @@ export default function Storefront() {
                 </>
               )}
 
+              {notFound && (
+                <div className="sf-notfound" role="status">
+                  <b>We couldn't find that page.</b> It may have moved, or the link has a typo. Here's the shop instead.
+                </div>
+              )}
               {page && !wishOnly && (
                 <header key={location.pathname} className="sf-landing ui-title-in">
                   <nav className="sf-crumbs" aria-label="Breadcrumb">

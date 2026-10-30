@@ -21,6 +21,7 @@ import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions, PriceTag } from "./ProductViews";
+import { askHref, noPrice } from "../../components/shop/priceOnRequest";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
@@ -66,6 +67,9 @@ function productDescription(p: Product) {
 
 const RELATED = 8;
 
+/** The same product, whatever the case of the id: links carry it in lower case, Square's ids are upper case. */
+const sameId = (x: Product | null | undefined, id: string) => !!x && x.id.toLowerCase() === id.toLowerCase();
+
 /** Full product page at /product/<id>: gallery, buy box, details and "You may also like". */
 export function ProductPage({
   id,
@@ -95,16 +99,16 @@ export function ProductPage({
   onToast: (message: string) => void;
 }) {
   // Show what the card already knew straight away, then fill in description, JAN code and fresh stock.
-  const [p, setP] = useState<Product | null>(initial?.id === id ? initial : null);
+  const [p, setP] = useState<Product | null>(sameId(initial, id) ? initial : null);
   const [missing, setMissing] = useState(false);
   const [related, setRelated] = useState<Product[] | null>(null);
 
   useEffect(() => {
     let live = true;
     setMissing(false);
-    setP((cur) => (cur?.id === id ? cur : initial?.id === id ? initial : null));
+    setP((cur) => (sameId(cur, id) ? cur : sameId(initial, id) ? initial : null));
     const load = (key: string) => api<{ item: Product }>(`/square/catalog/${encodeURIComponent(key)}`);
-    // a link whose id was lowercased on the way (the host once redirected /product/BZJ6… to /product/bzj6…/): Square's ids are upper case
+    // links carry the id in lower case (the API finds it in any case); an older API needs Square's upper case
     load(id)
       .catch((e) => (id !== id.toUpperCase() ? load(id.toUpperCase()) : Promise.reject(e)))
       .then((res) => live && setP((cur) => ({ ...(cur ?? {}), ...res.item })))
@@ -154,13 +158,9 @@ export function ProductPage({
     };
   }, [id, hasProduct, categoryId, series]);
 
-  // A canonical-looking URL (with the name slug) once the name is known.
+  // The product's own link (lower-case id and the name slug) once the product is known, whatever address it was opened from.
   const navigate = useNavigate();
   const location = useLocation();
-  // found under its real (upper case) id: the address bar gets the product's own link
-  useEffect(() => {
-    if (p && p.id !== id && p.id.toLowerCase() === id.toLowerCase()) navigate(productPath(p), { replace: true });
-  }, [p, id, navigate]);
   useEffect(() => {
     if (!p) return;
     const path = productPath(p);
@@ -179,6 +179,8 @@ export function ProductPage({
     path: p ? productPath(p) : location.pathname,
     image: p?.images[0] ?? null,
     jsonLd: p ? [productJsonLd(p), breadcrumbJsonLd([...crumbTrail, { name: p.name, path: productPath(p) }])] : null,
+    // a product that isn't there (removed, or a wrong link) is this site's 404: kept out of search results
+    noindex: missing && !p,
   });
 
   if (missing && !p) {
@@ -580,8 +582,12 @@ function BuyBox({
 
       <div className="sf-pp__pricebox">
         <div className="sf-pp__price">
-          <PriceTag cents={p.priceCents} currency={a.currency} />
-          {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
+          {noPrice(p) ? (
+            <strong className="sf-price sf-price--ask">Ask for price</strong>
+          ) : (
+            <PriceTag cents={p.priceCents} currency={a.currency} />
+          )}
+          {off > 0 && !noPrice(p) && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
           {off > 0 && <span className="sf-pp__off">Save {off}%</span>}
         </div>
         <div className="sf-pp__status" style={{ color: meta.color }}>
@@ -615,7 +621,16 @@ function BuyBox({
       )}
 
       <div ref={buyRef}>
-        {s === "out" ? (
+        {s !== "out" && noPrice(p) ? (
+          <div className="sf-pp__notice">
+            <p>
+              <b>No online price yet.</b> Email us and we'll tell you the price and hold it for you.
+            </p>
+            <a className="sf-buy sf-pp__cta sf-center" href={askHref(p)}>
+              Ask for the price
+            </a>
+          </div>
+        ) : s === "out" ? (
           <div className="sf-pp__notice">
             <p>
               <b>Sold out.</b> Get an email the moment it's restocked.
@@ -726,7 +741,7 @@ function BuyBox({
 
       <FollowBox p={p} email={followEmail} />
 
-      {!buyVisible && s !== "out" && room > 0 && (
+      {!buyVisible && s !== "out" && room > 0 && !noPrice(p) && (
         <div className="sf-pp__sticky" aria-hidden={buyVisible}>
           <div>
             <b>{p.name}</b>

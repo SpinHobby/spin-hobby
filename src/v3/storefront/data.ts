@@ -209,7 +209,8 @@ export function slugify(text: string) {
 
 export function productPath(p: Pick<Product, "id" | "name">) {
   const slug = slugify(p.name);
-  return `/product/${encodeURIComponent(p.id)}${slug ? `/${slug}` : ""}`;
+  // lower case: Netlify serves the pre-built product pages from lower-case paths (it redirects any other), and the API finds an id in any case
+  return `/product/${encodeURIComponent(p.id.toLowerCase())}${slug ? `/${slug}` : ""}`;
 }
 export function productIdFromPath(pathname: string): string | null {
   const m = /^\/product\/([^/]+)/.exec(pathname);
