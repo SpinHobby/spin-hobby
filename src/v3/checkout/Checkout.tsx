@@ -65,7 +65,35 @@ interface Quote {
   taxCents: number;
   totalCents: number;
   warnings: { variationId: string; code: string; message: string }[];
+  /** The courier options for this cart and address, cheapest first (older APIs send none). */
+  shippingOptions?: ShippingOption[];
+  shippingOption?: ShippingOption | null;
+  /** Couriers' live rates (true) or the shop's flat standard/express prices (false). */
+  shippingLive?: boolean;
 }
+
+/** One courier choice: `cents` is what the shopper pays (free-shipping rule applied), `fullCents` what the courier charges. */
+interface ShippingOption {
+  id: string;
+  carrier: string;
+  service: string;
+  cents: number;
+  fullCents: number;
+  days: number | null;
+  free: boolean;
+}
+
+/** "Canada Post · Expedited Parcel"; the shop's own flat options are just "Standard" / "Express". */
+const optionName = (o: ShippingOption) => (o.carrier === "Spin Hobby" ? o.service : `${o.carrier} · ${o.service}`);
+/** "3 business days"; the flat options keep the shop's usual wording. */
+const optionTime = (o: ShippingOption) =>
+  o.days != null
+    ? `${o.days} business day${o.days === 1 ? "" : "s"}, tracked`
+    : o.id.endsWith("express")
+      ? "2–3 business days, tracked"
+      : o.carrier === "Spin Hobby"
+        ? "5–7 business days, tracked"
+        : "Tracked";
 
 // Fallback when the server doesn't expose /checkout/config yet. Only PayPal can work without it,
 // and only if the client ID matches the server's PAYPAL_CLIENT_ID.
@@ -98,7 +126,8 @@ export default function Checkout() {
   }, [hasItems]);
   const [email, setEmail] = useLocalState("spinhobby-checkout-email", "");
   const [ship, setShip] = useLocalState<Address>("spinhobby-checkout-address", EMPTY_ADDRESS);
-  const [method, setMethod] = useState<"standard" | "express">("standard");
+  // the courier option picked (an id from the quote's shippingOptions); null until the first quote picks the cheapest
+  const [option, setOption] = useState<string | null>(null);
   const [billingSame, setBillingSame] = useState(true);
   const [bill, setBill] = useState<Address>(EMPTY_ADDRESS);
   const [touched, setTouched] = useState(false); // a payment attempt: show every problem
@@ -189,15 +218,19 @@ export default function Checkout() {
     });
   }, []);
 
+  // the postal code goes with the quote once it looks complete: couriers price to it
+  const postalReady = POSTAL_RE[ship.country].test(ship.postalCode.trim());
   const quoteInput = useMemo(
     () => ({
       items: cart.lines.map((l) => ({ variationId: l.variationId, quantity: l.quantity })),
-      shippingMethod: method,
+      shippingMethod: "standard" as const,
       country: ship.country,
       province: ship.province,
+      ...(postalReady ? { postalCode: ship.postalCode.trim(), city: ship.city.trim() } : {}),
+      ...(option ? { shippingOption: option } : {}),
       ...(appliedCode ? { discountCode: appliedCode } : {}),
     }),
-    [cart.lines, method, ship.country, ship.province, appliedCode],
+    [cart.lines, ship.country, ship.province, postalReady, ship.postalCode, ship.city, option, appliedCode],
   );
 
   useEffect(() => {
@@ -213,6 +246,9 @@ export default function Checkout() {
           if (active) {
             setQuote(q);
             setQuoteError("");
+            // the option picked isn't offered for this address (or none was picked yet): use the one the quote priced
+            const priced = q.shippingOption?.id ?? null;
+            if (priced) setOption((cur) => (cur === priced ? cur : priced));
             // a code that doesn't (or no longer) applies is dropped with its reason, so it never blocks paying
             if (q.discountMessage) {
               setCodeMessage(q.discountMessage);
@@ -379,6 +415,8 @@ export default function Checkout() {
     touched || blurred.has(`${prefix}.${k}`) ? errs[k] : undefined;
   // free shipping is judged on the goods after any discount (as the server prices it)
   const goods = (quote?.subtotalCents ?? cart.subtotal) - (quote?.discountCents ?? 0);
+  const options = quote?.shippingOptions ?? [];
+  const chosen = quote?.shippingOption ?? null;
   const freeLeft = config ? Math.max(config.freeShippingThresholdCents - goods, 0) : 0;
 
   const shipOk = Object.keys(shipErrors).length === 0;
@@ -505,22 +543,35 @@ export default function Checkout() {
                 phone={false}
               />
               <h3>Delivery</h3>
-              <div className="co-methods">
-                {(["standard", "express"] as const).map((m) => {
-                  const cost = m === "express" ? config?.shippingExpressCents : goods >= threshold ? 0 : config?.shippingStandardCents;
-                  return (
-                    <label key={m} className={`co-method ${method === m ? "is-active" : ""}`}>
-                      <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} />
-                      <span className="co-method__main">
-                        <b>{m === "express" ? "Express" : "Standard"}</b>
-                        <span>{m === "express" ? "2–3 business days, tracked" : "5–7 business days, tracked"}</span>
-                      </span>
-                      <b className="co-method__price">{cost === undefined ? "—" : cost === 0 ? "Free" : price(cost)}</b>
-                    </label>
-                  );
-                })}
-              </div>
-              {method === "standard" && freeLeft > 0 && <p className="co-note">Add {price(freeLeft)} more for free standard shipping.</p>}
+              {options.length ? (
+                <div className="co-methods" role="radiogroup" aria-label="Delivery">
+                  {options.map((o) => {
+                    const on = (chosen?.id ?? options[0]!.id) === o.id;
+                    return (
+                      <label key={o.id} className={`co-method ${on ? "is-active" : ""}`}>
+                        <input type="radio" name="method" checked={on} onChange={() => setOption(o.id)} />
+                        <span className="co-method__main">
+                          <b>{optionName(o)}</b>
+                          <span>{optionTime(o)}</span>
+                        </span>
+                        <b className="co-method__price">
+                          {o.cents === 0 ? "Free" : price(o.cents)}
+                          {o.cents !== o.fullCents && o.cents > 0 && <s className="co-method__was">{price(o.fullCents)}</s>}
+                        </b>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="co-note">{quoting ? "Finding delivery options…" : "Delivery options show once your cart is priced."}</p>
+              )}
+              {!quote?.shippingLive && !postalReady && (
+                <p className="co-note">Enter your postal code to see couriers and delivery times for your address.</p>
+              )}
+              {freeLeft > 0 && <p className="co-note">Add {price(freeLeft)} more for free shipping.</p>}
+              {quote?.shippingLive && freeLeft === 0 && options.length > 1 && (
+                <p className="co-note">The cheapest courier is free on this order; faster ones cost only the difference.</p>
+              )}
             </section>
 
             <section className="co-section" aria-labelledby="co-h-pay">
@@ -745,7 +796,7 @@ export default function Checkout() {
                   <Row label={`Discount${quote.discount ? ` (${quote.discount.code})` : ""}`} value={`−${price(quote.discountCents)}`} />
                 )}
                 <Row
-                  label={`Shipping (${method === "express" ? "Express" : "Standard"})`}
+                  label={`Shipping${chosen ? ` (${optionName(chosen)})` : ""}`}
                   value={quote ? (quote.shippingCents ? price(quote.shippingCents) : "Free") : "—"}
                 />
                 <Row label="Tax" value={quote ? price(quote.taxCents) : "—"} />

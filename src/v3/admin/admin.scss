@@ -3194,3 +3194,15 @@
   color: var(--red);
   font-size: 14px;
 }
+
+// A category's packed size for courier rates (Categories.tsx ParcelSizeForm)
+.ad-cat__size {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  .sh-input {
+    width: 72px;
+  }
+}

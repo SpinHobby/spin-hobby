@@ -108,6 +108,11 @@ export interface ShopCategory {
   sortOrder: number;
   isVisible?: boolean; // admin only
   productCount?: number; // admin only: products directly in this category
+  /** Admin only: the packed size of one product here (grams, cm) for courier rates; null inherits the parent's or the shop's. */
+  parcelWeightG?: number | null;
+  parcelLengthCm?: number | null;
+  parcelWidthCm?: number | null;
+  parcelHeightCm?: number | null;
 }
 
 export interface Homepage {
@@ -226,6 +231,17 @@ export interface StoreSettings {
   maintenance_message: string | null;
   /** The storefront's Shop playlist (a YouTube playlist id); null hides the button. */
   music_playlist_id?: string | null;
+  /** Live courier rates: where parcels leave from, and the default packed size of one item (grams, cm). */
+  ship_from_postal?: string | null;
+  ship_from_city?: string | null;
+  ship_from_province?: string | null;
+  parcel_weight_g?: number;
+  parcel_length_cm?: number;
+  parcel_width_cm?: number;
+  parcel_height_cm?: number;
+  packaging_weight_g?: number;
+  /** Whether the server has an EasyPost key (EASYPOST_API_KEY). */
+  easypost_configured?: boolean;
 }
 
 export interface Readiness {
