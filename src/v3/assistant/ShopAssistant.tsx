@@ -220,7 +220,13 @@ export default function ShopAssistant() {
               Ask
             </button>
           </form>
-          <p className="sa-note">Answers are written by AI and can be wrong. Prices and stock are on each product's page.</p>
+          <p className="sa-note">
+            Answers are written by AI and can be wrong. Prices and stock are on each product's page. Chats are not saved:{" "}
+            <Link to="/legal/privacy" onClick={() => setOpen(false)}>
+              privacy
+            </Link>
+            .
+          </p>
         </section>
       )}
       <button

@@ -84,7 +84,8 @@ src/components/
 
 The shop's own cards, for any page that shows products (the homepage, a category, search, the wishlist, an account page). Unlike
 the pieces above, they take a real `Product` and the shop's `CardActions` (add to cart, wishlist, open the product), so they behave
-the same everywhere. See them live on `/ui-kit` → **Shop cards**, and the spec (sizes, behaviour, a wishlist example) in Figma:
+the same everywhere. Give `CardActions` an `onBuyNow` and each card also shows **Buy now** under Add to cart: checkout for just that
+item at `/checkout/now`, leaving the cart alone (the shop's is `startBuyNow` in `v3/storefront/data.ts`). See them live on `/ui-kit` → **Shop cards**, and the spec (sizes, behaviour, a wishlist example) in Figma:
 https://www.figma.com/design/ktDoGrb7ngNJb7U1mbJucY
 
 | Piece | What it is | Options worth knowing |

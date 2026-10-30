@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./support.scss";
-import { handlingLabel, price } from "../format";
+import { handlingLabel, price, storeFormat } from "../format";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE, SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
@@ -122,8 +122,8 @@ export default function Support() {
             <summary>When will my order ship, and how do I track it?</summary>
             <p>In-stock orders are packed within {handlingLabel()}. When your order ships we email you the carrier and tracking number.</p>
             <p>
-              If you checked out while signed in, your orders are saved to your account. If you can&apos;t find a tracking email,{" "}
-              <a href={mailto("Order status", TOPICS[0].body)}>email us</a> with your order number.
+              <Link to="/order-status">Check your order status</Link> any time with your order number and the email you used at checkout.
+              Can&apos;t find your order number? <a href={mailto("Order status", TOPICS[0].body)}>Email us</a>.
             </p>
           </details>
           <details id="preorders">
@@ -154,8 +154,9 @@ export default function Support() {
           <details id="payment">
             <summary>Is paying on the site safe?</summary>
             <p>
-              Payments are handled by Square and PayPal. Your card details go straight to them and are never stored on our servers. More in
-              our <Link to="/legal/privacy">Privacy Policy</Link>.
+              Payments are handled by {storeFormat.paypal ? "Square and PayPal" : "Square"}. Your card details go straight to{" "}
+              {storeFormat.paypal ? "them" : "Square"} and are never stored on our servers. More in our{" "}
+              <Link to="/legal/privacy">Privacy Policy</Link>.
             </p>
           </details>
         </div>

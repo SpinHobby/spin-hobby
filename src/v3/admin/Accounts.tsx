@@ -17,11 +17,13 @@ import {
   SegmentedControl,
   StatusBadge,
   Switch,
+  Tabs,
   TextField,
   Toolbar,
   type Column,
 } from "../../components";
 import type { Ctx } from "./Screens";
+import { AccountActivity, type Activity, type ActivityTab } from "./AccountActivity";
 
 /** A role as the API describes it (lowest first). New roles on the server show up here by themselves. */
 interface RoleInfo {
@@ -236,6 +238,17 @@ function AccountDrawer({
   const [reason, setReason] = useState("");
   const [confirm, setConfirm] = useState<null | "owner" | "ban">(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<ActivityTab | "manage">("overview");
+  const [activity, setActivity] = useState<Activity | null>(null);
+  const [activityError, setActivityError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActivity(null);
+    setActivityError(null);
+    api<Activity>(`/admin/accounts/${id}/activity`)
+      .then(setActivity)
+      .catch((e) => setActivityError(errMsg(e)));
+  }, [id]);
 
   const load = useCallback(() => {
     api<{ account: Account }>(`/admin/accounts/${id}`)
@@ -278,139 +291,173 @@ function AccountDrawer({
             <dd>{account.name ?? "—"}</dd>
             <dt>Joined</dt>
             <dd>{dateLabel(account.createdAt)}</dd>
-            <dt>Orders</dt>
-            <dd>{account.orders ? `${account.orders} paid · ${money(account.spentCents)}` : "None yet"}</dd>
+            <dt>Role</dt>
+            <dd>{roleInfo(account.role)?.label ?? account.role}</dd>
             <dt>Standing</dt>
             <dd>
               <Standing a={account} />
             </dd>
           </dl>
 
-          {isMe && <Banner tone="info">This is your own account. To keep the shop safe, another owner has to change it.</Banner>}
+          <Tabs<ActivityTab | "manage">
+            label="Account"
+            value={tab}
+            onChange={setTab}
+            items={[
+              { key: "overview", label: "Overview" },
+              { key: "orders", label: "Orders", count: activity?.orders.length },
+              { key: "favourites", label: "Favourites", count: activity?.favourites.length },
+              { key: "addresses", label: "Addresses", count: activity?.addresses.length },
+              { key: "alerts", label: "Alerts", count: activity?.alerts.length },
+              { key: "manage", label: "Manage" },
+            ]}
+          />
+          <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+            {TAB_HELP[tab]}
+          </p>
 
-          <section className="ad-acct__section">
-            <h3 className="ad-h3">Role</h3>
-            {account.roleFromEnv && (
-              <p className="ad-muted ad-sm" style={{ margin: 0 }}>
-                The server's {account.roleFromEnv === "owner" ? "OWNER_EMAILS" : "STAFF_EMAILS"} list makes this account at least{" "}
-                {roleInfo(account.roleFromEnv)?.label ?? account.roleFromEnv}, so it can't go below that here.
-              </p>
-            )}
-            <RadioGroup
-              label="Role"
-              value={role}
-              onChange={setRole}
-              options={[...roles].reverse().map((r) => ({
-                value: r.key,
-                label: r.label,
-                description: r.description,
-                disabled: isMe || (account.roleFromEnv ? r.rank < rankOf(account.roleFromEnv) : false),
-              }))}
-            />
-            <div>
-              <Button
-                size="sm"
-                disabled={isMe || busy || role === account.role}
-                onClick={() => (rankOf(role) >= ownerRank && rankOf(account.role) < ownerRank ? setConfirm("owner") : saveRole())}
-              >
-                {rankOf(role) > rankOf(account.role) ? "Promote" : "Change role"}
-              </Button>
-            </div>
-            {rankOf(account.role) >= staffRank && rankOf(account.role) < ownerRank && (
-              <Switch
-                checked={account.canAudit}
-                disabled={isMe || busy}
-                onChange={(v) =>
-                  run(v ? "They can now open Audit" : "They can no longer open Audit", `/admin/audit/access/${id}`, { canAudit: v })
-                }
-                label="Can open Audit"
-                description="Audit documents and sales records"
-              />
-            )}
-          </section>
+          {tab !== "manage" &&
+            (activityError ? (
+              <Banner tone="error">{activityError}</Banner>
+            ) : activity ? (
+              <AccountActivity tab={tab} activity={activity} email={account.email} />
+            ) : (
+              <EmptyState>Loading…</EmptyState>
+            ))}
 
-          <section className="ad-acct__section">
-            <h3 className="ad-h3">Standing</h3>
-            {account.restriction ? (
-              <>
-                <Banner tone="error">
-                  {account.restriction.kind === "banned"
-                    ? `Banned since ${shopDate(account.restriction.since)}.`
-                    : `Suspended until the end of ${dayLabelOf(account.restriction.lastDay)}.`}
-                  {account.restriction.reason && ` Reason: ${account.restriction.reason}`}
-                </Banner>
+          {tab === "manage" && isMe && (
+            <Banner tone="info">This is your own account. To keep the shop safe, another owner has to change it.</Banner>
+          )}
+
+          {tab === "manage" && (
+            <>
+              <section className="ad-acct__section">
+                <h3 className="ad-h3">Role</h3>
+                {account.roleFromEnv && (
+                  <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+                    The server's {account.roleFromEnv === "owner" ? "OWNER_EMAILS" : "STAFF_EMAILS"} list makes this account at least{" "}
+                    {roleInfo(account.roleFromEnv)?.label ?? account.roleFromEnv}, so it can't go below that here.
+                  </p>
+                )}
+                <RadioGroup
+                  label="Role"
+                  value={role}
+                  onChange={setRole}
+                  options={[...roles].reverse().map((r) => ({
+                    value: r.key,
+                    label: r.label,
+                    description: r.description,
+                    disabled: isMe || (account.roleFromEnv ? r.rank < rankOf(account.roleFromEnv) : false),
+                  }))}
+                />
                 <div>
                   <Button
                     size="sm"
-                    variant="ghost"
+                    disabled={isMe || busy || role === account.role}
+                    onClick={() => (rankOf(role) >= ownerRank && rankOf(account.role) < ownerRank ? setConfirm("owner") : saveRole())}
+                  >
+                    {rankOf(role) > rankOf(account.role) ? "Promote" : "Change role"}
+                  </Button>
+                </div>
+                {rankOf(account.role) >= staffRank && rankOf(account.role) < ownerRank && (
+                  <Switch
+                    checked={account.canAudit}
                     disabled={isMe || busy}
-                    onClick={() =>
-                      run(
-                        account.restriction!.kind === "banned" ? "Ban lifted" : "Suspension lifted",
-                        `/admin/accounts/${id}/restriction`,
-                        { action: "lift" },
-                      )
+                    onChange={(v) =>
+                      run(v ? "They can now open Audit" : "They can no longer open Audit", `/admin/audit/access/${id}`, { canAudit: v })
                     }
-                  >
-                    {account.restriction.kind === "banned" ? "Lift the ban" : "Lift the suspension"}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <SegmentedControl<Length>
-                  label="Suspend for"
-                  size="sm"
-                  value={length}
-                  onChange={(v) => {
-                    setLength(v);
-                    if (v !== "date") setUntil(lastDay(v));
-                  }}
-                  options={LENGTHS}
-                />
-                {length === "date" && <TextField label="Last day" type="date" value={until} onChange={(e) => setUntil(e.target.value)} />}
-                <TextField
-                  label="Reason"
-                  hint="Shown to them when they try to sign in, and kept in the log."
-                  maxLength={300}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-                <div className="ad-acct__actions">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={isMe || busy || !until}
-                    onClick={() =>
-                      run(`Suspended until the end of ${dayLabelOf(until)}`, `/admin/accounts/${id}/restriction`, {
-                        action: "suspend",
-                        until,
-                        reason,
-                      })
-                    }
-                  >
-                    Suspend until the end of {until ? dayLabelOf(until) : "…"}
-                  </Button>
-                  <Button size="sm" variant="danger" disabled={isMe || busy} onClick={() => setConfirm("ban")}>
-                    Ban permanently
-                  </Button>
-                </div>
-              </>
-            )}
-          </section>
+                    label="Can open Audit"
+                    description="Audit documents and sales records"
+                  />
+                )}
+              </section>
 
-          {!!account.history?.length && (
-            <section className="ad-acct__section">
-              <h3 className="ad-h3">History</h3>
-              <LineList
-                rows={account.history}
-                rowKey={(h) => `${h.action}-${h.created_at}`}
-                id={(h) => dateLabel(h.created_at)}
-                main={(h) => describe(h, (k) => roleInfo(k)?.label ?? k)}
-                value={(h) => <span className="ad-muted ad-sm">{h.by ?? ""}</span>}
-                empty="No changes yet."
-              />
-            </section>
+              <section className="ad-acct__section">
+                <h3 className="ad-h3">Standing</h3>
+                {account.restriction ? (
+                  <>
+                    <Banner tone="error">
+                      {account.restriction.kind === "banned"
+                        ? `Banned since ${shopDate(account.restriction.since)}.`
+                        : `Suspended until the end of ${dayLabelOf(account.restriction.lastDay)}.`}
+                      {account.restriction.reason && ` Reason: ${account.restriction.reason}`}
+                    </Banner>
+                    <div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={isMe || busy}
+                        onClick={() =>
+                          run(
+                            account.restriction!.kind === "banned" ? "Ban lifted" : "Suspension lifted",
+                            `/admin/accounts/${id}/restriction`,
+                            { action: "lift" },
+                          )
+                        }
+                      >
+                        {account.restriction.kind === "banned" ? "Lift the ban" : "Lift the suspension"}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <SegmentedControl<Length>
+                      label="Suspend for"
+                      size="sm"
+                      value={length}
+                      onChange={(v) => {
+                        setLength(v);
+                        if (v !== "date") setUntil(lastDay(v));
+                      }}
+                      options={LENGTHS}
+                    />
+                    {length === "date" && (
+                      <TextField label="Last day" type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
+                    )}
+                    <TextField
+                      label="Reason"
+                      hint="Shown to them when they try to sign in, and kept in the log."
+                      maxLength={300}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
+                    <div className="ad-acct__actions">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={isMe || busy || !until}
+                        onClick={() =>
+                          run(`Suspended until the end of ${dayLabelOf(until)}`, `/admin/accounts/${id}/restriction`, {
+                            action: "suspend",
+                            until,
+                            reason,
+                          })
+                        }
+                      >
+                        Suspend until the end of {until ? dayLabelOf(until) : "…"}
+                      </Button>
+                      <Button size="sm" variant="danger" disabled={isMe || busy} onClick={() => setConfirm("ban")}>
+                        Ban permanently
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </section>
+
+              {!!account.history?.length && (
+                <section className="ad-acct__section">
+                  <h3 className="ad-h3">History</h3>
+                  <LineList
+                    rows={account.history}
+                    rowKey={(h) => `${h.action}-${h.created_at}`}
+                    id={(h) => dateLabel(h.created_at)}
+                    main={(h) => describe(h, (k) => roleInfo(k)?.label ?? k)}
+                    value={(h) => <span className="ad-muted ad-sm">{h.by ?? ""}</span>}
+                    empty="No changes yet."
+                  />
+                </section>
+              )}
+            </>
           )}
         </div>
       )}
@@ -438,6 +485,16 @@ function AccountDrawer({
     </Drawer>
   );
 }
+
+/** One plain line under the tabs: what this tab shows. */
+const TAB_HELP: Record<ActivityTab | "manage", string> = {
+  overview: "How to reach them, what they've spent, and their latest orders.",
+  orders: "Every order, newest first, including ones placed as a guest with this email. Click an order for its items and timeline.",
+  favourites: "What they've hearted, newest first: a good guide to what to restock or tell them about.",
+  addresses: "The addresses saved to their account. The default one is filled in at checkout.",
+  alerts: "Sold-out products they asked to be emailed about when back in stock.",
+  manage: "Change their role, suspend or ban them. Every change is logged below.",
+};
 
 /** One line of an account's history, in words. */
 function describe(h: { action: string; data: Record<string, unknown> }, label: (role: string) => string) {

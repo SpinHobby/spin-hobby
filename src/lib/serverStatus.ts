@@ -2,10 +2,15 @@
 // up to a minute to wake: without a word on screen the site just looks broken. Every request is watched here, and the banner (ServerStatus.tsx)
 // says when the server is slow to answer (waking up) or cannot be reached, and when it is back.
 
+import { IS_STAGING } from "../staging";
+
 export type ServerState = "ok" | "slow" | "down";
 
-/** A request still waiting after this long is taken as the server waking up. */
-const SLOW_MS = 3_000;
+/**
+ * A request still waiting after this long shows the banner. Staging's server sleeps, so a slow answer there is nearly always it waking:
+ * say so early. The live server never sleeps; a slow moment there (a deploy, a heavy admin task, a weak connection) waits longer first.
+ */
+const SLOW_MS = IS_STAGING ? 3_000 : 8_000;
 /** How often the server is asked whether it is up again, while it is not answering. */
 const PING_MS = 4_000;
 /** How long a page read waits for a sleeping server before giving up. */

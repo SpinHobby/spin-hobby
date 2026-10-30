@@ -218,6 +218,7 @@ function CategoryRow({
   const [name, setName] = useState(n.name);
   const [moving, setMoving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [sizing, setSizing] = useState(false);
   const isOpen = open.includes(n.id);
   const hasKids = n.children.length > 0;
   const subtree = tree.descendants(n.id);
@@ -324,6 +325,15 @@ function CategoryRow({
               ▼
             </button>
           </span>
+          <button
+            type="button"
+            className="ad-link"
+            onClick={() => setSizing((v) => !v)}
+            disabled={busy}
+            title="Weight and box for courier rates"
+          >
+            {n.parcelWeightG ? `${sizeLabel(n)}` : "Size…"}
+          </button>
           {moving ? (
             <select
               className="sh-input ad-cat__move"
@@ -371,6 +381,18 @@ function CategoryRow({
           </button>
         </div>
       </div>
+      {sizing && (
+        <ParcelSizeForm
+          n={n}
+          depth={n.depth}
+          busy={busy}
+          onCancel={() => setSizing(false)}
+          onSave={(size) => {
+            setSizing(false);
+            put(size, size.parcelWeightG ? `${n.name}: size saved` : `${n.name}: uses its parent's size`);
+          }}
+        />
+      )}
       {(isOpen || adding === n.id) && (
         <ul role="group">
           {adding === n.id && (
@@ -405,6 +427,68 @@ function CategoryRow({
         </ul>
       )}
     </li>
+  );
+}
+
+/** "1.2 kg · 35×25×20 cm" for a category's packed size. */
+function sizeLabel(n: CategoryNode) {
+  const kg = (n.parcelWeightG ?? 0) >= 1000 ? `${Number(((n.parcelWeightG ?? 0) / 1000).toFixed(2))} kg` : `${n.parcelWeightG} g`;
+  return n.parcelLengthCm ? `${kg} · ${n.parcelLengthCm}×${n.parcelWidthCm}×${n.parcelHeightCm} cm` : kg;
+}
+
+type ParcelSize = Record<"parcelWeightG" | "parcelLengthCm" | "parcelWidthCm" | "parcelHeightCm", number | null>;
+
+/**
+ * The packed size of one product in this category, for courier rates at checkout: weight and box. Subcategories and products without their
+ * own size use it; blank means this category uses its parent's (or the shop default in Admin > Settings).
+ */
+function ParcelSizeForm({
+  n,
+  depth,
+  busy,
+  onSave,
+  onCancel,
+}: {
+  n: CategoryNode;
+  depth: number;
+  busy: boolean;
+  onSave: (size: ParcelSize) => void;
+  onCancel: () => void;
+}) {
+  const [v, setV] = useState({
+    w: n.parcelWeightG ? String(n.parcelWeightG) : "",
+    l: n.parcelLengthCm ? String(n.parcelLengthCm) : "",
+    wd: n.parcelWidthCm ? String(n.parcelWidthCm) : "",
+    h: n.parcelHeightCm ? String(n.parcelHeightCm) : "",
+  });
+  const num = (x: string) => (x.trim() ? Math.round(Number(x)) : null);
+  const bad = Object.values(v).some((x) => x.trim() && !(Number(x) >= 1));
+  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((cur) => ({ ...cur, [k]: e.target.value }));
+  return (
+    <form
+      className="ad-cat ad-cat__size"
+      style={{ paddingLeft: 18 + depth * 24 + 28 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!bad) onSave({ parcelWeightG: num(v.w), parcelLengthCm: num(v.l), parcelWidthCm: num(v.wd), parcelHeightCm: num(v.h) });
+      }}
+    >
+      <span className="ad-muted ad-sm">One packed item, for courier rates:</span>
+      <input className="sh-input" inputMode="numeric" placeholder="grams" aria-label="Weight in grams" value={v.w} onChange={set("w")} />
+      <span className="ad-range">
+        <input className="sh-input" inputMode="numeric" placeholder="L" aria-label="Length in cm" value={v.l} onChange={set("l")} />×
+        <input className="sh-input" inputMode="numeric" placeholder="W" aria-label="Width in cm" value={v.wd} onChange={set("wd")} />×
+        <input className="sh-input" inputMode="numeric" placeholder="H" aria-label="Height in cm" value={v.h} onChange={set("h")} />
+        cm
+      </span>
+      <button className="sh-btn" disabled={busy || bad}>
+        Save
+      </button>
+      <button type="button" className="ad-link" onClick={onCancel}>
+        Cancel
+      </button>
+      <span className="ad-muted ad-sm">Blank: uses the parent category's size, or the default in Settings.</span>
+    </form>
   );
 }
 

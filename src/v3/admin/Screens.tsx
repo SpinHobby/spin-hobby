@@ -1,12 +1,13 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
-import { dateLabel, dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
+import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
 import { useEscape } from "../hooks";
 import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
+import { ShopperFunnel } from "./ShopperFunnel";
 import {
   activeFilterCount,
   DEFAULT_SORT,
@@ -15,7 +16,9 @@ import {
   EMPTY_FILTERS,
   filterQuery,
   filtersFromShortcut,
+  addedLabel,
   loadPrefs,
+  PAGE_SIZES,
   savePrefs,
   STATE_META,
   useCatalog,
@@ -229,6 +232,7 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
           </Card>
         </div>
       </div>
+      <ShopperFunnel />
     </>
   );
 }
@@ -238,7 +242,6 @@ async function patchProduct(ctx: Ctx, id: string, body: Record<string, unknown>)
   await api(`/admin/products/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
 }
 
-const PAGE_SIZES = [25, 50, 100];
 const ago = (iso: string) => {
   const a = relativeAge(iso);
   return a === "just now" ? a : `${a} ago`;
@@ -253,6 +256,7 @@ const FIRST_DIR: Record<SortKey, SortDir> = {
   release: "asc",
   updated: "desc",
   created: "desc",
+  added_here: "desc",
   alerts: "desc",
   front: "asc",
 };
@@ -367,7 +371,7 @@ function ProductCardRow({
             {[
               place,
               p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}` : "",
-              p.createdAt ? `Added ${dateLabel(p.createdAt)}` : "",
+              addedLabel(p)?.text ?? "",
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -848,8 +852,8 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
                   <span className="ad-text2 ad-sm c-rel">
                     {p.status === "pre" && p.state === "pre" ? `${monthLabel(p.releaseMonth)} · by ${dayLabel(p.orderByDate)}` : "—"}
                   </span>
-                  <span className="ad-text2 ad-sm c-upd" title={p.createdAt ? new Date(p.createdAt).toLocaleString() : undefined}>
-                    {dateLabel(p.createdAt)}
+                  <span className="ad-text2 ad-sm c-upd" title={addedLabel(p)?.title}>
+                    {addedLabel(p)?.short ?? "—"}
                   </span>
                   <span onClick={(e) => e.stopPropagation()}>
                     <VisibilityToggle p={p} busy={visibilityBusy.has(p.id)} onToggle={() => toggleVisible(p)} />
@@ -1501,9 +1505,14 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
     }
     setBusy("refund");
     try {
-      const res = await api<{ status: Order["status"] }>(`/admin/orders/${o.id}/refund`, { method: "POST", body: "{}" });
+      const res = await api<{ status: Order["status"]; customerEmailed?: boolean }>(`/admin/orders/${o.id}/refund`, {
+        method: "POST",
+        body: "{}",
+      });
       update({ status: res.status });
-      ctx.flash(`Refund issued via ${provider}`);
+      ctx.flash(
+        `Refund issued via ${provider}${res.customerEmailed ? " · customer emailed" : " · no email sent (check the email settings)"}`,
+      );
       onClose();
     } catch (e) {
       ctx.flash(errMsg(e));
@@ -1602,6 +1611,12 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
             <span className="ad-strong">{money(it.unit_price_cents * it.quantity)}</span>
           </div>
         ))}
+        {!!o.discount_cents && (
+          <div className="ad-between ad-text2" style={{ paddingTop: 10, fontSize: 13.5 }}>
+            <span>Discount{o.discount_code ? ` (${o.discount_code})` : ""}</span>
+            <span>−{money(o.discount_cents)}</span>
+          </div>
+        )}
         <div className="ad-between ad-text2" style={{ paddingTop: 10, fontSize: 13.5 }}>
           <span>Shipping ({o.shipping_method === "express" ? "Express" : "Standard"})</span>
           <span>{o.shipping_cents ? money(o.shipping_cents) : "Free"}</span>
@@ -2098,8 +2113,23 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
       ctx.flash("Handling max must be at least the min");
       return;
     }
+    const parcel = {
+      parcel_weight_g: Number(form.pWeight),
+      parcel_length_cm: Number(form.pLength),
+      parcel_width_cm: Number(form.pWidth),
+      parcel_height_cm: Number(form.pHeight),
+    };
+    if (Object.values(parcel).some((v) => !Number.isInteger(v) || v < 1) || !(Number(form.pack) >= 0)) {
+      ctx.flash("The parcel size needs whole numbers above 0");
+      return;
+    }
     const patch: Partial<StoreSettings> = {
       ...numeric,
+      ...parcel,
+      packaging_weight_g: Math.round(Number(form.pack)),
+      ship_from_postal: form.fromPostal.trim() || null,
+      ship_from_city: form.fromCity.trim() || null,
+      ship_from_province: form.fromProvince.trim() || null,
       maintenance_message: form.maintenanceMessage.trim() || null,
       // the API takes the playlist's address or id and keeps the id (blank turns the button off)
       music_playlist_id: form.playlist.trim() || null,
@@ -2237,6 +2267,52 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
               <span>Free standard shipping over</span>
               <input className="sh-input" inputMode="decimal" {...field("free")} />
             </label>
+            <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+              With live courier rates (below), these flat prices are only used when a courier can't be reached. Over the free-shipping
+              amount the cheapest courier is free and faster ones cost only the difference.
+            </p>
+          </section>
+          <section className="ad-card ad-pad">
+            <div className="ad-h3">Live courier rates</div>
+            <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+              {s.easypost_configured
+                ? s.ship_from_postal
+                  ? "On: shoppers choose between Canada Post, UPS, Purolator and the other couriers on your EasyPost account, priced to their postal code."
+                  : "The EasyPost key is set. Add the ship-from postal code to turn live rates on."
+                : "Off: the server has no EasyPost key (EASYPOST_API_KEY), so checkout uses the flat prices above."}
+            </p>
+            <label className="ad-kv">
+              <span>Ship from: postal code</span>
+              <input className="sh-input" placeholder="T2P 1J9" {...field("fromPostal")} />
+            </label>
+            <label className="ad-kv">
+              <span>City</span>
+              <input className="sh-input" placeholder="Calgary" {...field("fromCity")} />
+            </label>
+            <label className="ad-kv">
+              <span>Province</span>
+              <input className="sh-input" placeholder="AB" {...field("fromProvince")} />
+            </label>
+            <div className="ad-kv">
+              <span>Default item: weight (g)</span>
+              <input className="sh-input" inputMode="numeric" {...field("pWeight")} />
+            </div>
+            <div className="ad-kv">
+              <span>Default item: box (cm)</span>
+              <span className="ad-range">
+                <input className="sh-input" inputMode="numeric" aria-label="Length in cm" {...field("pLength")} />×
+                <input className="sh-input" inputMode="numeric" aria-label="Width in cm" {...field("pWidth")} />×
+                <input className="sh-input" inputMode="numeric" aria-label="Height in cm" {...field("pHeight")} />
+              </span>
+            </div>
+            <label className="ad-kv">
+              <span>Packaging per order (g)</span>
+              <input className="sh-input" inputMode="numeric" {...field("pack")} />
+            </label>
+            <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+              A courier prices by weight and box size. Each product uses its own size if set, else its category's (Admin &gt; Categories),
+              else this default. Several items are stacked in one box.
+            </p>
           </section>
           <section className="ad-card ad-pad">
             <div className="ad-h3">Storefront</div>
@@ -2330,5 +2406,13 @@ function toForm(s: StoreSettings) {
     hMax: String(s.handling_days_max),
     maintenanceMessage: s.maintenance_message ?? "",
     playlist: s.music_playlist_id ?? "",
+    fromPostal: s.ship_from_postal ?? "",
+    fromCity: s.ship_from_city ?? "",
+    fromProvince: s.ship_from_province ?? "",
+    pWeight: String(s.parcel_weight_g ?? 500),
+    pLength: String(s.parcel_length_cm ?? 30),
+    pWidth: String(s.parcel_width_cm ?? 20),
+    pHeight: String(s.parcel_height_cm ?? 15),
+    pack: String(s.packaging_weight_g ?? 150),
   };
 }

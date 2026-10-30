@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./checkout.scss";
+import { track } from "../../lib/analytics";
 import { api } from "../../lib/api";
 import { price } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { loadStoreConfig } from "../storeConfig";
-import { useCart } from "../storefront/data";
+import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { photo } from "../photo";
+import { CheckoutAddOns } from "../storefront/Suggestions";
+import type { Product } from "../types";
 
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
@@ -52,11 +55,45 @@ interface QuoteLine {
 interface Quote {
   lines: QuoteLine[];
   subtotalCents: number;
+  /** What the discount code took off the goods. */
+  discountCents: number;
+  /** The code that applied, or null. */
+  discount: { code: string; label: string } | null;
+  /** Why the typed code doesn't apply, or null. */
+  discountMessage: string | null;
   shippingCents: number;
   taxCents: number;
   totalCents: number;
   warnings: { variationId: string; code: string; message: string }[];
+  /** The courier options for this cart and address, cheapest first (older APIs send none). */
+  shippingOptions?: ShippingOption[];
+  shippingOption?: ShippingOption | null;
+  /** Couriers' live rates (true) or the shop's flat standard/express prices (false). */
+  shippingLive?: boolean;
 }
+
+/** One courier choice: `cents` is what the shopper pays (free-shipping rule applied), `fullCents` what the courier charges. */
+interface ShippingOption {
+  id: string;
+  carrier: string;
+  service: string;
+  cents: number;
+  fullCents: number;
+  days: number | null;
+  free: boolean;
+}
+
+/** "Canada Post · Expedited Parcel"; the shop's own flat options are just "Standard" / "Express". */
+const optionName = (o: ShippingOption) => (o.carrier === "Spin Hobby" ? o.service : `${o.carrier} · ${o.service}`);
+/** "3 business days"; the flat options keep the shop's usual wording. */
+const optionTime = (o: ShippingOption) =>
+  o.days != null
+    ? `${o.days} business day${o.days === 1 ? "" : "s"}, tracked`
+    : o.id.endsWith("express")
+      ? "2–3 business days, tracked"
+      : o.carrier === "Spin Hobby"
+        ? "5–7 business days, tracked"
+        : "Tracked";
 
 // Fallback when the server doesn't expose /checkout/config yet. Only PayPal can work without it,
 // and only if the client ID matches the server's PAYPAL_CLIENT_ID.
@@ -77,10 +114,20 @@ export default function Checkout() {
   const location = useLocation();
   useDocumentHead({ title: "Checkout | Spin Hobby", description: "Checkout", path: location.pathname, noindex: true });
   const auth = useAuth();
-  const cart = useCart();
+  // "Buy now" (/checkout/now) checks out its one item instead of the cart, and the cart is left as it is.
+  const buyingNow = location.pathname.startsWith(BUY_NOW_PATH);
+  const fullCart = useCart();
+  const single = useBuyNow();
+  const cart = buyingNow ? single : fullCart;
+  // one anonymous "checkout opened" per visit to this page with something in the cart (src/lib/analytics.ts)
+  const hasItems = cart.lines.length > 0;
+  useEffect(() => {
+    if (hasItems) track("checkout_view");
+  }, [hasItems]);
   const [email, setEmail] = useLocalState("spinhobby-checkout-email", "");
   const [ship, setShip] = useLocalState<Address>("spinhobby-checkout-address", EMPTY_ADDRESS);
-  const [method, setMethod] = useState<"standard" | "express">("standard");
+  // the courier option picked (an id from the quote's shippingOptions); null until the first quote picks the cheapest
+  const [option, setOption] = useState<string | null>(null);
   const [billingSame, setBillingSame] = useState(true);
   const [bill, setBill] = useState<Address>(EMPTY_ADDRESS);
   const [touched, setTouched] = useState(false); // a payment attempt: show every problem
@@ -95,10 +142,60 @@ export default function Checkout() {
   const [done, setDone] = useState<{ orderId: number; status: string } | null>(null);
   const orderIdRef = useRef<number | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false); // phones: the order summary folds away above the form
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState(""); // sent with every quote while it applies
+  const [codeMessage, setCodeMessage] = useState("");
 
   useEffect(() => {
     if (!email && auth.email) setEmail(auth.email);
   }, [auth.email, email, setEmail]);
+
+  // A cart reminder email's link (/checkout?restore=<token>): put that cart back, then drop the token from the address.
+  const restoreToken = new URLSearchParams(location.search).get("restore");
+  const [restoring, setRestoring] = useState(!!restoreToken);
+  const { add: addToCart, qtyOf: cartQtyOf, setQty: setCartQty } = fullCart;
+  useEffect(() => {
+    if (!restoreToken) return;
+    let live = true;
+    api<{ items: { product: Product; quantity: number }[] }>(`/checkout/cart-reminder/${encodeURIComponent(restoreToken)}`)
+      .then((r) => {
+        if (!live) return;
+        for (const { product, quantity } of r.items) {
+          const have = cartQtyOf(product.variationId);
+          if (!have) addToCart(product, quantity);
+          else if (have < quantity) setCartQty(product.variationId, quantity);
+        }
+      })
+      .catch(() => undefined) // expired or stopped: the cart stays as it is
+      .finally(() => {
+        if (!live) return;
+        setRestoring(false);
+        window.history.replaceState(null, "", location.pathname);
+      });
+    return () => {
+      live = false;
+    };
+    // once per link
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreToken]);
+
+  // "Email me my cart if I don't finish": never ticked for the shopper. While ticked, the cart is saved for one reminder.
+  const [remind, setRemind] = useLocalState("spinhobby-cart-reminder", false);
+  const remindEmail = email.trim().toLowerCase();
+  const remindLines = useMemo(() => cart.lines.map((l) => ({ variationId: l.variationId, quantity: l.quantity })), [cart.lines]);
+  const remindSent = useRef<string>("");
+  useEffect(() => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(remindEmail)) return;
+    const lines = remind ? remindLines : [];
+    const key = `${remindEmail}|${JSON.stringify(lines)}`;
+    // nothing to tell the server: unticked and never saved, or the same as last time
+    if (remindSent.current === key || (!remind && !remindSent.current)) return;
+    const timer = window.setTimeout(() => {
+      remindSent.current = key;
+      void api("/checkout/cart-reminder", { method: "POST", body: JSON.stringify({ email: remindEmail, lines }) }).catch(() => undefined);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [remind, remindEmail, remindLines]);
 
   useEffect(() => {
     loadStoreConfig().then((c) => {
@@ -121,14 +218,19 @@ export default function Checkout() {
     });
   }, []);
 
+  // the postal code goes with the quote once it looks complete: couriers price to it
+  const postalReady = POSTAL_RE[ship.country].test(ship.postalCode.trim());
   const quoteInput = useMemo(
     () => ({
       items: cart.lines.map((l) => ({ variationId: l.variationId, quantity: l.quantity })),
-      shippingMethod: method,
+      shippingMethod: "standard" as const,
       country: ship.country,
       province: ship.province,
+      ...(postalReady ? { postalCode: ship.postalCode.trim(), city: ship.city.trim() } : {}),
+      ...(option ? { shippingOption: option } : {}),
+      ...(appliedCode ? { discountCode: appliedCode } : {}),
     }),
-    [cart.lines, method, ship.country, ship.province],
+    [cart.lines, ship.country, ship.province, postalReady, ship.postalCode, ship.city, option, appliedCode],
   );
 
   useEffect(() => {
@@ -144,6 +246,14 @@ export default function Checkout() {
           if (active) {
             setQuote(q);
             setQuoteError("");
+            // the option picked isn't offered for this address (or none was picked yet): use the one the quote priced
+            const priced = q.shippingOption?.id ?? null;
+            if (priced) setOption((cur) => (cur === priced ? cur : priced));
+            // a code that doesn't (or no longer) applies is dropped with its reason, so it never blocks paying
+            if (q.discountMessage) {
+              setCodeMessage(q.discountMessage);
+              setAppliedCode("");
+            } else if (q.discount) setCodeMessage("");
           }
         })
         .catch((e: Error) => {
@@ -303,7 +413,11 @@ export default function Checkout() {
   const regions = ship.country === "CA" ? PROVINCES : STATES;
   const show = (errs: Partial<Record<keyof Address, string>>, prefix: string, k: keyof Address) =>
     touched || blurred.has(`${prefix}.${k}`) ? errs[k] : undefined;
-  const freeLeft = config ? Math.max(config.freeShippingThresholdCents - (quote?.subtotalCents ?? cart.subtotal), 0) : 0;
+  // free shipping is judged on the goods after any discount (as the server prices it)
+  const goods = (quote?.subtotalCents ?? cart.subtotal) - (quote?.discountCents ?? 0);
+  const options = quote?.shippingOptions ?? [];
+  const chosen = quote?.shippingOption ?? null;
+  const freeLeft = config ? Math.max(config.freeShippingThresholdCents - goods, 0) : 0;
 
   const shipOk = Object.keys(shipErrors).length === 0;
   const itemCount = cart.lines.reduce((n, l) => n + l.quantity, 0);
@@ -311,6 +425,18 @@ export default function Checkout() {
   const subtotal = quote?.subtotalCents ?? cart.subtotal;
   const totalLabel = quote ? price(quote.totalCents) : "—";
 
+  // Nothing left to buy now (paid already, or opened later): the cart's checkout instead.
+  if (buyingNow && cart.lines.length === 0) return <Navigate to="/checkout" replace />;
+  if (restoring) {
+    return (
+      <div className="sh co">
+        <div className="co-empty">
+          <img src={MASCOT} alt="" />
+          <h1 className="sh-display">Getting your cart back…</h1>
+        </div>
+      </div>
+    );
+  }
   if (cart.lines.length === 0) {
     return (
       <div className="sh co">
@@ -395,6 +521,12 @@ export default function Checkout() {
               <p className="co-note">
                 Your receipt and shipping updates go here.{!auth.email && " Sign in from the shop to save orders to your account."}
               </p>
+              <label className="co-check co-remind">
+                <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
+                <span>
+                  Email me my cart if I don't finish <span className="co-note">(one reminder a few hours later; stop any time)</span>
+                </span>
+              </label>
             </section>
 
             <section className="co-section" aria-labelledby="co-h-ship">
@@ -411,22 +543,35 @@ export default function Checkout() {
                 phone={false}
               />
               <h3>Delivery</h3>
-              <div className="co-methods">
-                {(["standard", "express"] as const).map((m) => {
-                  const cost = m === "express" ? config?.shippingExpressCents : subtotal >= threshold ? 0 : config?.shippingStandardCents;
-                  return (
-                    <label key={m} className={`co-method ${method === m ? "is-active" : ""}`}>
-                      <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} />
-                      <span className="co-method__main">
-                        <b>{m === "express" ? "Express" : "Standard"}</b>
-                        <span>{m === "express" ? "2–3 business days, tracked" : "5–7 business days, tracked"}</span>
-                      </span>
-                      <b className="co-method__price">{cost === undefined ? "—" : cost === 0 ? "Free" : price(cost)}</b>
-                    </label>
-                  );
-                })}
-              </div>
-              {method === "standard" && freeLeft > 0 && <p className="co-note">Add {price(freeLeft)} more for free standard shipping.</p>}
+              {options.length ? (
+                <div className="co-methods" role="radiogroup" aria-label="Delivery">
+                  {options.map((o) => {
+                    const on = (chosen?.id ?? options[0]!.id) === o.id;
+                    return (
+                      <label key={o.id} className={`co-method ${on ? "is-active" : ""}`}>
+                        <input type="radio" name="method" checked={on} onChange={() => setOption(o.id)} />
+                        <span className="co-method__main">
+                          <b>{optionName(o)}</b>
+                          <span>{optionTime(o)}</span>
+                        </span>
+                        <b className="co-method__price">
+                          {o.cents === 0 ? "Free" : price(o.cents)}
+                          {o.cents !== o.fullCents && o.cents > 0 && <s className="co-method__was">{price(o.fullCents)}</s>}
+                        </b>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="co-note">{quoting ? "Finding delivery options…" : "Delivery options show once your cart is priced."}</p>
+              )}
+              {!quote?.shippingLive && !postalReady && (
+                <p className="co-note">Enter your postal code to see couriers and delivery times for your address.</p>
+              )}
+              {freeLeft > 0 && <p className="co-note">Add {price(freeLeft)} more for free shipping.</p>}
+              {quote?.shippingLive && freeLeft === 0 && options.length > 1 && (
+                <p className="co-note">The cheapest courier is free on this order; faster ones cost only the difference.</p>
+              )}
             </section>
 
             <section className="co-section" aria-labelledby="co-h-pay">
@@ -551,6 +696,18 @@ export default function Checkout() {
                   {itemCount} item{itemCount === 1 ? "" : "s"}
                 </span>
               </div>
+              {buyingNow && (
+                <p className="co-note co-buynow">
+                  Buying just this item. Your cart is kept for later
+                  {fullCart.count > 0 && (
+                    <>
+                      {" "}
+                      (<a href="/checkout">check out the cart instead</a>)
+                    </>
+                  )}
+                  .
+                </p>
+              )}
               <div className="co-lines">
                 {cart.lines.map((l) => {
                   // Quantities come straight from the cart so the steppers respond at once; prices from the server's quote once it lands.
@@ -602,22 +759,44 @@ export default function Checkout() {
               {quoteError && <div className="co-alert co-alert--error">{quoteError}</div>}
               <div className="co-meter">
                 <span>
-                  {subtotal >= threshold ? (
+                  {goods >= threshold ? (
                     <b>You've unlocked free standard shipping 🎉</b>
                   ) : (
                     <>
-                      Add <b>{price(threshold - subtotal)}</b> more for free standard shipping
+                      Add <b>{price(threshold - goods)}</b> more for free standard shipping
                     </>
                   )}
                 </span>
                 <div className="co-meter__bar">
-                  <i style={{ width: `${Math.min(subtotal / threshold, 1) * 100}%` }} />
+                  <i style={{ width: `${Math.min(goods / threshold, 1) * 100}%` }} />
                 </div>
               </div>
+              {!buyingNow && <CheckoutAddOns itemIds={cart.lines.map((l) => l.itemId)} currency="CAD" onAdd={(p) => fullCart.add(p, 1)} />}
+              <DiscountBox
+                applied={quote?.discount ?? null}
+                value={codeInput}
+                onChange={setCodeInput}
+                message={codeMessage}
+                busy={quoting && !!appliedCode && !quote?.discount}
+                onApply={() => {
+                  const code = codeInput.trim();
+                  if (!code) return;
+                  setCodeMessage("");
+                  setAppliedCode(code);
+                }}
+                onRemove={() => {
+                  setAppliedCode("");
+                  setCodeInput("");
+                  setCodeMessage("");
+                }}
+              />
               <div className="co-totals">
                 <Row label="Subtotal" value={price(subtotal)} />
+                {!!quote?.discountCents && (
+                  <Row label={`Discount${quote.discount ? ` (${quote.discount.code})` : ""}`} value={`−${price(quote.discountCents)}`} />
+                )}
                 <Row
-                  label={`Shipping (${method === "express" ? "Express" : "Standard"})`}
+                  label={`Shipping${chosen ? ` (${optionName(chosen)})` : ""}`}
                   value={quote ? (quote.shippingCents ? price(quote.shippingCents) : "Free") : "—"}
                 />
                 <Row label="Tax" value={quote ? price(quote.taxCents) : "—"} />
@@ -639,6 +818,67 @@ export default function Checkout() {
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** "Discount code" in the order summary: type a code and apply it, or see the one that applies and remove it. */
+function DiscountBox({
+  applied,
+  value,
+  onChange,
+  message,
+  busy,
+  onApply,
+  onRemove,
+}: {
+  applied: { code: string; label: string } | null;
+  value: string;
+  onChange: (v: string) => void;
+  message: string;
+  busy: boolean;
+  onApply: () => void;
+  onRemove: () => void;
+}) {
+  if (applied)
+    return (
+      <div className="co-code is-applied">
+        <span>
+          ✓ <b>{applied.code}</b> · {applied.label}
+        </span>
+        <button type="button" className="co-link" onClick={onRemove}>
+          Remove
+        </button>
+      </div>
+    );
+  return (
+    <div className="co-code">
+      <form
+        className="co-code__row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onApply();
+        }}
+      >
+        <input
+          className="sh-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Discount code"
+          aria-label="Discount code"
+          autoCapitalize="characters"
+          autoComplete="off"
+          maxLength={40}
+        />
+        <button type="submit" className="sh-btn sh-btn--ghost" disabled={!value.trim() || busy}>
+          {busy ? "Checking…" : "Apply"}
+        </button>
+      </form>
+      {message && (
+        <p className="co-code__msg" role="alert">
+          {message}
+        </p>
+      )}
     </div>
   );
 }
@@ -790,7 +1030,8 @@ function Success({ orderId, preorder, email }: { orderId: number; preorder: bool
           <b>{email || "your inbox"}</b>.
         </p>
         <p className="co-note">
-          Questions? Email <a href={`mailto:${SUPPORT_EMAIL}?subject=Order%20%23${orderId}`}>{SUPPORT_EMAIL}</a> with your order number.
+          Follow it any time on <a href={`/order-status?order=${orderId}`}>Order status</a>. Questions? Email{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}?subject=Order%20%23${orderId}`}>{SUPPORT_EMAIL}</a> with your order number.
         </p>
         <a href="/" className="sh-btn">
           Keep shopping

@@ -1,3 +1,4 @@
+import { track } from "../../lib/analytics";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -13,16 +14,18 @@ import {
   statusLabel,
   type Currency,
 } from "../format";
-import { useEscape } from "../hooks";
+import { useAuth, useEscape } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { SITE_URL, useDocumentHead } from "../seo";
 import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions, PriceTag } from "./ProductViews";
+import { askHref, noPrice } from "../../components/shop/priceOnRequest";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
+import { BoughtTogether, FollowBox } from "./Suggestions";
 
 // Keep in sync with productJsonLd() in scripts/generate-seo.mjs.
 function productJsonLd(p: Product) {
@@ -64,6 +67,9 @@ function productDescription(p: Product) {
 
 const RELATED = 8;
 
+/** The same product, whatever the case of the id: links carry it in lower case, Square's ids are upper case. */
+const sameId = (x: Product | null | undefined, id: string) => !!x && x.id.toLowerCase() === id.toLowerCase();
+
 /** Full product page at /product/<id>: gallery, buy box, details and "You may also like". */
 export function ProductPage({
   id,
@@ -73,6 +79,7 @@ export function ProductPage({
   cartQty,
   cartSubtotal,
   onAddQty,
+  onBuyNow,
   onViewCart,
   onCategory,
   onHome,
@@ -85,22 +92,23 @@ export function ProductPage({
   cartQty: (variationId: string) => number;
   cartSubtotal: number;
   onAddQty: (p: Product, qty: number) => void;
+  onBuyNow: (p: Product, qty: number) => void;
   onViewCart: () => void;
   onCategory: (categoryId: string) => void;
   onHome: () => void;
   onToast: (message: string) => void;
 }) {
   // Show what the card already knew straight away, then fill in description, JAN code and fresh stock.
-  const [p, setP] = useState<Product | null>(initial?.id === id ? initial : null);
+  const [p, setP] = useState<Product | null>(sameId(initial, id) ? initial : null);
   const [missing, setMissing] = useState(false);
   const [related, setRelated] = useState<Product[] | null>(null);
 
   useEffect(() => {
     let live = true;
     setMissing(false);
-    setP((cur) => (cur?.id === id ? cur : initial?.id === id ? initial : null));
+    setP((cur) => (sameId(cur, id) ? cur : sameId(initial, id) ? initial : null));
     const load = (key: string) => api<{ item: Product }>(`/square/catalog/${encodeURIComponent(key)}`);
-    // a link whose id was lowercased on the way (the host once redirected /product/BZJ6… to /product/bzj6…/): Square's ids are upper case
+    // links carry the id in lower case (the API finds it in any case); an older API needs Square's upper case
     load(id)
       .catch((e) => (id !== id.toUpperCase() ? load(id.toUpperCase()) : Promise.reject(e)))
       .then((res) => live && setP((cur) => ({ ...(cur ?? {}), ...res.item })))
@@ -109,6 +117,12 @@ export function ProductPage({
       live = false;
     };
   }, [id, initial]);
+
+  // one anonymous "product viewed" per product opened (src/lib/analytics.ts)
+  const viewedId = p?.id;
+  useEffect(() => {
+    if (viewedId) track("product_view", viewedId);
+  }, [viewedId]);
 
   // Related: same category, then same series, then featured. Uses the normal product search.
   const categoryId = p?.categoryId ?? null;
@@ -144,13 +158,9 @@ export function ProductPage({
     };
   }, [id, hasProduct, categoryId, series]);
 
-  // A canonical-looking URL (with the name slug) once the name is known.
+  // The product's own link (lower-case id and the name slug) once the product is known, whatever address it was opened from.
   const navigate = useNavigate();
   const location = useLocation();
-  // found under its real (upper case) id: the address bar gets the product's own link
-  useEffect(() => {
-    if (p && p.id !== id && p.id.toLowerCase() === id.toLowerCase()) navigate(productPath(p), { replace: true });
-  }, [p, id, navigate]);
   useEffect(() => {
     if (!p) return;
     const path = productPath(p);
@@ -169,6 +179,8 @@ export function ProductPage({
     path: p ? productPath(p) : location.pathname,
     image: p?.images[0] ?? null,
     jsonLd: p ? [productJsonLd(p), breadcrumbJsonLd([...crumbTrail, { name: p.name, path: productPath(p) }])] : null,
+    // a product that isn't there (removed, or a wrong link) is this site's 404: kept out of search results
+    noindex: missing && !p,
   });
 
   if (missing && !p) {
@@ -221,11 +233,21 @@ export function ProductPage({
           inCartQty={cartQty(p.variationId)}
           cartSubtotal={cartSubtotal}
           onAddQty={onAddQty}
+          onBuyNow={onBuyNow}
           onViewCart={onViewCart}
           onToast={onToast}
           onCategory={p.categoryId && tree.byId.has(p.categoryId) ? () => onCategory(p.categoryId!) : undefined}
         />
       </div>
+
+      <BoughtTogether
+        p={p}
+        currency={a.currency}
+        onAddAll={(items) => {
+          for (const x of items) onAddQty(x, 1);
+          onToast(`${items.length} items added to cart`);
+        }}
+      />
 
       <Details p={p} currency={a.currency} />
 
@@ -471,6 +493,7 @@ function BuyBox({
   inCartQty,
   cartSubtotal,
   onAddQty,
+  onBuyNow,
   onViewCart,
   onToast,
   onCategory,
@@ -480,12 +503,16 @@ function BuyBox({
   inCartQty: number;
   cartSubtotal: number;
   onAddQty: (p: Product, qty: number) => void;
+  onBuyNow: (p: Product, qty: number) => void;
   onViewCart: () => void;
   onToast: (message: string) => void;
   onCategory?: () => void;
 }) {
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  // the follow box's email: the account's, else the one typed at checkout before
+  const auth = useAuth();
+  const followEmail = auth.email ?? savedCheckoutEmail();
   const [buyVisible, setBuyVisible] = useState(true);
   const buyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -555,8 +582,12 @@ function BuyBox({
 
       <div className="sf-pp__pricebox">
         <div className="sf-pp__price">
-          <PriceTag cents={p.priceCents} currency={a.currency} />
-          {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
+          {noPrice(p) ? (
+            <strong className="sf-price sf-price--ask">Ask for price</strong>
+          ) : (
+            <PriceTag cents={p.priceCents} currency={a.currency} />
+          )}
+          {off > 0 && !noPrice(p) && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
           {off > 0 && <span className="sf-pp__off">Save {off}%</span>}
         </div>
         <div className="sf-pp__status" style={{ color: meta.color }}>
@@ -590,7 +621,16 @@ function BuyBox({
       )}
 
       <div ref={buyRef}>
-        {s === "out" ? (
+        {s !== "out" && noPrice(p) ? (
+          <div className="sf-pp__notice">
+            <p>
+              <b>No online price yet.</b> Email us and we'll tell you the price and hold it for you.
+            </p>
+            <a className="sf-buy sf-pp__cta sf-center" href={askHref(p)}>
+              Ask for the price
+            </a>
+          </div>
+        ) : s === "out" ? (
           <div className="sf-pp__notice">
             <p>
               <b>Sold out.</b> Get an email the moment it's restocked.
@@ -619,6 +659,9 @@ function BuyBox({
             </div>
             <button type="button" className="sf-buy sf-pp__cta" onClick={add}>
               {buyLabel} · {price(p.priceCents * n, a.currency)}
+            </button>
+            <button type="button" className="sf-buy sf-buy--now sf-pp__now" onClick={() => onBuyNow(p, n)}>
+              {s === "pre" ? "Pre-order now" : "Buy now"}
             </button>
           </div>
         )}
@@ -696,7 +739,9 @@ function BuyBox({
         </li>
       </ul>
 
-      {!buyVisible && s !== "out" && room > 0 && (
+      <FollowBox p={p} email={followEmail} />
+
+      {!buyVisible && s !== "out" && room > 0 && !noPrice(p) && (
         <div className="sf-pp__sticky" aria-hidden={buyVisible}>
           <div>
             <b>{p.name}</b>
@@ -709,6 +754,16 @@ function BuyBox({
       )}
     </div>
   );
+}
+
+/** The email this browser last typed at checkout (Checkout.tsx keeps it), or null. */
+function savedCheckoutEmail(): string | null {
+  try {
+    const v = JSON.parse(localStorage.getItem("spinhobby-checkout-email") ?? "null");
+    return typeof v === "string" && v.includes("@") ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------- details

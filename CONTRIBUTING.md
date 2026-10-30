@@ -10,7 +10,7 @@ your branch ──► pull request into `staging` ──► check it on the stag
 ```
 
 - **`production`** is the live site (spinhobby.com): real customers and real money. Only the owner merges into it, and
-  the owner publishes it by hand, so nothing reaches customers by accident.
+  **a push to it goes live within a minute**, so nothing goes there that hasn't been tried on staging.
 - **`staging`** builds automatically as the staging site (https://spin-hobby-staging.netlify.app: test data, sandbox
   payments), so merged work can be tried there.
 
@@ -143,6 +143,5 @@ one file, `src/features.ts`: one line per feature, saying where it is on.
 
 ## Releasing to the live site (owner only)
 
-The steps, and what to do if something goes wrong, are in the server repo's `CONTRIBUTING.md` under **Releasing**: merge
-`staging` into `production`, then **Netlify → Deploys → the newest production deploy → Publish deploy** (automatic
-publishing is off).
+A push to `production` is a release: Netlify builds and publishes it straight away. The checks to do first, the steps
+(the server before the website) and how to roll back are in the server repo's `CONTRIBUTING.md` under **Releasing**.

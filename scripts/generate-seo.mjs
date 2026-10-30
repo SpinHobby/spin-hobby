@@ -31,9 +31,10 @@ function slugify(name) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 }
+// keep in sync with productPath in src/v3/storefront/data.ts (lower case: Netlify serves these pages from lower-case paths)
 const productPath = (p) => {
   const slug = slugify(p.name);
-  return `/product/${encodeURIComponent(p.id)}${slug ? `/${slug}` : ""}`;
+  return `/product/${encodeURIComponent(p.id.toLowerCase())}${slug ? `/${slug}` : ""}`;
 };
 const seriesPath = (name) => `/series/${slugify(name)}`;
 

@@ -38,7 +38,8 @@
     color: var(--text);
     text-decoration: none;
   }
-  a:hover {
+  // not on link buttons (<a class="sh-btn">): this outranks .sh-btn, so their text turned the button's own colour on hover
+  a:hover:where(:not(.sh-btn)) {
     color: var(--blue);
   }
   button,

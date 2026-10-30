@@ -25,7 +25,12 @@ export interface Product {
   orderByDate: string | null;
   rank: number | null;
   maxPerCustomer: number | null;
+  /** Added: Square's date when Square knows the product, else when it reached our database (the admin list shows this one). */
   createdAt?: string | null;
+  /** Admin list: the day the product was added in Square (null for a product entered here and not moved to Square yet). */
+  squareCreatedAt?: string | null;
+  /** Admin list: when the product reached our database (its first sync, or the day it was entered here). */
+  addedHereAt?: string | null;
   // Admin-only enrichments (present on /admin/products).
   janCode?: string | null;
   /** The entry in the series list this product belongs to (admin catalog list). */
@@ -103,6 +108,11 @@ export interface ShopCategory {
   sortOrder: number;
   isVisible?: boolean; // admin only
   productCount?: number; // admin only: products directly in this category
+  /** Admin only: the packed size of one product here (grams, cm) for courier rates; null inherits the parent's or the shop's. */
+  parcelWeightG?: number | null;
+  parcelLengthCm?: number | null;
+  parcelWidthCm?: number | null;
+  parcelHeightCm?: number | null;
 }
 
 export interface Homepage {
@@ -160,6 +170,9 @@ export interface Order {
   status: OrderStatus;
   provider: "paypal" | "square";
   subtotal_cents: number;
+  /** What a discount code took off (0 without one); total = subtotal - discount + shipping + tax. */
+  discount_code?: string | null;
+  discount_cents?: number;
   shipping_cents: number;
   tax_cents: number;
   total_cents: number;
@@ -218,6 +231,17 @@ export interface StoreSettings {
   maintenance_message: string | null;
   /** The storefront's Shop playlist (a YouTube playlist id); null hides the button. */
   music_playlist_id?: string | null;
+  /** Live courier rates: where parcels leave from, and the default packed size of one item (grams, cm). */
+  ship_from_postal?: string | null;
+  ship_from_city?: string | null;
+  ship_from_province?: string | null;
+  parcel_weight_g?: number;
+  parcel_length_cm?: number;
+  parcel_width_cm?: number;
+  parcel_height_cm?: number;
+  packaging_weight_g?: number;
+  /** Whether the server has an EasyPost key (EASYPOST_API_KEY). */
+  easypost_configured?: boolean;
 }
 
 export interface Readiness {

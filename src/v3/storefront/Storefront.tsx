@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./storefront.scss";
-import { handlingLabel, price, normalizeStatus, type Currency } from "../format";
+import { handlingLabel, paymentLabel, price, normalizeStatus, type Currency } from "../format";
 import { EVENTS } from "../events/data";
 import { eventDateShort, isPastEvent } from "../events/dates";
 import { useAuth, useEscape, useLocalState, useTheme, useToast } from "../hooks";
@@ -21,6 +21,8 @@ import {
   SORTS,
   productIdFromPath,
   productPath,
+  startBuyNow,
+  BUY_NOW_PATH,
   useCart,
   useProducts,
   useStorefront,
@@ -199,12 +201,19 @@ export default function Storefront() {
           ? seriesCopy(seriesName!, landing.slug)
           : null;
   const intro = homeCopy();
+  // An address the shop has no page for (a mistyped link, an old category): the shop is shown with a note, and search engines are told
+  // not to index it, so it can't sit in Google as a copy of the home page. Netlify answers every address with the app, so this is the 404.
+  const bare = location.pathname.replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+  const notFound =
+    !productId &&
+    ((!landing && !["/", "/shop", "/index"].includes(bare)) || (landing?.kind === "category" && tree.flat.length > 0 && !landingCategory));
   useDocumentHead({
     enabled: !productId,
-    title: page?.title ?? intro.title,
+    title: notFound ? "Page not found | Spin Hobby" : (page?.title ?? intro.title),
     description: page?.description ?? intro.description,
-    path: page ? (page.canonical ?? page.crumbs[page.crumbs.length - 1].path) : "/",
-    jsonLd: page ? breadcrumbJsonLd(page.crumbs) : null,
+    path: notFound ? bare : page ? (page.canonical ?? page.crumbs[page.crumbs.length - 1].path) : "/",
+    jsonLd: page && !notFound ? breadcrumbJsonLd(page.crumbs) : null,
+    noindex: notFound,
   });
 
   // Same split as the Events page. With nothing upcoming, show the latest events (newest first) so the strip isn't empty.
@@ -305,6 +314,12 @@ export default function Storefront() {
   const maxOff = home?.promos?.maxDiscountPct ?? 0;
   const storeEmpty = facets !== null && facets.total === 0;
 
+  /** "Buy now": checkout for just this item; the cart stays as it is for later. */
+  const buyNow = (p: Product, qty = 1) => {
+    startBuyNow(p, qty);
+    navigate(BUY_NOW_PATH);
+  };
+
   const actions: CardActions = {
     currency,
     inCart: (p) => cart.has(p.variationId),
@@ -324,6 +339,7 @@ export default function Storefront() {
         ),
       );
     },
+    onBuyNow: (p) => buyNow(p),
     onNotify: setNotify,
     onWish: wishlist.toggle,
     onOpen: openProduct,
@@ -572,6 +588,7 @@ export default function Storefront() {
               cartQty={cart.qtyOf}
               cartSubtotal={cart.subtotal}
               onAddQty={(p, qty) => cart.add(p, qty)}
+              onBuyNow={buyNow}
               onViewCart={() => setCartOpen(true)}
               onToast={flash}
               onCategory={(id) => setCategory(`id:${id}`)}
@@ -722,6 +739,11 @@ export default function Storefront() {
                 </>
               )}
 
+              {notFound && (
+                <div className="sf-notfound" role="status">
+                  <b>We couldn't find that page.</b> It may have moved, or the link has a typo. Here's the shop instead.
+                </div>
+              )}
               {page && !wishOnly && (
                 <header key={location.pathname} className="sf-landing ui-title-in">
                   <nav className="sf-crumbs" aria-label="Breadcrumb">
@@ -996,7 +1018,7 @@ function TrustStrip() {
     { icon: "✦", title: "100% authentic", text: "Officially licensed goods only" },
     { icon: "🚚", title: `Free shipping over ${freeShippingLabel()}`, text: "Tracked, Canada & US" },
     { icon: "📦", title: `Ships in ${handlingLabel()}`, text: "Packed with care for collectors" },
-    { icon: "🔒", title: "Secure checkout", text: "Card or PayPal" },
+    { icon: "🔒", title: "Secure checkout", text: `Pay by ${paymentLabel()}` },
   ];
   return (
     <ul className="sf-trust" aria-label="Why shop with us">
@@ -1145,7 +1167,7 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
           <span className="sf-footer__h">Help</span>
           <Link to="/support#preorders">Pre-order policy</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
-          <Link to="/support#order-status">Order status</Link>
+          <Link to="/order-status">Order status</Link>
           <Link to="/support#contact">Contact</Link>
           <a href="/legal/terms">Terms of Service</a>
           <a href="/legal/privacy">Privacy Policy</a>

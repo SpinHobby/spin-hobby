@@ -16,6 +16,18 @@
   to = "/app.html"
   status = 200
 
+# Security headers on every page. frame-ancestors / X-Frame-Options: no other site may show the shop (checkout, admin) inside a
+# frame to trick clicks; the shop itself still embeds Square, PayPal and YouTube. Camera and microphone stay allowed for the site
+# itself (Admin's barcode scanner, the avatar). No full Content-Security-Policy yet: payments load scripts from several hosts.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    Content-Security-Policy = "frame-ancestors 'self'"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
+
 # Staging: the `staging` branch is deployed as its own Netlify site, https://spin-hobby-staging.netlify.app
 # (a branch deploy of the main site would be https://staging--spinhobby.netlify.app). Either way it talks
 # to the staging API, never production.

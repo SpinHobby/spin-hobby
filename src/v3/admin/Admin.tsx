@@ -21,11 +21,13 @@ import { useDocumentHead } from "../seo";
 import { useStoreConfig } from "../storeConfig";
 import { SCREENS, useAdminData, type Screen } from "./data";
 import { AccountsScreen } from "./Accounts";
+import { DiscountsScreen } from "./Discounts";
 import { AuditScreen } from "./Audit";
 import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
 import { PhotosScreen } from "./PhotoQueue";
 import { DescriptionsScreen } from "./Descriptions";
+import { BarcodesScreen } from "./Barcodes";
 import { isOn } from "../../features";
 import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, SettingsScreen, type Ctx } from "./Screens";
 
@@ -50,13 +52,17 @@ export default function Admin() {
     ...SCREENS,
     ...(showAvatar ? (["Avatar"] as const) : []),
     ...(canAudit ? (["Audit"] as const) : []),
-    ...(isOwner ? (["Accounts"] as const) : []),
+    ...(isOwner ? (["Accounts", "Discounts"] as const) : []),
   ];
   const { data, setData, reload } = useAdminData(isStaff);
 
   const [screen, setScreenState] = useState<Screen>(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1));
-    return (SCREENS as string[]).includes(hash) || hash === "Audit" || hash === "Accounts" || (hash === "Avatar" && isOn("avatarStudio"))
+    return (SCREENS as string[]).includes(hash) ||
+      hash === "Audit" ||
+      hash === "Accounts" ||
+      hash === "Discounts" ||
+      (hash === "Avatar" && isOn("avatarStudio"))
       ? (hash as Screen)
       : "Dashboard";
   });
@@ -167,6 +173,7 @@ export default function Admin() {
       {screen === "Imports" && <ImportsScreen ctx={ctx} />}
       {screen === "Photos" && <PhotosScreen ctx={ctx} />}
       {screen === "Descriptions" && <DescriptionsScreen ctx={ctx} />}
+      {screen === "Barcodes" && <BarcodesScreen ctx={ctx} />}
       {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
       {screen === "Orders" && <OrdersScreen ctx={ctx} />}
       {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
@@ -177,6 +184,8 @@ export default function Admin() {
         </Suspense>
       )}
       {screen === "Audit" && (canAudit ? <AuditScreen ctx={ctx} /> : <p className="ad-muted">Ask the owner for access to Audit.</p>)}
+      {screen === "Discounts" &&
+        (isOwner ? <DiscountsScreen ctx={ctx} /> : <p className="ad-muted">Only owners can manage discount codes.</p>)}
       {screen === "Accounts" &&
         (isOwner ? (
           <AccountsScreen ctx={ctx} myId={auth.user?.id ?? null} />
