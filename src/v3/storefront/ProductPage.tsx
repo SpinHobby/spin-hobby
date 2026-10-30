@@ -14,7 +14,7 @@ import {
   statusLabel,
   type Currency,
 } from "../format";
-import { useEscape } from "../hooks";
+import { useAuth, useEscape } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { SITE_URL, useDocumentHead } from "../seo";
 import { freeShippingLabel } from "../storeConfig";
@@ -24,6 +24,7 @@ import { ProductCard, type CardActions, PriceTag } from "./ProductViews";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
+import { BoughtTogether, FollowBox } from "./Suggestions";
 
 // Keep in sync with productJsonLd() in scripts/generate-seo.mjs.
 function productJsonLd(p: Product) {
@@ -236,6 +237,15 @@ export function ProductPage({
           onCategory={p.categoryId && tree.byId.has(p.categoryId) ? () => onCategory(p.categoryId!) : undefined}
         />
       </div>
+
+      <BoughtTogether
+        p={p}
+        currency={a.currency}
+        onAddAll={(items) => {
+          for (const x of items) onAddQty(x, 1);
+          onToast(`${items.length} items added to cart`);
+        }}
+      />
 
       <Details p={p} currency={a.currency} />
 
@@ -498,6 +508,9 @@ function BuyBox({
 }) {
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  // the follow box's email: the account's, else the one typed at checkout before
+  const auth = useAuth();
+  const followEmail = auth.email ?? savedCheckoutEmail();
   const [buyVisible, setBuyVisible] = useState(true);
   const buyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -711,6 +724,8 @@ function BuyBox({
         </li>
       </ul>
 
+      <FollowBox p={p} email={followEmail} />
+
       {!buyVisible && s !== "out" && room > 0 && (
         <div className="sf-pp__sticky" aria-hidden={buyVisible}>
           <div>
@@ -724,6 +739,16 @@ function BuyBox({
       )}
     </div>
   );
+}
+
+/** The email this browser last typed at checkout (Checkout.tsx keeps it), or null. */
+function savedCheckoutEmail(): string | null {
+  try {
+    const v = JSON.parse(localStorage.getItem("spinhobby-checkout-email") ?? "null");
+    return typeof v === "string" && v.includes("@") ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------- details

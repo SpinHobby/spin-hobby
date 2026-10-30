@@ -684,3 +684,16 @@
     text-decoration: underline;
   }
 }
+
+// "Email me my cart if I don't finish" under the email (opt-in, never ticked for the shopper)
+.co-remind {
+  margin-top: 10px;
+  font-size: 14px;
+  .co-note {
+    display: inline;
+  }
+}
+// "Often added at checkout": cheap extras in the order summary (Suggestions.tsx)
+.co-addons {
+  margin: 12px 0;
+}

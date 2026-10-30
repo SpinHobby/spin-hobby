@@ -8,14 +8,17 @@ import type { CartLine } from "./data";
 import { isCutout, photo } from "../photo";
 import type { ProductPage as ProductList } from "../types";
 import { PriceTag } from "./ProductViews";
+import { useAddOns } from "./suggestionData";
 import { isOn } from "../../features";
 
 /**
- * Up to three products that would take the cart to free shipping: in stock, not in the cart already, and priced to just cover what's
- * missing (the cheapest that does first), topped up with the next best. Loaded once when the cart opens.
+ * Up to three add-ons for the cart. Short of free shipping: in stock, not in the cart already, and priced to just cover what's
+ * missing (the cheapest that does first), topped up with the next best; items bought with what's in the cart come first among
+ * equals. Free shipping reached: cheap items other collectors bought with these (useAddOns).
  */
 function useShippingPicks(lines: CartLine[], remaining: number) {
   const [pool, setPool] = useState<Product[]>([]);
+  const together = useAddOns(lines.map((l) => l.itemId));
   useEffect(() => {
     let live = true;
     api<ProductList>(`/products?${new URLSearchParams({ limit: "40", sort: "featured" })}`)
@@ -25,9 +28,14 @@ function useShippingPicks(lines: CartLine[], remaining: number) {
       live = false;
     };
   }, []);
-  if (remaining <= 0) return [];
   const inCart = new Set(lines.map((l) => l.variationId));
-  const ok = pool.filter((p) => !inCart.has(p.variationId) && ["in", "low"].includes(normalizeStatus(p.status)));
+  if (remaining <= 0) return together.filter((p) => !inCart.has(p.variationId));
+  const seen = new Set<string>();
+  const ok = [...together, ...pool].filter((p) => {
+    if (seen.has(p.id) || inCart.has(p.variationId) || !["in", "low"].includes(normalizeStatus(p.status))) return false;
+    seen.add(p.id);
+    return true;
+  });
   const covers = ok.filter((p) => p.priceCents >= remaining).sort((x, y) => x.priceCents - y.priceCents);
   const rest = ok.filter((p) => p.priceCents < remaining).sort((x, y) => y.priceCents - x.priceCents);
   return [...covers, ...rest].slice(0, 3);
@@ -122,7 +130,11 @@ export function CartDrawer({
               {picks.length > 0 && (
                 <section className="sf-picks" aria-labelledby="picks-title">
                   <div id="picks-title" className="sf-picks__title">
-                    {picks[0].priceCents >= remaining ? "Add one for free shipping" : "Popular add-ons"}
+                    {remaining <= 0
+                      ? "Often bought with these"
+                      : picks[0].priceCents >= remaining
+                        ? "Add one for free shipping"
+                        : "Popular add-ons"}
                   </div>
                   {picks.map((p) => (
                     <div key={p.id} className="sf-pick">

@@ -151,6 +151,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
       "Support communications: anything you send us by email or through the Site's contact/support channels.",
       "Shop assistant chats: if you use the AI shop assistant (the chat button), the questions you type and the answers it gives. They go to our server and to the shop's own computer, where an AI model writes the answer from our catalogue; they are not sent to an outside AI company. We don't save them: they are kept in memory only until the answer is given (a spoken answer for up to 10 minutes, so it can be played), and your browser keeps the conversation until you close the tab. Please don't share personal details in the chat; for questions about an order, contact us instead.",
       "Technical information: IP address, browser/device type, and basic usage data collected automatically to keep the Site secure and working correctly.",
+      "Emails you ask for: if you tick \"Email me my cart if I don't finish\" at checkout, we keep your email and what's in your cart for up to 7 days to send one reminder (none if you complete the order). If you sign up for news of new pre-orders from a series or maker, we keep your email and what you follow until you stop. Every one of these emails has a link to stop them.",
     ],
   },
   {
@@ -158,7 +159,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     body: [
       "To process and fulfill your orders, including shipping, customer support, and order-status communications.",
       "To manage your account, including sign-in via Google or Discord.",
-      "To send transactional emails (order confirmations, shipping notices, restock alerts you've opted into) and, only with your consent, marketing updates.",
+      "To send transactional emails (order confirmations, shipping notices, restock alerts you've opted into) and, only with your consent, a cart reminder, news of new pre-orders you've asked for, and marketing updates.",
       "To detect and prevent fraud, abuse, and security issues.",
       "To improve the Site's products, content, and performance.",
     ],

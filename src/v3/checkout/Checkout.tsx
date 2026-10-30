@@ -13,6 +13,8 @@ import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { photo } from "../photo";
+import { CheckoutAddOns } from "../storefront/Suggestions";
+import type { Product } from "../types";
 
 const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
@@ -118,6 +120,53 @@ export default function Checkout() {
   useEffect(() => {
     if (!email && auth.email) setEmail(auth.email);
   }, [auth.email, email, setEmail]);
+
+  // A cart reminder email's link (/checkout?restore=<token>): put that cart back, then drop the token from the address.
+  const restoreToken = new URLSearchParams(location.search).get("restore");
+  const [restoring, setRestoring] = useState(!!restoreToken);
+  const { add: addToCart, qtyOf: cartQtyOf, setQty: setCartQty } = fullCart;
+  useEffect(() => {
+    if (!restoreToken) return;
+    let live = true;
+    api<{ items: { product: Product; quantity: number }[] }>(`/checkout/cart-reminder/${encodeURIComponent(restoreToken)}`)
+      .then((r) => {
+        if (!live) return;
+        for (const { product, quantity } of r.items) {
+          const have = cartQtyOf(product.variationId);
+          if (!have) addToCart(product, quantity);
+          else if (have < quantity) setCartQty(product.variationId, quantity);
+        }
+      })
+      .catch(() => undefined) // expired or stopped: the cart stays as it is
+      .finally(() => {
+        if (!live) return;
+        setRestoring(false);
+        window.history.replaceState(null, "", location.pathname);
+      });
+    return () => {
+      live = false;
+    };
+    // once per link
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreToken]);
+
+  // "Email me my cart if I don't finish": never ticked for the shopper. While ticked, the cart is saved for one reminder.
+  const [remind, setRemind] = useLocalState("spinhobby-cart-reminder", false);
+  const remindEmail = email.trim().toLowerCase();
+  const remindLines = useMemo(() => cart.lines.map((l) => ({ variationId: l.variationId, quantity: l.quantity })), [cart.lines]);
+  const remindSent = useRef<string>("");
+  useEffect(() => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(remindEmail)) return;
+    const lines = remind ? remindLines : [];
+    const key = `${remindEmail}|${JSON.stringify(lines)}`;
+    // nothing to tell the server: unticked and never saved, or the same as last time
+    if (remindSent.current === key || (!remind && !remindSent.current)) return;
+    const timer = window.setTimeout(() => {
+      remindSent.current = key;
+      void api("/checkout/cart-reminder", { method: "POST", body: JSON.stringify({ email: remindEmail, lines }) }).catch(() => undefined);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [remind, remindEmail, remindLines]);
 
   useEffect(() => {
     loadStoreConfig().then((c) => {
@@ -340,6 +389,16 @@ export default function Checkout() {
 
   // Nothing left to buy now (paid already, or opened later): the cart's checkout instead.
   if (buyingNow && cart.lines.length === 0) return <Navigate to="/checkout" replace />;
+  if (restoring) {
+    return (
+      <div className="sh co">
+        <div className="co-empty">
+          <img src={MASCOT} alt="" />
+          <h1 className="sh-display">Getting your cart back…</h1>
+        </div>
+      </div>
+    );
+  }
   if (cart.lines.length === 0) {
     return (
       <div className="sh co">
@@ -424,6 +483,12 @@ export default function Checkout() {
               <p className="co-note">
                 Your receipt and shipping updates go here.{!auth.email && " Sign in from the shop to save orders to your account."}
               </p>
+              <label className="co-check co-remind">
+                <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
+                <span>
+                  Email me my cart if I don't finish <span className="co-note">(one reminder a few hours later; stop any time)</span>
+                </span>
+              </label>
             </section>
 
             <section className="co-section" aria-labelledby="co-h-ship">
@@ -655,6 +720,7 @@ export default function Checkout() {
                   <i style={{ width: `${Math.min(goods / threshold, 1) * 100}%` }} />
                 </div>
               </div>
+              {!buyingNow && <CheckoutAddOns itemIds={cart.lines.map((l) => l.itemId)} currency="CAD" onAdd={(p) => fullCart.add(p, 1)} />}
               <DiscountBox
                 applied={quote?.discount ?? null}
                 value={codeInput}
