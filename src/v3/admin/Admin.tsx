@@ -27,6 +27,7 @@ import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
 import { PhotosScreen } from "./PhotoQueue";
 import { DescriptionsScreen } from "./Descriptions";
+import { BarcodesScreen } from "./Barcodes";
 import { isOn } from "../../features";
 import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, SettingsScreen, type Ctx } from "./Screens";
 
@@ -172,6 +173,7 @@ export default function Admin() {
       {screen === "Imports" && <ImportsScreen ctx={ctx} />}
       {screen === "Photos" && <PhotosScreen ctx={ctx} />}
       {screen === "Descriptions" && <DescriptionsScreen ctx={ctx} />}
+      {screen === "Barcodes" && <BarcodesScreen ctx={ctx} />}
       {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
       {screen === "Orders" && <OrdersScreen ctx={ctx} />}
       {screen === "Homepage" && <HomepageScreen ctx={ctx} />}

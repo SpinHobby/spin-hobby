@@ -19,6 +19,7 @@ export type Screen =
   | "Imports"
   | "Photos"
   | "Descriptions"
+  | "Barcodes"
   | "Categories"
   | "Orders"
   | "Homepage"
@@ -33,6 +34,7 @@ export const SCREENS: Screen[] = [
   "Imports",
   "Photos",
   "Descriptions",
+  "Barcodes",
   "Categories",
   "Orders",
   "Homepage",
