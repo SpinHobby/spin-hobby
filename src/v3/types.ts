@@ -1,3 +1,4 @@
+import type { StorefrontLayout } from "./storefront/layout";
 // Mirrors design_handoff_spinhobby_storefront/shared/api-types.ts and the
 // Supabase `store-api` edge function responses.
 
@@ -242,6 +243,8 @@ export interface StoreSettings {
   packaging_weight_g?: number;
   /** Whether the server has an EasyPost key (EASYPOST_API_KEY). */
   easypost_configured?: boolean;
+  /** The storefront layout (Admin > Homepage > Page layout), always complete. */
+  storefront_layout?: StorefrontLayout;
 }
 
 export interface Readiness {

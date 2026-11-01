@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./storefront.scss";
@@ -12,6 +12,7 @@ import { ScrollRow } from "../../components/layout/ScrollRow";
 import { useDocumentHead } from "../seo";
 import type { Product } from "../types";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
+import { DEFAULT_LAYOUT, layoutAttrs, type LayoutSection, type ProductView, type StorefrontLayout } from "./layout";
 import {
   ALL,
   AVAIL,
@@ -81,8 +82,15 @@ export default function Storefront() {
     series: null,
   });
   const [draftQuery, setDraftQuery] = useState("");
-  // How the shop lists products: cards, smaller cards (more per screen), or rows.
-  const [view, setView] = useLocalState<"grid" | "compact" | "list">("spinhobby-view", "grid");
+  // The owner's layout. The last one seen is kept on this device, so a return visit doesn't flash the default layout first.
+  const [seenLayout, setSeenLayout] = useLocalState<StorefrontLayout | null>("spinhobby-layout", null);
+  useEffect(() => {
+    if (config?.layout) setSeenLayout(config.layout);
+  }, [config?.layout, setSeenLayout]);
+  const layout = config?.layout ?? seenLayout ?? DEFAULT_LAYOUT;
+  // How the shop lists products: cards, smaller cards (more per screen), or rows. The shop's default until the shopper picks one.
+  const [pickedView, setView] = useLocalState<ProductView | null>("spinhobby-view-picked", null);
+  const view = pickedView ?? layout.productView;
   const [wishOnly, setWishOnly] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -380,43 +388,292 @@ export default function Storefront() {
   // the sidebar scrolls without a bar; its edges fade while there is more
   const sidebarRef = useScrollFade<HTMLElement>();
 
+  // The homepage blocks, in the order and with the visibility the owner chose (Admin > Homepage > Page layout).
+  const homeReady = isHome && !!home;
+  const blocks: Record<LayoutSection, React.ReactNode> = {
+    hero: homeReady && home && (
+      <HeroRow
+        heading={intro.h1}
+        slides={home.slides}
+        closingSoon={closingSoon}
+        maxOff={maxOff}
+        onPreorders={() => setNav("Pre-Orders")}
+        onSale={() => setNav("Sale")}
+      />
+    ),
+    trust: homeReady && <TrustStrip />,
+    preorders: homeReady && preorders.length > 0 && (
+      <section aria-labelledby="pre-title">
+        <div className="sf-section-head">
+          <h2 id="pre-title" className="sh-display">
+            New pre-orders <span className="sf-jp">予約受付中</span>
+          </h2>
+          <button type="button" className="sf-link" onClick={() => setNav("Pre-Orders")}>
+            See all →
+          </button>
+        </div>
+        <ScrollRow className="sf-pre-row" label="New pre-orders">
+          {preorders.map((p) => (
+            <PreorderCard key={p.id} p={p} a={actions} />
+          ))}
+        </ScrollRow>
+      </section>
+    ),
+    lists: homeReady && (ranking.length > 0 || arrived.length > 0) && (
+      <section className="sf-duo">
+        {ranking.length > 0 && (
+          <div className="sf-panel sf-list-card">
+            <div className="sf-list-card__head">
+              <h2 className="sh-display">Weekly ranking</h2>
+              <span className="sf-muted sf-small">Updated Mondays</span>
+            </div>
+            {ranking.map((p, i) => (
+              <MiniRow key={p.id} p={p} a={actions} rank={p.rank ?? i + 1} />
+            ))}
+          </div>
+        )}
+        {arrived.length > 0 && (
+          <div className="sf-panel sf-list-card">
+            <div className="sf-list-card__head">
+              <h2 className="sh-display">Just arrived</h2>
+              <span className="sf-muted sf-small">Ready to ship</span>
+            </div>
+            {arrived.map((p) => (
+              <MiniRow key={p.id} p={p} a={actions} quickAdd />
+            ))}
+          </div>
+        )}
+      </section>
+    ),
+    shop: (
+      <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
+        <div className="sf-shop__head">
+          <h2 key={shopTitle} id="shop-title" className="sh-display ui-title-in">
+            <span className={page && !wishOnly && !filters.query ? "sh-visually-hidden" : ""}>
+              {page && !wishOnly ? `Shop ${page.h1.toLowerCase()}` : shopTitle}
+            </span>{" "}
+            <span key={results.loading ? "" : results.total} className="sf-count">
+              {results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}
+            </span>
+          </h2>
+          <div className="sf-shop__tools">
+            <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>
+              Filters{hasFilters ? " •" : ""}
+            </button>
+            <label className="sf-muted sf-sort-label" htmlFor="sf-sort">
+              Sort
+            </label>
+            <select
+              id="sf-sort"
+              className="sf-select"
+              value={filters.sort}
+              onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ShopSort }))}
+            >
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <div className="sf-seg" role="group" aria-label="Layout">
+              <button
+                type="button"
+                className={view === "grid" ? "is-active" : ""}
+                aria-pressed={view === "grid"}
+                onClick={() => setView("grid")}
+              >
+                Grid
+              </button>
+              <button
+                type="button"
+                className={view === "compact" ? "is-active" : ""}
+                aria-pressed={view === "compact"}
+                onClick={() => setView("compact")}
+                title="Smaller cards, more products per screen"
+              >
+                Compact
+              </button>
+              <button
+                type="button"
+                className={view === "list" ? "is-active" : ""}
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                List
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {(results.loading && !results.items.length) || swap.phase === "slow" ? (
+          <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""}`} aria-busy="true" aria-label="Loading products">
+            {Array.from({ length: 10 }, (_, i) => (
+              <div key={i} className="sf-card sf-card--skeleton">
+                <div className="sh-skeleton" style={{ aspectRatio: "1" }} />
+                <div className="sh-skeleton" style={{ height: 14, margin: "12px 12px 6px" }} />
+                <div className="sh-skeleton" style={{ height: 14, width: "50%", margin: "0 12px 14px" }} />
+              </div>
+            ))}
+          </div>
+        ) : results.error ? (
+          <div className="sf-empty">
+            <strong>We couldn't load the shop right now</strong>
+            <span>{results.error}</span>
+            <button type="button" className="sh-btn" onClick={results.retry}>
+              Try again
+            </button>
+          </div>
+        ) : storeEmpty ? (
+          <div className="sf-empty">
+            <img src={MASCOT} alt="" className="sf-empty__mascot" />
+            <strong>New stock is on its way</strong>
+            <span>Our catalog is syncing from the shop. Come say hi in our Discord community while you wait.</span>
+            <a className="sh-btn sh-btn--gold" href={DISCORD_URL} target="_blank" rel="noreferrer">
+              Join the Discord
+            </a>
+          </div>
+        ) : results.items.length === 0 ? (
+          <div className="sf-empty">
+            <strong>{wishOnly ? "Your wishlist is empty" : "Nothing matches these filters"}</strong>
+            <span>
+              {wishOnly ? "Tap ♡ on any product to save it here." : "Try another category or clear filters. New stock is added weekly."}
+            </span>
+            <button type="button" className="sh-btn sh-btn--ghost" onClick={clearFilters}>
+              Clear filters
+            </button>
+          </div>
+        ) : view !== "list" ? (
+          <div key={swap.round} className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""} ${listMotion}`}>
+            {results.items.map((p) => (
+              <ProductCard key={p.id} p={p} a={actions} />
+            ))}
+          </div>
+        ) : (
+          <div key={swap.round} className={`sf-panel sf-list ${listMotion}`}>
+            {results.items.map((p) => (
+              <ProductRow key={p.id} p={p} a={actions} />
+            ))}
+          </div>
+        )}
+        {!results.loading && results.cursor && (
+          <div className="sf-more">
+            <span className="sf-muted">
+              Showing {results.items.length} of {results.total}
+            </span>
+            <button type="button" className="sh-btn sh-btn--ghost" onClick={results.loadMore} disabled={results.loadingMore}>
+              {results.loadingMore ? "Loading…" : "Show more"}
+            </button>
+          </div>
+        )}
+      </section>
+    ),
+    about: isHome && (
+      <section className="sf-panel sf-about" aria-labelledby="about-shop-title">
+        <h2 id="about-shop-title" className="sh-display">
+          Your Canadian shop for authentic anime merch
+        </h2>
+        <p>{intro.intro}</p>
+        <div className="sf-about__links">
+          <span className="sh-eyebrow">Shop by type</span>
+          {SECTIONS.map((sct) => (
+            <a
+              key={sct.path}
+              href={sct.path}
+              onClick={(e) => {
+                e.preventDefault();
+                setNav(sct.nav);
+              }}
+            >
+              {sct.h1}
+            </a>
+          ))}
+        </div>
+        {popularSeries.length > 0 && (
+          <div className="sf-about__links">
+            <span className="sh-eyebrow">Popular series</span>
+            {popularSeries.map((name) => (
+              <a
+                key={name}
+                href={seriesPath(name)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  go(seriesPath(name));
+                }}
+              >
+                {name}
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+    ),
+    events: (
+      <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
+        <div className="sf-events__head">
+          <h2 id="events-title" className="sh-display">
+            Meet us at the con
+          </h2>
+          <Link to="/events" className="sf-events__all">
+            See all events →
+          </Link>
+        </div>
+        {stripIsPast && (
+          <p className="sf-events__note">No upcoming events right now. New dates are announced on Discord and Instagram. Recent events:</p>
+        )}
+        <div className="sf-events__list">
+          {stripEvents.map((e, i) => (
+            <span key={e.name + e.start} className={`sf-event ${stripIsPast ? "is-past" : ""}`}>
+              <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
+              {e.name}
+              <span className="sf-muted sf-event__date">
+                {eventDateShort(e.start, e.end)} · {e.city}
+              </span>
+            </span>
+          ))}
+        </div>
+      </section>
+    ),
+  };
+
   return (
-    <div className="sh sf" data-view={view}>
+    <div className="sh sf" data-view={view} data-ready={config ? "" : undefined} {...layoutAttrs(layout)}>
       <a className="sf-skip" href="#shop">
         Skip to products
       </a>
 
-      {/* Utility bar */}
-      <div className="sf-utility">
-        <div className="sf-wrap sf-utility__inner">
-          {/* once the cart has something, say how close it is to free shipping (a goal close at hand is motivating) */}
-          <span className="sf-utility__ship" key={cart.count ? (gap ? "gap" : "free") : "none"}>
-            {!cart.count ? (
-              <>
-                <span className="sf-gold">●</span> Free shipping on orders over {freeShippingLabel()} · Canada &amp; US
-              </>
-            ) : gap ? (
-              <>
-                <span className="sf-gold">●</span> You're <b>{price(gap, currency)}</b> away from free shipping
-              </>
-            ) : (
-              <>
-                <span className="sf-gold">✓</span> Your order ships free
-              </>
-            )}
-          </span>
-          {/* site links only: Discord and Instagram are the icons beside the search */}
-          <div className="sf-utility__links">
-            {SHOW_EBAY_STORE && (
-              <a href={EBAY_URL} target="_blank" rel="noreferrer">
-                eBay store ↗
-              </a>
-            )}
-            <Link to="/events">Events</Link>
-            <Link to="/support">Support</Link>
+      {/* Utility bar (the owner can switch it off in Page layout) */}
+      {layout.announcementBar && (
+        <div className="sf-utility">
+          <div className="sf-wrap sf-utility__inner">
+            {/* once the cart has something, say how close it is to free shipping (a goal close at hand is motivating) */}
+            <span className="sf-utility__ship" key={cart.count ? (gap ? "gap" : "free") : "none"}>
+              {!cart.count ? (
+                <>
+                  <span className="sf-gold">●</span> Free shipping on orders over {freeShippingLabel()} · Canada &amp; US
+                </>
+              ) : gap ? (
+                <>
+                  <span className="sf-gold">●</span> You're <b>{price(gap, currency)}</b> away from free shipping
+                </>
+              ) : (
+                <>
+                  <span className="sf-gold">✓</span> Your order ships free
+                </>
+              )}
+            </span>
+            {/* site links only: Discord and Instagram are the icons beside the search */}
+            <div className="sf-utility__links">
+              {SHOW_EBAY_STORE && (
+                <a href={EBAY_URL} target="_blank" rel="noreferrer">
+                  eBay store ↗
+                </a>
+              )}
+              <Link to="/events">Events</Link>
+              <Link to="/support">Support</Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Header */}
       <header className="sf-header">
@@ -680,65 +937,6 @@ export default function Storefront() {
                 </div>
               )}
 
-              {isHome && home && (
-                <>
-                  <HeroRow
-                    heading={intro.h1}
-                    slides={home.slides}
-                    closingSoon={closingSoon}
-                    maxOff={maxOff}
-                    onPreorders={() => setNav("Pre-Orders")}
-                    onSale={() => setNav("Sale")}
-                  />
-                  <TrustStrip />
-
-                  {preorders.length > 0 && (
-                    <section aria-labelledby="pre-title">
-                      <div className="sf-section-head">
-                        <h2 id="pre-title" className="sh-display">
-                          New pre-orders <span className="sf-jp">予約受付中</span>
-                        </h2>
-                        <button type="button" className="sf-link" onClick={() => setNav("Pre-Orders")}>
-                          See all →
-                        </button>
-                      </div>
-                      <ScrollRow className="sf-pre-row" label="New pre-orders">
-                        {preorders.map((p) => (
-                          <PreorderCard key={p.id} p={p} a={actions} />
-                        ))}
-                      </ScrollRow>
-                    </section>
-                  )}
-
-                  {(ranking.length > 0 || arrived.length > 0) && (
-                    <section className="sf-duo">
-                      {ranking.length > 0 && (
-                        <div className="sf-panel sf-list-card">
-                          <div className="sf-list-card__head">
-                            <h2 className="sh-display">Weekly ranking</h2>
-                            <span className="sf-muted sf-small">Updated Mondays</span>
-                          </div>
-                          {ranking.map((p, i) => (
-                            <MiniRow key={p.id} p={p} a={actions} rank={p.rank ?? i + 1} />
-                          ))}
-                        </div>
-                      )}
-                      {arrived.length > 0 && (
-                        <div className="sf-panel sf-list-card">
-                          <div className="sf-list-card__head">
-                            <h2 className="sh-display">Just arrived</h2>
-                            <span className="sf-muted sf-small">Ready to ship</span>
-                          </div>
-                          {arrived.map((p) => (
-                            <MiniRow key={p.id} p={p} a={actions} quickAdd />
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  )}
-                </>
-              )}
-
               {notFound && (
                 <div className="sf-notfound" role="status">
                   <b>We couldn't find that page.</b> It may have moved, or the link has a typo. Here's the shop instead.
@@ -780,196 +978,7 @@ export default function Storefront() {
                 </header>
               )}
 
-              <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
-                <div className="sf-shop__head">
-                  <h2 key={shopTitle} id="shop-title" className="sh-display ui-title-in">
-                    <span className={page && !wishOnly && !filters.query ? "sh-visually-hidden" : ""}>
-                      {page && !wishOnly ? `Shop ${page.h1.toLowerCase()}` : shopTitle}
-                    </span>{" "}
-                    <span key={results.loading ? "" : results.total} className="sf-count">
-                      {results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}
-                    </span>
-                  </h2>
-                  <div className="sf-shop__tools">
-                    <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>
-                      Filters{hasFilters ? " •" : ""}
-                    </button>
-                    <label className="sf-muted sf-sort-label" htmlFor="sf-sort">
-                      Sort
-                    </label>
-                    <select
-                      id="sf-sort"
-                      className="sf-select"
-                      value={filters.sort}
-                      onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ShopSort }))}
-                    >
-                      {SORTS.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="sf-seg" role="group" aria-label="Layout">
-                      <button
-                        type="button"
-                        className={view === "grid" ? "is-active" : ""}
-                        aria-pressed={view === "grid"}
-                        onClick={() => setView("grid")}
-                      >
-                        Grid
-                      </button>
-                      <button
-                        type="button"
-                        className={view === "compact" ? "is-active" : ""}
-                        aria-pressed={view === "compact"}
-                        onClick={() => setView("compact")}
-                        title="Smaller cards, more products per screen"
-                      >
-                        Compact
-                      </button>
-                      <button
-                        type="button"
-                        className={view === "list" ? "is-active" : ""}
-                        aria-pressed={view === "list"}
-                        onClick={() => setView("list")}
-                      >
-                        List
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {(results.loading && !results.items.length) || swap.phase === "slow" ? (
-                  <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""}`} aria-busy="true" aria-label="Loading products">
-                    {Array.from({ length: 10 }, (_, i) => (
-                      <div key={i} className="sf-card sf-card--skeleton">
-                        <div className="sh-skeleton" style={{ aspectRatio: "1" }} />
-                        <div className="sh-skeleton" style={{ height: 14, margin: "12px 12px 6px" }} />
-                        <div className="sh-skeleton" style={{ height: 14, width: "50%", margin: "0 12px 14px" }} />
-                      </div>
-                    ))}
-                  </div>
-                ) : results.error ? (
-                  <div className="sf-empty">
-                    <strong>We couldn't load the shop right now</strong>
-                    <span>{results.error}</span>
-                    <button type="button" className="sh-btn" onClick={results.retry}>
-                      Try again
-                    </button>
-                  </div>
-                ) : storeEmpty ? (
-                  <div className="sf-empty">
-                    <img src={MASCOT} alt="" className="sf-empty__mascot" />
-                    <strong>New stock is on its way</strong>
-                    <span>Our catalog is syncing from the shop. Come say hi in our Discord community while you wait.</span>
-                    <a className="sh-btn sh-btn--gold" href={DISCORD_URL} target="_blank" rel="noreferrer">
-                      Join the Discord
-                    </a>
-                  </div>
-                ) : results.items.length === 0 ? (
-                  <div className="sf-empty">
-                    <strong>{wishOnly ? "Your wishlist is empty" : "Nothing matches these filters"}</strong>
-                    <span>
-                      {wishOnly
-                        ? "Tap ♡ on any product to save it here."
-                        : "Try another category or clear filters. New stock is added weekly."}
-                    </span>
-                    <button type="button" className="sh-btn sh-btn--ghost" onClick={clearFilters}>
-                      Clear filters
-                    </button>
-                  </div>
-                ) : view !== "list" ? (
-                  <div key={swap.round} className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""} ${listMotion}`}>
-                    {results.items.map((p) => (
-                      <ProductCard key={p.id} p={p} a={actions} />
-                    ))}
-                  </div>
-                ) : (
-                  <div key={swap.round} className={`sf-panel sf-list ${listMotion}`}>
-                    {results.items.map((p) => (
-                      <ProductRow key={p.id} p={p} a={actions} />
-                    ))}
-                  </div>
-                )}
-                {!results.loading && results.cursor && (
-                  <div className="sf-more">
-                    <span className="sf-muted">
-                      Showing {results.items.length} of {results.total}
-                    </span>
-                    <button type="button" className="sh-btn sh-btn--ghost" onClick={results.loadMore} disabled={results.loadingMore}>
-                      {results.loadingMore ? "Loading…" : "Show more"}
-                    </button>
-                  </div>
-                )}
-              </section>
-
-              {isHome && (
-                <section className="sf-panel sf-about" aria-labelledby="about-shop-title">
-                  <h2 id="about-shop-title" className="sh-display">
-                    Your Canadian shop for authentic anime merch
-                  </h2>
-                  <p>{intro.intro}</p>
-                  <div className="sf-about__links">
-                    <span className="sh-eyebrow">Shop by type</span>
-                    {SECTIONS.map((sct) => (
-                      <a
-                        key={sct.path}
-                        href={sct.path}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setNav(sct.nav);
-                        }}
-                      >
-                        {sct.h1}
-                      </a>
-                    ))}
-                  </div>
-                  {popularSeries.length > 0 && (
-                    <div className="sf-about__links">
-                      <span className="sh-eyebrow">Popular series</span>
-                      {popularSeries.map((name) => (
-                        <a
-                          key={name}
-                          href={seriesPath(name)}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            go(seriesPath(name));
-                          }}
-                        >
-                          {name}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
-
-              <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
-                <div className="sf-events__head">
-                  <h2 id="events-title" className="sh-display">
-                    Meet us at the con
-                  </h2>
-                  <Link to="/events" className="sf-events__all">
-                    See all events →
-                  </Link>
-                </div>
-                {stripIsPast && (
-                  <p className="sf-events__note">
-                    No upcoming events right now. New dates are announced on Discord and Instagram. Recent events:
-                  </p>
-                )}
-                <div className="sf-events__list">
-                  {stripEvents.map((e, i) => (
-                    <span key={e.name + e.start} className={`sf-event ${stripIsPast ? "is-past" : ""}`}>
-                      <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
-                      {e.name}
-                      <span className="sf-muted sf-event__date">
-                        {eventDateShort(e.start, e.end)} · {e.city}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </section>
+              {layout.sections.map((s) => s.visible && <Fragment key={s.id}>{blocks[s.id]}</Fragment>)}
             </main>
           </div>
         )}

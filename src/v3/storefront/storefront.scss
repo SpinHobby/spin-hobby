@@ -1781,10 +1781,8 @@ h1.sf-hero__eyebrow {
 }
 
 // ------------------------------------------------------------ responsive
-@media (max-width: 900px) {
-  .sf {
-    --header-h: 0px;
-  }
+// The filters as a slide-over sheet behind the Filters button: on small screens, and everywhere when Page layout hides the sidebar.
+@mixin sidebar-sheet {
   .sf-filter-btn {
     display: inline-block;
   }
@@ -1816,6 +1814,13 @@ h1.sf-hero__eyebrow {
   .sf-sidebar-overlay {
     z-index: 44;
   }
+}
+
+@media (max-width: 900px) {
+  .sf {
+    --header-h: 0px;
+  }
+  @include sidebar-sheet;
 }
 @media (max-width: 640px) {
   .sf-header__row {
@@ -3728,4 +3733,38 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   background: var(--surface2);
   color: var(--text2);
   font-size: 14px;
+}
+
+// ------------------------------------------------------------ Page layout (Admin > Homepage > Page layout; layout.ts)
+.sf[data-width="wide"] .sf-wrap {
+  max-width: 1680px;
+}
+.sf[data-width="full"] .sf-wrap {
+  max-width: none;
+}
+.sf[data-shape="portrait"] .sf-card .sf-img {
+  aspect-ratio: 3 / 4;
+}
+.sf[data-sidebar="right"] .sf-body {
+  flex-direction: row-reverse;
+}
+.sf[data-sidebar="hidden"] {
+  @include sidebar-sheet;
+}
+// until the settings arrive the layout may still change: no sliding sheet when it does
+.sf:not([data-ready]) .sf-sidebar {
+  transition: none;
+}
+// a set number of cards per row on a computer; tablets and phones keep "as many as fit" and two per row
+@media (min-width: 901px) {
+  @each $n in 3, 4, 5, 6 {
+    .sf[data-columns="#{$n}"] .sf-shop {
+      .sf-grid {
+        grid-template-columns: repeat($n, minmax(0, 1fr));
+      }
+      .sf-grid--compact {
+        grid-template-columns: repeat($n + 2, minmax(0, 1fr));
+      }
+    }
+  }
 }

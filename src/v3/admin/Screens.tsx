@@ -38,6 +38,7 @@ import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
 import { EbayListing } from "./EbayListing";
 import { EbaySettings } from "./EbaySettings";
+import { PageLayoutCard } from "./PageLayout";
 import { SeriesSelect } from "./SeriesSelect";
 import { ImprovePhotosDialog } from "./PhotoQueue";
 import { LabelsDialog } from "./Labels";
@@ -1775,6 +1776,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
           onSale={() => {}}
         />
       </StorefrontPreview>
+      <PageLayoutCard ctx={ctx} />
       <div className="ad-two">
         <Card
           title="Hero slides"
