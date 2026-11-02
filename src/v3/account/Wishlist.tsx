@@ -1,90 +1,48 @@
 import { Pagination, Button } from "@/components";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CardAction, ProductCard, type CardActions } from "@/components/shop/ProductCards";
-import type { Product } from "@/v3/types";
+import { useAuth } from "../hooks";
+import { ALL, DEFAULT_AVAIL, productPath, useCart, useProducts, useWishlist, type Filters } from "@/v3/storefront/data";
 import "./wishlist.scss";
 
-const base = { variationId: "", character: null, images: [], currency: "CAD" as const, maxPerCustomer: null, createdAt: null };
-const PRODUCTS: Product[] = [
-  {
-    ...base,
-    id: "s1",
-    name: "Frieren 1/7 Scale Figure",
-    series: "Frieren: Beyond Journey's End",
-    category: "Scale Figures",
-    priceCents: 25900,
-    compareAtCents: null,
-    status: "pre",
-    stockCount: null,
-    releaseMonth: "2027-02-01",
-    orderByDate: new Date(Date.now() + 3 * 86_400_000).toISOString(),
-    rank: 3,
-  },
-  {
-    ...base,
-    id: "s2",
-    name: "Nendoroid Hatsune Miku: Snow Miku 2026 Ver.",
-    series: "Vocaloid",
-    category: "Nendoroids",
-    priceCents: 8400,
-    compareAtCents: 9900,
-    status: "low",
-    stockCount: 2,
-    releaseMonth: null,
-    orderByDate: null,
-    rank: null,
-  },
-  {
-    ...base,
-    id: "s3",
-    name: "Bond Forger Big Plush (40 cm)",
-    series: "Spy × Family",
-    category: "Character Plush",
-    priceCents: 5500,
-    compareAtCents: null,
-    status: "in",
-    stockCount: 12,
-    releaseMonth: null,
-    orderByDate: null,
-    rank: 1,
-  },
-  {
-    ...base,
-    id: "s4",
-    name: "One Piece Card Game: Premium Card Collection",
-    series: "One Piece",
-    category: "Trading Cards",
-    priceCents: 5900,
-    compareAtCents: null,
-    status: "out",
-    stockCount: 0,
-    releaseMonth: null,
-    orderByDate: null,
-    rank: null,
-  },
-];
+// same starting filters as Storefront.tsx; defined outside the component so the object stays the same between renders
+const FILTERS: Filters = {
+  nav: "Home",
+  category: ALL,
+  categoryId: null,
+  avail: DEFAULT_AVAIL,
+  price: "Any",
+  sort: "featured",
+  query: "",
+  series: null,
+};
 
 export function Wishlist() {
+  const navigate = useNavigate();
+  const auth = useAuth();
+  const wishlist = useWishlist(auth.user?.id ?? null, () => {});
+  const cart = useCart();
+
   const [page, setPage] = useState(1);
-  const [removed, setRemoved] = useState<string[]>([]);
-  const [cart, setCart] = useState<string[]>([]);
-
-  // Switching between "Grid" and "Row" views
   const [view, setView] = useState<"grid" | "row">("row");
-
   const PAGE = 5;
+
+  // the saved ids -> the real products (the same way Storefront.tsx does it)
+  const results = useProducts(FILTERS, wishlist.list);
+  // keep only items still saved, so a removed item disappears right away
+  const items = wishlist.list.length ? results.items.filter((p) => wishlist.ids.has(p.id)) : [];
 
   const a: CardActions = {
     currency: "CAD",
-    inCart: (p) => cart.includes(p.id),
-    wished: () => true,
-    onAdd: (p) => setCart((c) => (c.includes(p.id) ? c : [...c, p.id])),
+    inCart: (p) => cart.has(p.variationId),
+    wished: (p) => wishlist.ids.has(p.id),
+    onAdd: (p) => cart.add(p),
     onNotify: () => {},
-    onWish: (p) => setRemoved((r) => [...r, p.id]),
-    onOpen: () => {},
+    onWish: wishlist.toggle, // the heart: add or remove
+    onOpen: (p) => navigate(productPath(p), { state: { product: p } }),
   };
 
-  const items = PRODUCTS.filter((p) => !removed.includes(p.id));
   const visible = items.slice((page - 1) * PAGE, page * PAGE);
   const totalCents = items.reduce((sum, p) => sum + p.priceCents, 0);
 
@@ -121,6 +79,9 @@ export function Wishlist() {
           </button>
         </div>
       </div>
+
+      {items.length === 0 && <p className="ui-muted">{results.loading ? "Loading…" : "Tap ♡ on any product to save it here."}</p>}
+
       <div className="ui-kit-shop-list">
         {view === "grid" && (
           <div className="ui-kit-shop-grid">
@@ -147,13 +108,13 @@ export function Wishlist() {
                     </CardAction>
                   </>
                 }
-                onRemove={(x) => setRemoved((r) => [...r, x.id])}
+                onRemove={(x) => wishlist.toggle(x)} // the bin: remove
               />
             ))}
           </div>
         )}
       </div>
-      <Pagination page={page} pageSize={PAGE} total={items.length} onPage={(newPage) => setPage(newPage)} />
+      <Pagination page={page} pageSize={PAGE} total={items.length} onPage={setPage} />
     </>
   );
 }
