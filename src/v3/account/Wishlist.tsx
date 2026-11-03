@@ -1,11 +1,9 @@
-import { Card, PanelLayout } from "@/components";
+import { EmptyState } from "@/components";
 
 export function Wishlist() {
   return (
-    <PanelLayout title="" tag="" navLabel="" tabs={[]} active="" onSelect={() => {}}>
-      <Card title="Cool">
-        <div>Cool!</div>
-      </Card>
-    </PanelLayout>
+    <EmptyState title="Your wishlist is empty">
+      Items you save show up here.
+    </EmptyState>
   );
 }
