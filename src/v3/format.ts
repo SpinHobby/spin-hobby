@@ -3,7 +3,15 @@ import type { Product, ProductStatus } from "./types";
 export type Currency = "CAD" | "USD";
 
 /** Store-wide display settings. Defaults mirror store_settings; replaced by /checkout/config on load. */
-export const storeFormat = { fxCadUsd: 0.73, handlingDaysMin: 2, handlingDaysMax: 3, freeShippingThresholdCents: 7500 };
+export const storeFormat = { fxCadUsd: 0.73, handlingDaysMin: 2, handlingDaysMax: 3, freeShippingThresholdCents: 7500, paypal: false };
+
+/**
+ * How shoppers can pay, for "Secure checkout" lines: "card or PayPal" only when checkout really offers PayPal (it's the payment
+ * provider in Admin > Settings and the server has its key; /checkout/config says so), else "card". Until the config loads: "card".
+ */
+export function paymentLabel() {
+  return storeFormat.paypal ? "card or PayPal" : "card";
+}
 
 export function handlingLabel() {
   const { handlingDaysMin: a, handlingDaysMax: b } = storeFormat;

@@ -1,3 +1,4 @@
+import { track } from "../../lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { normalizeStatus } from "../format";
@@ -208,7 +209,8 @@ export function slugify(text: string) {
 
 export function productPath(p: Pick<Product, "id" | "name">) {
   const slug = slugify(p.name);
-  return `/product/${encodeURIComponent(p.id)}${slug ? `/${slug}` : ""}`;
+  // lower case: Netlify serves the pre-built product pages from lower-case paths (it redirects any other), and the API finds an id in any case
+  return `/product/${encodeURIComponent(p.id.toLowerCase())}${slug ? `/${slug}` : ""}`;
 }
 export function productIdFromPath(pathname: string): string | null {
   const m = /^\/product\/([^/]+)/.exec(pathname);
@@ -221,30 +223,59 @@ export function purchaseCap(p: Product) {
   return Math.max(1, Math.min(p.maxPerCustomer ?? 99, stockCap));
 }
 
+function cartLine(p: Product, qty: number): CartLine {
+  return {
+    variationId: p.variationId,
+    itemId: p.id,
+    name: p.name,
+    imageUrl: p.images[0] ?? null,
+    imageCutout: !!p.images[0] && !!p.cutouts?.includes(p.images[0]),
+    unitPriceCents: p.priceCents,
+    quantity: Math.min(qty, purchaseCap(p)),
+    isPreorder: p.status === "pre",
+    maxPerCustomer: p.maxPerCustomer,
+  };
+}
+
+const CART_KEY = "spinhobby-cart-v3";
+/** "Buy now" keeps its one item apart from the cart, so buying it doesn't empty or change the cart. */
+const BUY_NOW_KEY = "spinhobby-buy-now-v1";
+export const BUY_NOW_PATH = "/checkout/now";
+
+/**
+ * Starts "Buy now": checkout for just this item (and quantity), leaving the cart as it is. Saved straight away, before the
+ * caller goes to BUY_NOW_PATH, so checkout reads it on arrival.
+ */
+export function startBuyNow(p: Product, qty = 1) {
+  track("add_to_cart", p.id); // the funnel's "added to cart" step, or checkouts would outnumber it
+  try {
+    localStorage.setItem(BUY_NOW_KEY, JSON.stringify([cartLine(p, qty)]));
+  } catch {
+    /* storage blocked: checkout then shows nothing to buy and sends the shopper to the cart */
+  }
+}
+
+/** The cart, kept in this browser. */
 export function useCart() {
-  const [lines, setLines] = useLocalState<CartLine[]>("spinhobby-cart-v3", []);
+  return useLines(CART_KEY);
+}
+/** The one item from "Buy now", with the same controls as the cart (checkout uses either). */
+export function useBuyNow() {
+  return useLines(BUY_NOW_KEY);
+}
+
+function useLines(key: string) {
+  const [lines, setLines] = useLocalState<CartLine[]>(key, []);
   const add = useCallback(
     (p: Product, qty = 1) => {
+      track("add_to_cart", p.id);
       setLines((current) => {
         const existing = current.find((l) => l.variationId === p.variationId);
-        const cap = purchaseCap(p);
         if (existing) {
+          const cap = purchaseCap(p);
           return current.map((l) => (l.variationId === p.variationId ? { ...l, quantity: Math.min(l.quantity + qty, cap) } : l));
         }
-        return [
-          ...current,
-          {
-            variationId: p.variationId,
-            itemId: p.id,
-            name: p.name,
-            imageUrl: p.images[0] ?? null,
-            imageCutout: !!p.images[0] && !!p.cutouts?.includes(p.images[0]),
-            unitPriceCents: p.priceCents,
-            quantity: Math.min(qty, cap),
-            isPreorder: p.status === "pre",
-            maxPerCustomer: p.maxPerCustomer,
-          },
-        ];
+        return [...current, cartLine(p, qty)];
       });
     },
     [setLines],

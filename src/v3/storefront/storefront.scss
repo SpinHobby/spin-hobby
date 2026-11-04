@@ -1358,6 +1358,20 @@ h1.sf-hero__eyebrow {
     padding: 9px 16px;
   }
 }
+// "Buy now": outlined, so "Add to cart" stays the main button; on a grid card it sits just under it
+.sf-buy--now {
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--primary);
+  &:hover {
+    background: var(--primary);
+    color: var(--on-primary);
+    filter: none;
+  }
+}
+.sf-card__foot .sf-buy--now {
+  margin-top: 6px;
+}
 
 .sf-list {
   overflow: hidden;
@@ -2270,6 +2284,7 @@ h1.sf-hero__eyebrow {
 }
 .sf-pp__buyrow {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .sf-pp__qty {
@@ -2306,6 +2321,13 @@ h1.sf-hero__eyebrow {
   flex: 1;
   min-height: 52px;
   font-size: 16px;
+  border-radius: 14px;
+}
+// "Buy now" gets its own full-width line under the quantity and "Add to cart"
+.sf-pp__now {
+  flex-basis: 100%;
+  min-height: 48px;
+  font-size: 15px;
   border-radius: 14px;
 }
 .sf-pp__added {
@@ -3575,4 +3597,135 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   .sf-eq i {
     animation: none !important;
   }
+}
+
+// ---- "Frequently bought together" (Suggestions.tsx)
+.sf-together {
+  margin-top: 28px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+  &__why {
+    margin: 4px 0 14px;
+    font-size: 13px;
+  }
+  &__row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    .sh-thumb {
+      width: 96px;
+      height: 96px;
+      border-radius: 12px;
+    }
+  }
+  &__plus {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--muted);
+  }
+  &__list {
+    list-style: none;
+    margin: 14px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+    label {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      min-width: 0;
+      cursor: pointer;
+    }
+    input {
+      margin-top: 3px;
+      accent-color: var(--primary);
+    }
+  }
+  @media (max-width: 560px) {
+    &__item .sh-thumb {
+      width: 72px;
+      height: 72px;
+    }
+    &__add {
+      width: 100%;
+    }
+  }
+}
+
+// ---- "Get new pre-orders first" in the buy box (Suggestions.tsx)
+.sf-follow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  font-size: 14px;
+  p {
+    margin: 0;
+  }
+  &__title {
+    font-weight: 800;
+  }
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    input {
+      accent-color: var(--primary);
+    }
+  }
+  &__row {
+    display: flex;
+    gap: 8px;
+    .sh-input {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+  &__small {
+    font-size: 12px;
+  }
+  &.is-done {
+    border-style: solid;
+    border-color: var(--teal);
+    color: var(--text2);
+  }
+}
+
+// An address with no page (Storefront.tsx notFound): a note above the shop
+.sf-notfound {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 14px;
 }

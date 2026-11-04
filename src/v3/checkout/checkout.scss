@@ -639,3 +639,68 @@
 .co-testpay__btn {
   width: 100%;
 }
+// "Buy now": says the cart is kept, under the summary heading
+.co-buynow {
+  margin: -4px 0 12px;
+}
+
+// "Discount code" in the order summary
+.co-code {
+  margin: 12px 0;
+  &.is-applied {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px dashed var(--teal);
+    font-size: 14px;
+  }
+}
+.co-code__row {
+  display: flex;
+  gap: 8px;
+  .sh-input {
+    flex: 1;
+    min-width: 0;
+    text-transform: uppercase;
+  }
+}
+.co-code__msg {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--red);
+}
+.co-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--blue);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// "Email me my cart if I don't finish" under the email (opt-in, never ticked for the shopper)
+.co-remind {
+  margin-top: 10px;
+  font-size: 14px;
+  .co-note {
+    display: inline;
+  }
+}
+// "Often added at checkout": cheap extras in the order summary (Suggestions.tsx)
+.co-addons {
+  margin: 12px 0;
+}
+// what a faster courier would cost without the free-shipping rule, struck through beside what the shopper pays
+.co-method__was {
+  margin-left: 6px;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}

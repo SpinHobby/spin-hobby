@@ -8,6 +8,10 @@ export default defineConfig({
   // the image service (/.netlify/images) locally. Without it a local page shows Square's original photo instead (src/v3/photo.ts
   // falls back on error); the live site is unchanged. It pulled in 12 high-severity advisories, some with no fixed release.
   plugins: [react()],
+  // the deployed commit (Netlify sets COMMIT_REF), sent with browser error reports so they say which release broke
+  define: {
+    "import.meta.env.VITE_RELEASE": JSON.stringify((process.env.COMMIT_REF ?? "").slice(0, 7)),
+  },
   root: ".",
   publicDir: "public",
   resolve: {

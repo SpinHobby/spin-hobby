@@ -77,6 +77,7 @@ function useFakeShop(onDone: (m: string) => void): CardActions {
         setCart((c) => (c.includes(p.id) ? c : [...c, p.id]));
         onDone(`${p.name} added to the cart (made up)`);
       },
+      onBuyNow: (p) => onDone(`Would go to checkout with just ${p.name} (made up)`),
       onNotify: (p) => onDone(`We'd email you when ${p.name} is back (made up)`),
       onWish: (p) => setWish((w) => (w.includes(p.id) ? w.filter((x) => x !== p.id) : [...w, p.id])),
       onOpen: (p) => onDone(`Would open ${p.name}`),

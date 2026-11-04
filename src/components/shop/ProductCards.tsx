@@ -3,6 +3,8 @@
  * an account page). Each takes a `Product` and the shop's `CardActions` (add to cart, wishlist, open...). See README.md and
  * http://localhost:3000/ui-kit (Shop tab) for each one live.
  *
+ * - Each card's main button adds to the cart; with the page's `onBuyNow`, a "Buy now" button under it goes straight to checkout
+ *   with just that item (the cart is left as it is).
  * - ProductCard: the main card. `layout="vertical"` (default: the photo on top, for grids) or `layout="horizontal"` (the photo on
  *   the left, for lists like the wishlist), where `meta`, `actions` and `onRemove` add a page's own line and buttons.
  * - PreorderCard: the slim card in the homepage's "New pre-orders" row.
@@ -28,6 +30,7 @@ import type { Product } from "../../v3/types";
 import { productPath } from "../../v3/storefront/data";
 import { isCutout, photo } from "../../v3/photo";
 import { closingLabel } from "../../v3/storefront/nudges";
+import { askHref, noPrice } from "./priceOnRequest";
 import "../../v3/storefront/storefront.scss";
 import "../styles/shop.scss";
 
@@ -36,6 +39,8 @@ export interface CardActions {
   inCart: (p: Product) => boolean;
   wished: (p: Product) => boolean;
   onAdd: (p: Product) => void;
+  /** Straight to checkout with just this item, leaving the cart alone. Leave it out and cards show no "Buy now" button. */
+  onBuyNow?: (p: Product) => void;
   onNotify: (p: Product) => void;
   onWish: (p: Product) => void;
   onOpen: (p: Product) => void;
@@ -115,11 +120,35 @@ function Thumb({ p, size }: { p: Product; size: number }) {
   );
 }
 
+/** The product's price, or "Ask for price" when it has none online. */
+export function ProductPrice({ p, currency }: { p: Product; currency: Currency }) {
+  if (noPrice(p)) return <strong className="sf-price sf-price--ask">Ask for price</strong>;
+  return <PriceTag cents={p.priceCents} currency={currency} />;
+}
+
 function buttonState(p: Product, a: CardActions) {
   const s = normalizeStatus(p.status);
   if (s === "out") return { label: "Notify me", cls: "is-out", onClick: () => a.onNotify(p) };
+  if (noPrice(p)) return { label: "Ask us", cls: "is-out", onClick: () => window.location.assign(askHref(p)) };
   if (a.inCart(p)) return { label: "Added ✓", cls: "is-added", onClick: () => a.onAdd(p) };
   return { label: s === "pre" ? "Pre-order" : "Add to cart", cls: "", onClick: () => a.onAdd(p) };
+}
+
+/** "Buy now" (like Amazon's): checkout for this one item. Not for sold-out items, or where the page gives no `onBuyNow`. */
+function BuyNow({ p, a, inline = false }: { p: Product; a: CardActions; inline?: boolean }) {
+  const s = normalizeStatus(p.status);
+  if (!a.onBuyNow || s === "out" || noPrice(p)) return null;
+  const go = a.onBuyNow;
+  return (
+    <button
+      type="button"
+      className={`sf-buy sf-buy--now ${inline ? "sf-buy--inline" : ""}`}
+      onClick={() => go(p)}
+      aria-label={`Buy ${p.name} now`}
+    >
+      {s === "pre" ? "Pre-order now" : "Buy now"}
+    </button>
+  );
 }
 
 export interface ProductCardProps {
@@ -175,7 +204,7 @@ function VerticalCard({ p, a }: { p: Product; a: CardActions }) {
           </ProductLink>
         </h3>
         <div className="sf-card__price">
-          <PriceTag cents={p.priceCents} currency={a.currency} />
+          <ProductPrice p={p} currency={a.currency} />
           {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
         </div>
         <span className="sf-card__status" style={{ color: meta.color }}>
@@ -186,6 +215,7 @@ function VerticalCard({ p, a }: { p: Product; a: CardActions }) {
         <button type="button" className={`sf-buy ${btn.cls}`} onClick={btn.onClick}>
           {btn.label}
         </button>
+        <BuyNow p={p} a={a} />
       </div>
     </article>
   );
@@ -228,13 +258,14 @@ function HorizontalCard({ p, a, meta, actions, onRemove }: ProductCardProps) {
           {meta && <div className="sf-hcard__meta">{meta}</div>}
         </div>
         <div className="sf-hcard__price">
-          <PriceTag cents={p.priceCents} currency={a.currency} />
+          <ProductPrice p={p} currency={a.currency} />
           {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
         </div>
         <div className="sf-hcard__actions">
           <button type="button" className={`sf-buy sf-buy--inline ${btn.cls}`} onClick={btn.onClick}>
             {btn.label}
           </button>
+          <BuyNow p={p} a={a} inline />
           {actions}
           <span className="sf-hcard__end">
             {onRemove ? (
@@ -320,12 +351,13 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
         </div>
       </div>
       <div className="sf-row__price">
-        <PriceTag cents={p.priceCents} currency={a.currency} />
+        <ProductPrice p={p} currency={a.currency} />
         {off > 0 && <s>{price(p.compareAtCents, a.currency, { code: false })}</s>}
       </div>
       <button type="button" className={`sf-buy sf-buy--inline ${btn.cls}`} onClick={btn.onClick}>
         {btn.label}
       </button>
+      <BuyNow p={p} a={a} inline />
       <button
         type="button"
         className={`sf-row__wish ${a.wished(p) ? "is-on" : ""}`}
@@ -353,7 +385,7 @@ export function PreorderCard({ p, a }: { p: Product; a: CardActions }) {
         <ProductLink p={p} a={a} className="sf-pre__name">
           {p.name}
         </ProductLink>
-        <PriceTag cents={p.priceCents} currency={a.currency} />
+        <ProductPrice p={p} currency={a.currency} />
         {discountPct(p) > 0 && <s className="sf-muted">{price(p.compareAtCents, a.currency, { code: false })}</s>}
         <span className="sf-muted">Release {monthLabel(p.releaseMonth)}</span>
         {p.orderByDate && <span className="sf-pre__by">Order by {dayLabel(p.orderByDate)}</span>}
@@ -384,7 +416,7 @@ export function MiniRow({ p, a, rank, quickAdd }: { p: Product; a: CardActions; 
           {statusShort(p)}
         </div>
       </div>
-      {quickAdd && s !== "out" ? (
+      {quickAdd && s !== "out" && !noPrice(p) ? (
         <button
           type="button"
           className={`sf-mini__add ${added ? "is-added" : ""}`}
@@ -394,7 +426,7 @@ export function MiniRow({ p, a, rank, quickAdd }: { p: Product; a: CardActions; 
           {added ? "Added ✓" : `${price(p.priceCents, a.currency)} +`}
         </button>
       ) : (
-        <span className="sf-mini__price">{price(p.priceCents, a.currency)}</span>
+        <span className="sf-mini__price">{noPrice(p) ? "Ask for price" : price(p.priceCents, a.currency)}</span>
       )}
     </div>
   );
