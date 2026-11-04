@@ -1,0 +1,11 @@
+// hero
+.sf-hero__banner {
+  flex: auto !important;
+  min-width: 0;
+  min-height: auto !important;
+  display: flex;
+  justify-content: space-between;
+  .sf-cart-btn  {
+    margin-right: 20px;
+  }
+}
