@@ -1,6 +1,8 @@
-import { useCallback, useState } from "react";
-import { PanelLayout } from "@/components";
+import { useState } from "react";
+import { PanelLayout, useTheme } from "@/components";
 import { Wishlist } from "./Wishlist";
+import { useAuth } from "../hooks";
+import { initials } from "../format";
 
 type Tab = "orders" | "wishlist" | "addresses" | "profile";
 
@@ -12,26 +14,34 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export default function Account() {
-  const [selectedTab, setSelectedTab] = useState<Tab>(() => {
-    const hash = decodeURIComponent(window.location.hash.slice(1));
-    return TABS.some((t) => t.key === hash) ? (hash as Tab) : "orders";
-  });
-
-  const select = useCallback((next: Tab) => {
-    setSelectedTab(next);
-    // PanelLayout scrolls to the top and eases the new screen in
-    window.history.replaceState(null, "", `#${next}`);
-  }, []);
+  const [selectedTab, setSelectedTab] = useState("orders");
+  const { theme, toggle } = useTheme();
+  const auth = useAuth();
 
   return (
     <PanelLayout
       tag="ACCOUNT"
-      tabs={TABS}
+      tabs={[
+        { key: "orders", label: "Orders" },
+        { key: "wishlist", label: "Wishlist" },
+        { key: "addresses", label: "Addresses" },
+        { key: "profile", label: "Profile" },
+      ]}
       active={selectedTab}
-      onSelect={select}
-      title={TABS.find((t) => t.key === selectedTab)!.label}
+      onSelect={setSelectedTab}
+      title={selectedTab.toUpperCase()}
+      topActions={
+        <>
+          <button type="button" className="ui-theme" onClick={toggle} aria-label="Toggle dark mode">
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
+          <div className="ui-user" title={auth.email ?? "Demo"}>
+            <span className="ui-avatar">{initials(auth.email)}</span>
+          </div>
+        </>
+      }
     >
-      {selectedTab === "wishlist" && <Wishlist />}
+      {import.meta.env.DEV && selectedTab === "wishlist" && <Wishlist />}
     </PanelLayout>
   );
 }
