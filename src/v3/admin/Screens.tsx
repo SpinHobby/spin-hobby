@@ -40,6 +40,7 @@ import { SquarePhotos } from "./SquarePhotos";
 import { EbayListing } from "./EbayListing";
 import { EbaySettings } from "./EbaySettings";
 import { PageLayoutCard } from "./PageLayout";
+import { ThemePicker } from "./ThemePicker";
 import { SeriesSelect } from "./SeriesSelect";
 import { ImprovePhotosDialog } from "./PhotoQueue";
 import { LabelsDialog } from "./Labels";
@@ -1778,6 +1779,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
           onSale={() => {}}
         />
       </StorefrontPreview>
+      <ThemePicker ctx={ctx} />
       <PageLayoutCard ctx={ctx} />
       <div className="ad-two">
         <Card

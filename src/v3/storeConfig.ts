@@ -26,6 +26,8 @@ export interface StoreConfig {
   productBackground?: { id: string; url: string } | null;
   /** The storefront layout (Admin > Homepage > Page layout), always complete. */
   layout?: StorefrontLayout;
+  /** The storefront's look (Admin > Homepage > Theme); see storefront/themes.ts. */
+  theme?: string;
 }
 
 let cached: Promise<StoreConfig | null> | null = null;

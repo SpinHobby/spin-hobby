@@ -249,6 +249,8 @@ export interface StoreSettings {
   easypost_configured?: boolean;
   /** The storefront layout (Admin > Homepage > Page layout), always complete. */
   storefront_layout?: StorefrontLayout;
+  /** The storefront's look (Admin > Homepage > Theme). */
+  storefront_theme?: string;
 }
 
 export interface Readiness {

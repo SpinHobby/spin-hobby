@@ -3432,3 +3432,58 @@
     grid-template-columns: 1fr;
   }
 }
+
+// Admin > Homepage > Theme: one tile per theme, each a tiny shop in its own colours (ThemePicker.tsx, themes.scss)
+.ad-shopthemes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.ad-shoptheme {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  &__pick {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    padding: 8px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    transition:
+      border-color 0.15s,
+      transform 0.15s;
+    &:hover:not(:disabled) {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+    &:disabled {
+      cursor: default;
+    }
+  }
+  &.is-current &__pick {
+    border-color: var(--gold);
+  }
+  &__name {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &__badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--on-gold);
+  }
+  &__preview {
+    align-self: flex-start;
+    margin-left: 4px;
+    color: var(--muted);
+  }
+}

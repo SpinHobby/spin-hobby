@@ -1,4 +1,5 @@
-// Design tokens from design_handoff_spinhobby_storefront / _admin (v3).
+// Design tokens from design_handoff_spinhobby_storefront / _admin (v3). Storefront themes override them in themes.scss.
+@use "themes";
 .sh {
   --bg: #f4f5f8;
   --surface: #ffffff;
@@ -17,11 +18,21 @@
   --ph1: #eceef4;
   --ph2: #e4e7ef;
   --shadow-card: 0 12px 28px -16px rgba(15, 20, 45, 0.35);
+  // text on the dark blocks (top bar, hero, footer) and on the gold accent; themes change all three with the colours behind them
+  --on-block: #ffffff;
+  --on-block-muted: #d6dae7;
+  --on-gold: #1d2a53;
+  // a picture behind the whole page (themes; none in the classic look)
+  --bg-art: none;
+  --bg-art-size: auto;
   --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-display: "M PLUS Rounded 1c", "Plus Jakarta Sans", system-ui, sans-serif;
 
   min-height: 100vh;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--bg-art);
+  background-size: var(--bg-art-size);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
