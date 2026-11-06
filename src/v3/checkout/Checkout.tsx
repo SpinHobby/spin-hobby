@@ -129,6 +129,8 @@ export default function Checkout() {
   // the courier option picked (an id from the quote's shippingOptions); null until the first quote picks the cheapest
   const [option, setOption] = useState<string | null>(null);
   const [billingSame, setBillingSame] = useState(true);
+  /** Apple Pay, Google Pay or Afterpay, when Square offers them to this shopper. */
+  const [squareExtras, setSquareExtras] = useState<string[]>([]);
   const [bill, setBill] = useState<Address>(EMPTY_ADDRESS);
   const [touched, setTouched] = useState(false); // a payment attempt: show every problem
   const [blurred, setBlurred] = useState<Set<string>>(new Set()); // fields the shopper has left: show their problems
@@ -382,7 +384,7 @@ export default function Checkout() {
       });
       finish(res.orderId, res.status);
     } catch (e) {
-      if (e instanceof WalletCancelled) return; // closed the Apple Pay / Google Pay sheet
+      if (e instanceof WalletCancelled) return; // closed the Apple Pay / Google Pay / Afterpay sheet
       setPayError(e instanceof Error ? e.message : "Payment failed.");
     }
   };
@@ -584,7 +586,7 @@ export default function Checkout() {
                 {(config?.provider === "test"
                   ? ["Test payment"]
                   : config?.provider === "square"
-                    ? ["Visa", "Mastercard", "Amex", "Debit", "Apple Pay", "Google Pay"]
+                    ? ["Visa", "Mastercard", "Amex", "Debit", ...squareExtras]
                     : ["PayPal", "Visa", "Mastercard", "Amex"]
                 ).map((m) => (
                   <span key={m}>{m}</span>
@@ -624,6 +626,7 @@ export default function Checkout() {
                       disabled={!quoteOk || quoting}
                       amountLabel={totalLabel}
                       amountCents={quote?.totalCents ?? null}
+                      onMethods={setSquareExtras}
                       pay={onSquarePay}
                       onError={setPayError}
                       billing={{

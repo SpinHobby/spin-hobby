@@ -50,9 +50,11 @@ type SquareCard = {
   tokenize: () => Promise<TokenResult>;
   destroy: () => Promise<void>;
 };
-/** Apple Pay or Google Pay: the shopper's wallet sheet confirms the payment itself, so no card form and no 3-D Secure step. */
+/** Apple Pay, Google Pay or Afterpay: the shopper confirms in their own sheet or popup, so no card form and no 3-D Secure step. */
 type SquareWallet = {
   attach?: (selector: string, options?: Record<string, string>) => Promise<void>;
+  /** Afterpay only: "or 4 interest-free payments of $X" under the button. */
+  attachMessage?: (selector: string, options?: Record<string, string>) => Promise<void>;
   tokenize: () => Promise<TokenResult>;
   destroy?: () => Promise<void>;
 };
@@ -63,13 +65,14 @@ type SquarePayments = {
   paymentRequest: (options: unknown) => PaymentRequest;
   applePay: (request: PaymentRequest) => Promise<SquareWallet>;
   googlePay: (request: PaymentRequest) => Promise<SquareWallet>;
+  afterpayClearpay: (request: PaymentRequest) => Promise<SquareWallet>;
 };
 const squareSdk = () => (window as unknown as { Square?: { payments: (appId: string, locationId: string) => SquarePayments } }).Square;
 
 /** The total the wallet sheet shows; kept in step with the quote. */
 const walletTotal = (cents: number) => ({ amount: (Math.max(cents, 0) / 100).toFixed(2), label: "Spin Hobby" });
 
-/** The shopper closed the Apple Pay or Google Pay sheet: not an error worth showing. */
+/** The shopper closed the Apple Pay, Google Pay or Afterpay sheet: not an error worth showing. */
 export class WalletCancelled extends Error {
   constructor() {
     super("Payment cancelled.");
@@ -102,6 +105,7 @@ export function SquarePay({
   disabled,
   amountLabel,
   amountCents,
+  onMethods,
   billing,
   pay,
   onError,
@@ -111,6 +115,8 @@ export function SquarePay({
   amountLabel: string;
   /** The order total in cents (null until the quote is in), shown on the Apple Pay / Google Pay sheet. */
   amountCents: number | null;
+  /** Told which of Apple Pay, Google Pay and Afterpay this shopper can use, for the "accepted" list. */
+  onMethods?: (names: string[]) => void;
   billing: {
     givenName: string;
     familyName: string;
@@ -128,7 +134,7 @@ export function SquarePay({
   const cardRef = useRef<SquareCard | null>(null);
   const paymentsRef = useRef<SquarePayments | null>(null);
   const requestRef = useRef<PaymentRequest | null>(null);
-  const [wallets, setWallets] = useState<{ apple?: SquareWallet; google?: SquareWallet }>({});
+  const [wallets, setWallets] = useState<{ apple?: SquareWallet; google?: SquareWallet; afterpay?: SquareWallet }>({});
   const amountRef = useRef(amountCents);
   amountRef.current = amountCents;
 
@@ -161,11 +167,13 @@ export function SquarePay({
           total: walletTotal(amountRef.current ?? 0),
         });
         requestRef.current = request;
-        const [apple, google] = await Promise.all([
+        // Afterpay (pay in 4): only where Square has it turned on for the shop, and only for totals Afterpay accepts
+        const [apple, google, afterpay] = await Promise.all([
           payments.applePay(request).catch(() => undefined),
           payments.googlePay(request).catch(() => undefined),
+          payments.afterpayClearpay(request).catch(() => undefined),
         ]);
-        for (const w of [apple, google]) if (w) made.push(w);
+        for (const w of [apple, google, afterpay]) if (w) made.push(w);
         if (cancelled) return;
         if (google) {
           setWallets((w) => ({ ...w, google }));
@@ -175,6 +183,15 @@ export function SquarePay({
           });
         }
         if (apple) setWallets((w) => ({ ...w, apple }));
+        if (afterpay) {
+          setWallets((w) => ({ ...w, afterpay }));
+          try {
+            await afterpay.attach?.("#sq-afterpay");
+            await afterpay.attachMessage?.("#sq-afterpay-note");
+          } catch {
+            setWallets((w) => ({ ...w, afterpay: undefined }));
+          }
+        }
       } catch (e) {
         onError(e instanceof Error ? e.message : "Couldn't load the payment form.");
       }
@@ -228,7 +245,9 @@ export function SquarePay({
     }).finally(() => setBusy(false));
   };
 
-  const hasWallet = Boolean(wallets.apple || wallets.google);
+  const hasWallet = Boolean(wallets.apple || wallets.google || wallets.afterpay);
+  const methods = [wallets.apple && "Apple Pay", wallets.google && "Google Pay", wallets.afterpay && "Afterpay"].filter(Boolean).join(",");
+  useEffect(() => onMethods?.(methods ? methods.split(",") : []), [methods, onMethods]);
 
   return (
     <div className="co-square">
@@ -249,6 +268,14 @@ export function SquarePay({
           hidden={!wallets.google}
           onClick={() => wallets.google && payWithWallet(wallets.google)}
         />
+        {/* and the Afterpay button, with its "4 payments of" line */}
+        <div
+          id="sq-afterpay"
+          className="co-wallet co-wallet--afterpay"
+          hidden={!wallets.afterpay}
+          onClick={() => wallets.afterpay && payWithWallet(wallets.afterpay)}
+        />
+        <div id="sq-afterpay-note" className="co-afterpay-note" hidden={!wallets.afterpay} />
       </div>
       {hasWallet && (
         <p className="co-or">
