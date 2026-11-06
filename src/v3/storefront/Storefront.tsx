@@ -41,6 +41,7 @@ import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
 import { RecentlyViewed } from "./RecentlyViewed";
+import { PreorderDigestBox } from "./Suggestions";
 import { addedMessage, shippingGap } from "./nudges";
 import {
   SECTIONS,
@@ -418,6 +419,7 @@ export default function Storefront() {
             <PreorderCard key={p.id} p={p} a={actions} />
           ))}
         </ScrollRow>
+        <PreorderDigestBox email={auth.email} />
       </section>
     ),
     lists: homeReady && (ranking.length > 0 || arrived.length > 0) && (

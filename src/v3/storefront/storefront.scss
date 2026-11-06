@@ -3983,3 +3983,8 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 .sf-pp__recent {
   margin-top: 32px;
 }
+
+// The weekly pre-order email sign-up under the homepage's pre-orders row (PreorderDigestBox)
+.sf-digest {
+  max-width: 560px;
+}

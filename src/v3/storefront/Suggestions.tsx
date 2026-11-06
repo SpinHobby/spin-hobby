@@ -189,3 +189,56 @@ export function FollowBox({ p, email }: { p: Product; email: string | null }) {
     </form>
   );
 }
+
+/** "Email me new pre-orders, once a week": every new pre-order in one weekly email (spin-hobby-server: follows kind "all"). */
+export function PreorderDigestBox({ email }: { email: string | null }) {
+  const [value, setValue] = useState(email ?? "");
+  const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (email) setValue((cur) => cur || email);
+  }, [email]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setState("busy");
+    setError("");
+    try {
+      await api("/follows", { method: "POST", body: JSON.stringify({ email: value.trim(), kind: "all" }) });
+      setState("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save that.");
+      setState("idle");
+    }
+  };
+
+  if (state === "done")
+    return (
+      <div className="sf-follow sf-digest is-done" role="status">
+        ✓ Every week we'll email {value.trim()} the new pre-orders, before they close.
+      </div>
+    );
+  return (
+    <form className="sf-follow sf-digest" onSubmit={submit} aria-labelledby="digest-title">
+      <div id="digest-title" className="sf-follow__title">
+        New pre-orders in your inbox, once a week
+      </div>
+      <div className="sf-follow__row">
+        <input
+          className="sh-input"
+          type="email"
+          required
+          placeholder="you@example.com"
+          aria-label="Your email"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+        />
+        <button className="sh-btn" disabled={state === "busy"}>
+          {state === "busy" ? "Saving…" : "Email me weekly"}
+        </button>
+      </div>
+      {error && <span className="sf-error">{error}</span>}
+      <span className="sf-muted sf-follow__small">One email a week, only when there's something new. Every email has a link to stop.</span>
+    </form>
+  );
+}
