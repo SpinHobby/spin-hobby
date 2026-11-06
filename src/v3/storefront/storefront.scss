@@ -3768,3 +3768,207 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     }
   }
 }
+
+// Reviews (Reviews.tsx): stars, the product page's reviews section and the form to write one.
+.sf-stars {
+  display: inline-flex;
+  gap: 1px;
+  line-height: 1;
+  &__star {
+    // a star filled from the left to --fill, the rest in the line colour
+    background: linear-gradient(90deg, var(--gold) var(--fill), var(--border) var(--fill));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+.sf-rating-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 10px;
+  font-size: 13.5px;
+  color: var(--muted);
+  text-decoration: none;
+  &:hover span:last-child {
+    text-decoration: underline;
+  }
+}
+.sf-reviews {
+  margin-top: 40px;
+  scroll-margin-top: 90px;
+  .sf-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  &__note {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 14px;
+  }
+  &__error {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--red) 12%, var(--surface));
+    color: var(--red);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  &__body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  &__summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+  &__avg {
+    font-size: 40px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  &__bars {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    li {
+      display: grid;
+      grid-template-columns: 26px 1fr 24px;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+    }
+  }
+  &__bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface2);
+    overflow: hidden;
+    span {
+      display: block;
+      height: 100%;
+      background: var(--gold);
+    }
+  }
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+.sf-review {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  &:first-child {
+    padding-top: 0;
+  }
+  p {
+    margin: 6px 0;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  &__by {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  &__verified {
+    color: var(--text2);
+    font-weight: 600;
+  }
+  &__reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--border);
+    background: var(--surface2);
+    border-radius: 0 10px 10px 0;
+    font-size: 13.5px;
+  }
+}
+.sf-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  &__lead {
+    margin: 0;
+    font-size: 13px;
+  }
+  &__stars {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    legend {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    label {
+      font-size: 28px;
+      line-height: 1;
+      color: var(--border);
+      cursor: pointer;
+      &.is-on {
+        color: var(--gold);
+      }
+      &:focus-within {
+        outline: 2px solid var(--blue);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+    }
+    input {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+  }
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+@media (max-width: 700px) {
+  .sf-reviews__body,
+  .sf-review-form__row {
+    grid-template-columns: 1fr;
+  }
+}

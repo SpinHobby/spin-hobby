@@ -3323,3 +3323,42 @@
     }
   }
 }
+
+// Admin > Reviews (Reviews.tsx)
+.ad-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ad-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  &__stars {
+    color: var(--gold);
+    letter-spacing: 1px;
+    span {
+      color: var(--border);
+    }
+  }
+  &__body {
+    margin: 0;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  &__reply {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}

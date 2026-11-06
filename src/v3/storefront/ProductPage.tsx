@@ -25,10 +25,12 @@ import { askHref, noPrice } from "../../components/shop/priceOnRequest";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
+import { RatingLine, Reviews } from "./Reviews";
+import { useReviews, type ReviewSummary } from "./reviewData";
 import { BoughtTogether, FollowBox } from "./Suggestions";
 
 // Keep in sync with productJsonLd() in scripts/generate-seo.mjs.
-function productJsonLd(p: Product) {
+function productJsonLd(p: Product, reviews?: ReviewSummary) {
   const availability =
     normalizeStatus(p.status) === "out"
       ? "https://schema.org/OutOfStock"
@@ -47,6 +49,10 @@ function productJsonLd(p: Product) {
     ...(gtin ? { gtin13: gtin } : {}),
     ...(p.manufacturer ? { brand: { "@type": "Brand", name: p.manufacturer } } : {}),
     ...(p.category ? { category: p.category } : {}),
+    // star ratings in search results (approved reviews from verified buyers; the static SEO pages leave this out)
+    ...(reviews?.count && reviews.average != null
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.average, reviewCount: reviews.count } }
+      : {}),
     offers: {
       "@type": "Offer",
       priceCurrency: p.currency,
@@ -120,6 +126,7 @@ export function ProductPage({
 
   // one anonymous "product viewed" per product opened (src/lib/analytics.ts)
   const viewedId = p?.id;
+  const reviews = useReviews(p?.id);
   useEffect(() => {
     if (viewedId) track("product_view", viewedId);
   }, [viewedId]);
@@ -178,7 +185,7 @@ export function ProductPage({
     description: p ? productDescription(p) : "Authentic anime figures, plushies and goods, shipped across Canada and the US.",
     path: p ? productPath(p) : location.pathname,
     image: p?.images[0] ?? null,
-    jsonLd: p ? [productJsonLd(p), breadcrumbJsonLd([...crumbTrail, { name: p.name, path: productPath(p) }])] : null,
+    jsonLd: p ? [productJsonLd(p, reviews?.summary), breadcrumbJsonLd([...crumbTrail, { name: p.name, path: productPath(p) }])] : null,
     // a product that isn't there (removed, or a wrong link) is this site's 404: kept out of search results
     noindex: missing && !p,
   });
@@ -237,6 +244,7 @@ export function ProductPage({
           onViewCart={onViewCart}
           onToast={onToast}
           onCategory={p.categoryId && tree.byId.has(p.categoryId) ? () => onCategory(p.categoryId!) : undefined}
+          reviews={reviews?.summary}
         />
       </div>
 
@@ -250,6 +258,8 @@ export function ProductPage({
       />
 
       <Details p={p} currency={a.currency} />
+
+      <Reviews itemId={p.id} list={reviews} />
 
       <section className="sf-pp__related" aria-labelledby="related-title">
         <div className="sf-section-head">
@@ -497,6 +507,7 @@ function BuyBox({
   onViewCart,
   onToast,
   onCategory,
+  reviews,
 }: {
   p: Product;
   a: CardActions;
@@ -507,6 +518,7 @@ function BuyBox({
   onViewCart: () => void;
   onToast: (message: string) => void;
   onCategory?: () => void;
+  reviews?: ReviewSummary;
 }) {
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
@@ -578,6 +590,7 @@ function BuyBox({
           ))}
       </div>
       <h1 className="sh-display sf-pp__name">{p.name}</h1>
+      <RatingLine summary={reviews} />
       {p.janCode && <div className="sf-pp__sku">JAN {p.janCode}</div>}
 
       <div className="sf-pp__pricebox">

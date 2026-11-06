@@ -22,6 +22,7 @@ import { useStoreConfig } from "../storeConfig";
 import { SCREENS, useAdminData, type Screen } from "./data";
 import { AccountsScreen } from "./Accounts";
 import { DiscountsScreen } from "./Discounts";
+import { ReviewsScreen } from "./Reviews";
 import { AuditScreen } from "./Audit";
 import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
@@ -176,6 +177,7 @@ export default function Admin() {
       {screen === "Barcodes" && <BarcodesScreen ctx={ctx} />}
       {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
       {screen === "Orders" && <OrdersScreen ctx={ctx} />}
+      {screen === "Reviews" && <ReviewsScreen ctx={ctx} />}
       {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
       {screen === "Settings" && <SettingsScreen ctx={ctx} />}
       {screen === "Avatar" && showAvatar && (
