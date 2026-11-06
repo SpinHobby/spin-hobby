@@ -139,6 +139,7 @@ export function useProducts(filters: Filters, wishlistIds: string[] | null) {
     total: number;
     cursor?: string;
     didYouMean?: string;
+    closeMatches?: boolean;
     understood?: string[];
     loading: boolean;
     loadingMore: boolean;
@@ -160,6 +161,7 @@ export function useProducts(filters: Filters, wishlistIds: string[] | null) {
               total: page.total,
               cursor: page.cursor,
               didYouMean: page.didYouMean,
+              closeMatches: page.closeMatches,
               understood: page.understood,
               loading: false,
               loadingMore: false,

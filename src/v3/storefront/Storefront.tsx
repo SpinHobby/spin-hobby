@@ -490,6 +490,21 @@ export default function Storefront() {
               from your search
             </p>
           )}
+          {!!filters.query.trim() && results.closeMatches && !results.loading && (
+            <p className="sf-understood">
+              Nothing matched exactly, so these are close spellings.
+              {results.didYouMean && (
+                <>
+                  {" "}
+                  Search for{" "}
+                  <button type="button" className="sf-understood__fix" onClick={() => search(results.didYouMean ?? "")}>
+                    {results.didYouMean}
+                  </button>
+                  ?
+                </>
+              )}
+            </p>
+          )}
           <div className="sf-shop__tools">
             <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>
               Filters{hasFilters ? " •" : ""}

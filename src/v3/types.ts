@@ -79,8 +79,10 @@ export interface ProductPage {
   items: Product[];
   cursor?: string;
   total: number;
-  /** A search that found nothing: the same search with its typos fixed, when that one finds something. */
+  /** A search that found nothing as typed: the same search with its typos fixed, when that one finds something. */
   didYouMean?: string;
+  /** Nothing matched as typed, so these are products a typo or two away ("hatsne" found Hatsune). */
+  closeMatches?: boolean;
   /** Filters the server read out of a search's words ("under $50", "in stock"), to show next to the results. */
   understood?: string[];
 }
