@@ -22,6 +22,8 @@
   --on-block: #ffffff;
   --on-block-muted: #d6dae7;
   --on-gold: #1d2a53;
+  // the tile every product photo sits on: near-white in both modes, since product photos are shot on white
+  --photo-bg: #f4f5f7;
   // a picture behind the whole page (themes; none in the classic look)
   --bg-art: none;
   --bg-art-size: auto;
@@ -91,6 +93,7 @@ html[data-theme="dark"] .sh {
   --blue: #93aae0;
   --ph1: #1f222b;
   --ph2: #252832;
+  --photo-bg: #e8eaee;
   color-scheme: dark;
 }
 
@@ -119,14 +122,18 @@ body {
     background: repeating-linear-gradient(135deg, var(--ph1) 0 5px, var(--ph2) 5px 10px);
   }
 }
+// small product photos (cart, rankings, checkout): whole and on the studio tile, like the cards (.sf-img)
 .sh-thumb {
   flex: none;
   overflow: hidden;
   border-radius: 10px;
+  background-color: var(--photo-bg);
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 6%;
+    mix-blend-mode: multiply;
     display: block;
   }
 }

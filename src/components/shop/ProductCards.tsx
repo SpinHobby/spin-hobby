@@ -3,8 +3,8 @@
  * an account page). Each takes a `Product` and the shop's `CardActions` (add to cart, wishlist, open...). See README.md and
  * http://localhost:3000/ui-kit (Shop tab) for each one live.
  *
- * - Each card's main button adds to the cart; with the page's `onBuyNow`, a "Buy now" button under it goes straight to checkout
- *   with just that item (the cart is left as it is).
+ * - Each card's one button adds to the cart. Grid cards stop there (one clear action per product reads calmer than a wall of
+ *   buttons; "Buy now" is on the product page). List cards also show "Buy now" when the page gives `onBuyNow`.
  * - ProductCard: the main card. `layout="vertical"` (default: the photo on top, for grids) or `layout="horizontal"` (the photo on
  *   the left, for lists like the wishlist), where `meta`, `actions` and `onRemove` add a page's own line and buttons.
  * - PreorderCard: the slim card in the homepage's "New pre-orders" row.
@@ -212,10 +212,9 @@ function VerticalCard({ p, a }: { p: Product; a: CardActions }) {
         </span>
       </div>
       <div className="sf-card__foot">
-        <button type="button" className={`sf-buy ${btn.cls}`} onClick={btn.onClick}>
+        <button type="button" className={`sf-buy sf-buy--card ${btn.cls}`} onClick={btn.onClick}>
           {btn.label}
         </button>
-        <BuyNow p={p} a={a} />
       </div>
     </article>
   );

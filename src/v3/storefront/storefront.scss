@@ -1308,17 +1308,21 @@ h1.sf-hero__eyebrow {
   }
 }
 
+// Every product photo sits whole (never cropped) with the same margin on the same studio tile. multiply melts a photo's own
+// white background into the tile, so photos shot on different whites look like one set; cut-outs keep the shop background.
 .sf-img {
   position: relative;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   overflow: hidden;
-  background-color: var(--surface2);
+  background-color: var(--photo-bg);
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 7%;
+    mix-blend-mode: multiply;
     display: block;
   }
   &__ph {
@@ -1401,13 +1405,14 @@ h1.sf-hero__eyebrow {
     flex: 1;
   }
   &__series {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--muted);
     font-weight: 600;
+    letter-spacing: 0.02em;
   }
   &__name {
     margin: 0;
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.3;
     display: -webkit-box;
@@ -1422,8 +1427,8 @@ h1.sf-hero__eyebrow {
     gap: 6px;
     margin-top: 4px;
     strong {
-      font-size: 17px;
-      font-weight: 800;
+      font-size: 16px;
+      font-weight: 700;
     }
     s {
       font-size: 12px;
@@ -1472,7 +1477,20 @@ h1.sf-hero__eyebrow {
     padding: 9px 16px;
   }
 }
-// "Buy now": outlined, so "Add to cart" stays the main button; on a grid card it sits just under it
+// A grid card's one button: quiet until the shopper points at the card, so a page of products doesn't read as a wall of buttons
+.sf-buy--card {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+  .sf-card:hover &:not(.is-added):not(.is-out),
+  &:focus-visible:not(.is-added):not(.is-out) {
+    background: var(--primary);
+    color: var(--on-primary);
+    border-color: var(--primary);
+    filter: none;
+  }
+}
+// "Buy now": outlined, so "Add to cart" stays the main button (product page and list cards)
 .sf-buy--now {
   background: transparent;
   color: var(--primary);
@@ -2186,7 +2204,9 @@ h1.sf-hero__eyebrow {
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 6%;
+    background: var(--photo-bg);
     display: block;
   }
 }
@@ -2199,7 +2219,7 @@ h1.sf-hero__eyebrow {
   aspect-ratio: 1;
   border-radius: 20px;
   overflow: hidden;
-  background: var(--surface2);
+  background: var(--photo-bg);
   border: 1px solid var(--border);
   display: grid;
   place-items: center;
@@ -2216,10 +2236,13 @@ h1.sf-hero__eyebrow {
   &.is-active {
     display: block;
   }
+  // the whole product on the studio tile, as on the cards (.sf-img)
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 5%;
+    mix-blend-mode: multiply;
     display: block;
   }
 }
@@ -2932,7 +2955,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   position: absolute;
   inset: 0;
   opacity: 0;
-  background: var(--surface2);
+  background: var(--photo-bg);
 }
 .sf-card__chip {
   position: absolute;
@@ -3234,6 +3257,12 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   .sf-music-btn {
     margin-left: 0;
   }
+}
+// closed, the playlist is one quiet round icon at the end of the sections, not a labelled pill
+.sf-navrow .sf-music-btn--start {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
 }
 .sf-navrow .sf-music-btn {
   align-self: center;
