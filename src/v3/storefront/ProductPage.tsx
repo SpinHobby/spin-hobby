@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import type { CategoryTree } from "../categoryTree";
 import {
+  arrivalLabel,
   dayLabel,
   discountPct,
   handlingLabel,
@@ -614,6 +615,14 @@ function BuyBox({
           {statusLabel(p)}
         </div>
       </div>
+
+      {(s === "in" || s === "low") && !noPrice(p) && (
+        // the same transit days checkout shows for the shop's Standard (5–7) and Express (2–3) shipping, plus handling
+        <p className="sf-pp__arrival">
+          Order today, arrives around <b>{arrivalLabel(5, 7)}</b> with standard shipping in Canada, or <b>{arrivalLabel(2, 3)}</b> with
+          express. <span className="sf-muted">Estimate; checkout shows each courier's time for your address.</span>
+        </p>
+      )}
 
       {s === "pre" && (
         <div className="sf-pp__notice sf-pp__notice--pre">

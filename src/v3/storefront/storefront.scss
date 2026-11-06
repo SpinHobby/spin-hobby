@@ -3988,3 +3988,15 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 .sf-digest {
   max-width: 560px;
 }
+
+// "Order today, arrives around …" under the price (in-stock items)
+.sf-pp__arrival {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text2);
+  .sf-muted {
+    display: block;
+    font-size: 12px;
+  }
+}

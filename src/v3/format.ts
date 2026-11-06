@@ -13,6 +13,30 @@ export function paymentLabel() {
   return storeFormat.paypal ? "card or PayPal" : "card";
 }
 
+/** The day `days` business days (Monday to Friday; holidays not counted) after `from`. */
+export function addBusinessDays(from: Date, days: number) {
+  const d = new Date(from);
+  let left = days;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) left--;
+  }
+  return d;
+}
+
+/**
+ * "Nov 12–17": when an in-stock order placed `now` should arrive, from the shop's handling time plus the courier's business days in
+ * transit (the same days checkout shows for Standard and Express). An estimate, said so wherever it's shown.
+ */
+export function arrivalLabel(transitMin: number, transitMax: number, now = new Date()) {
+  const { handlingDaysMin: a, handlingDaysMax: b } = storeFormat;
+  const first = addBusinessDays(now, a + transitMin);
+  const last = addBusinessDays(now, b + transitMax);
+  const day = (d: Date) => d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+  if (day(first) === day(last)) return day(first);
+  return first.getMonth() === last.getMonth() ? `${day(first)}–${last.getDate()}` : `${day(first)} – ${day(last)}`;
+}
+
 export function handlingLabel() {
   const { handlingDaysMin: a, handlingDaysMax: b } = storeFormat;
   return a === b ? `${a} day${a === 1 ? "" : "s"}` : `${a}–${b} days`;
