@@ -39,6 +39,7 @@ export function loadStoreConfig() {
         handlingDaysMin: c.handlingDaysMin ?? storeFormat.handlingDaysMin,
         handlingDaysMax: c.handlingDaysMax ?? storeFormat.handlingDaysMax,
         freeShippingThresholdCents: c.freeShippingThresholdCents ?? storeFormat.freeShippingThresholdCents,
+        shippingStandardCents: c.shippingStandardCents ?? storeFormat.shippingStandardCents,
         paypal: c.provider === "paypal" && !!c.paypalClientId,
       });
       setShopBackground(c.productBackground?.url ?? null);

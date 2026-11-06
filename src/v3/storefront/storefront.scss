@@ -1433,6 +1433,40 @@ h1.sf-hero__eyebrow {
   }
 }
 
+.sf-noresults {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  &__fix {
+    color: var(--text2);
+    font-size: 15px;
+  }
+  &__suggest {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--blue);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  &__title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: var(--text);
+  }
+}
+
 .sf-empty {
   border: 1.5px dashed var(--border);
   border-radius: 16px;

@@ -122,7 +122,11 @@ function breadcrumbJsonLd(crumbs) {
   };
 }
 
-// Keep in sync with productJsonLd() in src/v3/storefront/ProductPage.tsx.
+// The shop's shipping settings (from /checkout/config in main), for the shipping part of each product's structured data.
+const SHIP = { freeShippingCents: 7500, standardCents: 899, handlingMin: 2, handlingMax: 3 };
+const STANDARD_TRANSIT = { min: 5, max: 7 };
+
+// Keep in sync with productJsonLd(), shippingJsonLd() and RETURN_POLICY in src/v3/storefront/ProductPage.tsx.
 function productJsonLd(p) {
   const s = normalizeStatus(p.status);
   const gtin = p.janCode && /^\d{13}$/.test(p.janCode) ? p.janCode : null;
@@ -145,9 +149,31 @@ function productJsonLd(p) {
       itemCondition: "https://schema.org/NewCondition",
       url: `${SITE_URL}${productPath(p)}`,
       seller: { "@type": "Organization", name: "Spin Hobby" },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: p.priceCents >= SHIP.freeShippingCents ? "0.00" : (SHIP.standardCents / 100).toFixed(2),
+          currency: "CAD",
+        },
+        shippingDestination: ["CA", "US"].map((addressCountry) => ({ "@type": "DefinedRegion", addressCountry })),
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: days(SHIP.handlingMin, SHIP.handlingMax),
+          transitTime: days(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max),
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: ["CA", "US"],
+        returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+        merchantReturnLink: `${SITE_URL}/support#returns`,
+      },
     },
   };
 }
+
+const days = (minValue, maxValue) => ({ "@type": "QuantitativeValue", minValue, maxValue, unitCode: "DAY" });
 
 const productDescription = (p) =>
   p.description
@@ -217,7 +243,14 @@ async function main() {
     /* no category pages */
   }
   try {
-    freeShippingCents = (await getJson("/checkout/config")).freeShippingThresholdCents ?? freeShippingCents;
+    const config = await getJson("/checkout/config");
+    freeShippingCents = config.freeShippingThresholdCents ?? freeShippingCents;
+    Object.assign(SHIP, {
+      freeShippingCents,
+      standardCents: config.shippingStandardCents ?? SHIP.standardCents,
+      handlingMin: config.handlingDaysMin ?? SHIP.handlingMin,
+      handlingMax: config.handlingDaysMax ?? SHIP.handlingMax,
+    });
   } catch {
     /* default */
   }

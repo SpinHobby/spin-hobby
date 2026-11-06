@@ -41,6 +41,7 @@ import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
 import { RecentlyViewed } from "./RecentlyViewed";
+import { SearchEmpty } from "./SearchEmpty";
 import { PreorderDigestBox } from "./Suggestions";
 import { addedMessage, shippingGap } from "./nudges";
 import {
@@ -158,7 +159,7 @@ export default function Storefront() {
   };
   /** Go to a shop address (a section, category or series page), remembering where we were for Back. */
   const go = (path: string) => {
-    if (location.pathname === path) {
+    if (location.pathname + location.search === path) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -173,8 +174,8 @@ export default function Storefront() {
   // The address decides which section, category or series the shop shows (each has its own page for search engines).
   const landing = useMemo(() => (productId ? null : landingFromPath(location.pathname)), [productId, location.pathname]);
   const landingCategory = landing?.kind === "category" ? categoryBySlug(tree, landing.slug) : null;
-  // a search typed on a landing page goes back to the main shop with it
-  const pendingQuery = useRef<string | null>(null);
+  // A search lives in the address (/?q=miku), so it can be shared, bookmarked and undone with Back.
+  const urlQuery = productId || landing ? "" : (new URLSearchParams(location.search).get("q") ?? "").trim().slice(0, 100);
   useEffect(() => {
     if (productId) return;
     setWishOnly(false);
@@ -186,12 +187,17 @@ export default function Storefront() {
       if (landingCategory)
         setFilters((f) => ({ ...f, nav: "Category", category: ALL, categoryId: landingCategory.id, query: "", series: null }));
     } else {
-      const q = pendingQuery.current ?? "";
-      pendingQuery.current = null;
-      setDraftQuery(q);
-      setFilters((f) => ({ ...f, nav: "Home", category: f.categoryId ? ALL : f.category, categoryId: null, query: q, series: null }));
+      setDraftQuery(urlQuery);
+      setFilters((f) => ({
+        ...f,
+        nav: "Home",
+        category: f.categoryId ? ALL : f.category,
+        categoryId: null,
+        query: urlQuery,
+        series: null,
+      }));
     }
-  }, [productId, landing, landingCategory]);
+  }, [productId, landing, landingCategory, urlQuery]);
 
   const facets = store.facets;
   const results = useProducts(filters, wishOnly ? wishlist.list : null);
@@ -219,11 +225,11 @@ export default function Storefront() {
     ((!landing && !["/", "/shop", "/index"].includes(bare)) || (landing?.kind === "category" && tree.flat.length > 0 && !landingCategory));
   useDocumentHead({
     enabled: !productId,
-    title: notFound ? "Page not found | Spin Hobby" : (page?.title ?? intro.title),
+    title: notFound ? "Page not found | Spin Hobby" : urlQuery ? `Search: ${urlQuery} | Spin Hobby` : (page?.title ?? intro.title),
     description: page?.description ?? intro.description,
     path: notFound ? bare : page ? (page.canonical ?? page.crumbs[page.crumbs.length - 1].path) : "/",
     jsonLd: page && !notFound ? breadcrumbJsonLd(page.crumbs) : null,
-    noindex: notFound,
+    noindex: notFound || !!urlQuery, // search results are for shoppers, not search engines
   });
 
   // Same split as the Events page. With nothing upcoming, show the latest events (newest first) so the strip isn't empty.
@@ -276,13 +282,19 @@ export default function Storefront() {
     setFilters((f) => ({ ...f, category: value, categoryId: null, nav: "Category" }));
     scrollShop();
   };
+  /** Show the results for a search (or the whole shop for an empty one). A new search is a new Back step; a retyped one isn't. */
+  const search = (text: string) => {
+    const q = text.trim().slice(0, 100);
+    const path = q ? `/?q=${encodeURIComponent(q)}` : "/";
+    if (path !== location.pathname + location.search) {
+      scrollMemory.set(location.key, window.scrollY);
+      navigate(path, { replace: !!urlQuery && !!q });
+    }
+    if (q) scrollShop();
+  };
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
-    if (productId || landing) {
-      pendingQuery.current = draftQuery;
-      go("/");
-    } else setFilters((f) => ({ ...f, query: draftQuery }));
-    if (draftQuery.trim()) scrollShop();
+    search(draftQuery);
   };
   const clearFilters = () => {
     setWishOnly(false);
@@ -297,7 +309,7 @@ export default function Storefront() {
       query: "",
       series: null,
     }));
-    if (location.pathname !== "/") go("/");
+    if (location.pathname !== "/" || location.search) go("/");
   };
 
   const hasTree = tree.flat.length > 0;
@@ -536,6 +548,17 @@ export default function Storefront() {
               Join the Discord
             </a>
           </div>
+        ) : results.items.length === 0 && filters.query.trim() && !wishOnly ? (
+          <SearchEmpty
+            query={filters.query.trim()}
+            didYouMean={results.didYouMean}
+            popular={home?.ranking ?? []}
+            a={actions}
+            onSearch={(text) => {
+              setDraftQuery(text);
+              search(text);
+            }}
+          />
         ) : results.items.length === 0 ? (
           <div className="sf-empty">
             <strong>{wishOnly ? "Your wishlist is empty" : "Nothing matches these filters"}</strong>
@@ -727,7 +750,7 @@ export default function Storefront() {
               value={draftQuery}
               onChange={(e) => {
                 setDraftQuery(e.target.value);
-                if (!e.target.value) setFilters((f) => ({ ...f, query: "" }));
+                if (!e.target.value && urlQuery) navigate("/", { replace: true });
               }}
             />
             <button type="submit">Search</button>
@@ -1180,6 +1203,7 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
           <span className="sf-footer__h">Help</span>
           <Link to="/support#preorders">Pre-order policy</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
+          <Link to="/support#returns">Returns &amp; damaged items</Link>
           <Link to="/order-status">Order status</Link>
           <Link to="/support#contact">Contact</Link>
           <a href="/legal/terms">Terms of Service</a>

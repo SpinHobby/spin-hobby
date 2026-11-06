@@ -27,6 +27,7 @@ export default function SiteFooter() {
           <span className="sh-footer__h">Help</span>
           <Link to="/support">Help &amp; support</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
+          <Link to="/support#returns">Returns &amp; damaged items</Link>
           <Link to="/legal/terms">Terms of Service</Link>
           <Link to="/legal/privacy">Privacy Policy</Link>
         </nav>

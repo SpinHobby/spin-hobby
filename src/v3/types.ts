@@ -79,6 +79,8 @@ export interface ProductPage {
   items: Product[];
   cursor?: string;
   total: number;
+  /** A search that found nothing: the same search with its typos fixed, when that one finds something. */
+  didYouMean?: string;
 }
 
 export interface HeroSlide {

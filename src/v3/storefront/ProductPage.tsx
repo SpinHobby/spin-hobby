@@ -13,6 +13,7 @@ import {
   normalizeStatus,
   STATUS_META,
   statusLabel,
+  storeFormat,
   type Currency,
 } from "../format";
 import { useAuth, useEscape } from "../hooks";
@@ -64,9 +65,49 @@ function productJsonLd(p: Product, reviews?: ReviewSummary) {
       itemCondition: "https://schema.org/NewCondition",
       url: `${SITE_URL}${productPath(p)}`,
       seller: { "@type": "Organization", name: "Spin Hobby" },
+      shippingDetails: shippingJsonLd(p),
+      hasMerchantReturnPolicy: RETURN_POLICY,
     },
   };
 }
+
+/** Standard shipping to Canada and the US, as Google Shopping asks for it: free over the threshold, the shop's rate below. */
+function shippingJsonLd(p: Product) {
+  const free = p.priceCents >= storeFormat.freeShippingThresholdCents;
+  const days = (min: number, max: number) => ({ "@type": "QuantitativeValue", minValue: min, maxValue: max, unitCode: "DAY" });
+  return {
+    "@type": "OfferShippingDetails",
+    shippingRate: {
+      "@type": "MonetaryAmount",
+      value: free ? "0.00" : (storeFormat.shippingStandardCents / 100).toFixed(2),
+      currency: "CAD",
+    },
+    shippingDestination: [
+      { "@type": "DefinedRegion", addressCountry: "CA" },
+      { "@type": "DefinedRegion", addressCountry: "US" },
+    ],
+    deliveryTime: {
+      "@type": "ShippingDeliveryTime",
+      handlingTime: days(storeFormat.handlingDaysMin, storeFormat.handlingDaysMax),
+      transitTime: days(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max),
+    },
+  };
+}
+
+/** Business days in the post with standard shipping (the "arrives around" line uses the same numbers). */
+const STANDARD_TRANSIT = { min: 5, max: 7 };
+const EXPRESS_TRANSIT = { min: 2, max: 3 };
+
+/**
+ * Section 6 of the Terms: no change-of-mind returns; a defective or damaged item is replaced or refunded when reported within
+ * 14 days. Google's word for that is "returns not permitted" (defects are a warranty matter, not a return).
+ */
+const RETURN_POLICY = {
+  "@type": "MerchantReturnPolicy",
+  applicableCountry: ["CA", "US"],
+  returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+  merchantReturnLink: `${SITE_URL}/support#returns`,
+};
 
 /** "Buy Rem 1/7 Scale Figure (Re:Zero) at Spin Hobby…": the description Google shows when the product has none of its own. */
 function productDescription(p: Product) {
@@ -619,8 +660,9 @@ function BuyBox({
       {(s === "in" || s === "low") && !noPrice(p) && (
         // the same transit days checkout shows for the shop's Standard (5–7) and Express (2–3) shipping, plus handling
         <p className="sf-pp__arrival">
-          Order today, arrives around <b>{arrivalLabel(5, 7)}</b> with standard shipping in Canada, or <b>{arrivalLabel(2, 3)}</b> with
-          express. <span className="sf-muted">Estimate; checkout shows each courier's time for your address.</span>
+          Order today, arrives around <b>{arrivalLabel(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max)}</b> with standard shipping in Canada, or{" "}
+          <b>{arrivalLabel(EXPRESS_TRANSIT.min, EXPRESS_TRANSIT.max)}</b> with express.{" "}
+          <span className="sf-muted">Estimate; checkout shows each courier's time for your address.</span>
         </p>
       )}
 
