@@ -4,8 +4,7 @@ import "../components/styles/tokens.scss";
 import "./siteLayout.scss";
 import { useTheme } from "./hooks";
 import SiteFooter from "./SiteFooter";
-
-const LOGO = "/logo/logo%20cropped.png";
+import { ShopLogo } from "./ShopLogo";
 
 /**
  * Header + footer for the plain content pages (support, terms, privacy). Add a page to the layout route in
@@ -18,7 +17,7 @@ export default function SiteLayout() {
     <div className="sh sl">
       <header className="sl-header">
         <a href="/" className="sl-logo">
-          <img src={LOGO} alt="Spin Hobby" />
+          <ShopLogo />
         </a>
         <button type="button" className="sh-icon-btn" onClick={toggle} title="Toggle theme" aria-label="Toggle dark mode">
           {theme === "dark" ? "☀" : "☾"}

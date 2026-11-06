@@ -62,8 +62,8 @@ import {
   titleFromSlug,
 } from "./landing";
 import { slugify } from "./data";
+import { ShopLogo } from "../ShopLogo";
 
-const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
 const EVENT_COLORS = ["var(--red)", "var(--blue)", "var(--gold)", "var(--teal)"];
 
@@ -739,7 +739,7 @@ export default function Storefront() {
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
-            <img src={LOGO} alt="Spin Hobby" />
+            <ShopLogo />
           </a>
           <form ref={searchRef} className="sf-search" role="search" onSubmit={submitSearch}>
             <label className="sh-visually-hidden" htmlFor="sf-cat">
@@ -1182,7 +1182,7 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
     <footer className="sf-footer">
       <div className="sf-wrap sf-footer__grid">
         <div className="sf-footer__brand">
-          <img src={LOGO} alt="Spin Hobby" />
+          <ShopLogo />
           <p>Official anime figures, plushies &amp; more. We bring the fun to everyone — since 2022.</p>
         </div>
         <div className="sf-footer__col">
@@ -1201,6 +1201,7 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Help</span>
+          <Link to="/about">About us</Link>
           <Link to="/support#preorders">Pre-order policy</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
           <Link to="/support#returns">Returns &amp; damaged items</Link>

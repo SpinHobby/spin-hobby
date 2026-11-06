@@ -15,8 +15,8 @@ import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { photo } from "../photo";
 import { CheckoutAddOns } from "../storefront/Suggestions";
 import type { Product } from "../types";
+import { ShopLogo } from "../ShopLogo";
 
-const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
 
 interface Address {
@@ -447,7 +447,7 @@ export default function Checkout() {
         <header className="co-bar">
           <div className="co-bar__row">
             <a href="/" className="co-logo">
-              <img src={LOGO} alt="Spin Hobby" />
+              <ShopLogo />
             </a>
           </div>
         </header>
@@ -470,7 +470,7 @@ export default function Checkout() {
           <div className="co-main__inner">
             <header className="co-top">
               <a href="/" className="co-logo">
-                <img src={LOGO} alt="Spin Hobby" />
+                <ShopLogo />
               </a>
               <a href="/" className="co-back">
                 ← Continue shopping
@@ -1019,7 +1019,7 @@ function Success({ orderId, preorder, email }: { orderId: number; preorder: bool
       <header className="co-bar">
         <div className="co-bar__row">
           <a href="/" className="co-logo">
-            <img src={LOGO} alt="Spin Hobby" />
+            <ShopLogo />
           </a>
         </div>
       </header>

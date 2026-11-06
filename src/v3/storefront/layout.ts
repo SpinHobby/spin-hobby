@@ -20,6 +20,8 @@ export interface StorefrontLayout {
   width: "standard" | "wide" | "full";
   /** The thin bar at the very top (free shipping, account links). */
   announcementBar: boolean;
+  /** The header logo: the original badge picture, or the clean wordmark (ShopLogo.tsx). */
+  logo: "badge" | "wordmark";
 }
 
 export const DEFAULT_LAYOUT: StorefrontLayout = {
@@ -30,6 +32,7 @@ export const DEFAULT_LAYOUT: StorefrontLayout = {
   sidebar: "left",
   width: "standard",
   announcementBar: true,
+  logo: "badge",
 };
 
 /** What each block is called in the admin. */

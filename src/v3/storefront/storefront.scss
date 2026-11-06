@@ -70,7 +70,7 @@
 .sf-utility {
   background: var(--block);
   color: var(--on-block);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   &__inner {
     padding-top: 8px;
@@ -150,7 +150,7 @@
     outline: 0;
     background: transparent;
     color: var(--text);
-    font-size: 15px;
+    font-size: 16px;
     padding: 12px 14px;
     &::-webkit-search-cancel-button {
       cursor: pointer;
@@ -313,7 +313,7 @@
   color: var(--on-gold);
   padding: 10px 16px;
   border-radius: 12px;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 14px;
   white-space: nowrap;
   &:hover {
@@ -343,12 +343,12 @@
   background: var(--primary);
   color: var(--on-primary);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
   &--lg {
     width: 40px;
     height: 40px;
-    font-size: 17px;
+    font-size: 18px;
   }
 }
 .sf-menu__who {
@@ -364,7 +364,7 @@
     min-width: 0;
   }
   b {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--text);
   }
   span {
@@ -416,7 +416,7 @@
     border: 0;
     background: none;
     color: var(--muted);
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
     padding: 2px 4px;
     border-radius: 6px;
@@ -517,7 +517,7 @@
       0 0 0 100vmax rgba(0, 0, 0, 0.55),
       0 20px 50px rgba(0, 0, 0, 0.4);
     &__label {
-      font-size: 13.5px;
+      font-size: 14px;
       padding: 8px 4px 10px;
     }
     &__signin {
@@ -526,7 +526,7 @@
     > a,
     > button {
       padding: 13px 12px;
-      font-size: 15px;
+      font-size: 16px;
     }
   }
   .sf-menu__close {
@@ -539,7 +539,7 @@
     height: 40px;
     border: 0;
     background: none;
-    font-size: 26px;
+    font-size: 28px;
     line-height: 1;
     color: var(--muted);
     border-radius: 10px;
@@ -731,8 +731,8 @@
     transition: transform 0.2s;
   }
   strong {
-    font-weight: 800;
-    font-size: 15px;
+    font-weight: 700;
+    font-size: 16px;
     max-width: 140px;
   }
   span {
@@ -921,7 +921,7 @@
 }
 .sf-hero__eyebrow {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold);
@@ -942,7 +942,7 @@ h1.sf-hero__eyebrow {
 .sf-hero p {
   margin: 0 0 18px;
   color: var(--on-block-muted);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.45;
 }
 .sf-hero__dots {
@@ -993,7 +993,7 @@ h1.sf-hero__eyebrow {
   }
   &__eyebrow {
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -1072,7 +1072,7 @@ h1.sf-hero__eyebrow {
     font-size: 12px;
     strong {
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 700;
       margin-top: 2px;
     }
   }
@@ -1107,7 +1107,7 @@ h1.sf-hero__eyebrow {
     align-items: baseline;
     margin-bottom: 8px;
     h2 {
-      font-size: 20px;
+      font-size: 22px;
       margin: 0;
     }
   }
@@ -1120,7 +1120,7 @@ h1.sf-hero__eyebrow {
   border-top: 1px solid var(--border);
   &__rank {
     font-family: var(--font-display);
-    font-weight: 800;
+    font-weight: 700;
     font-size: 18px;
     width: 26px;
     text-align: center;
@@ -1131,7 +1131,7 @@ h1.sf-hero__eyebrow {
     min-width: 0;
   }
   &__name {
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -1142,12 +1142,12 @@ h1.sf-hero__eyebrow {
     font-weight: 600;
   }
   &__price {
-    font-weight: 800;
+    font-weight: 700;
     font-size: 14px;
   }
   &__add {
     border: 0;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 700;
     padding: 7px 11px;
     border-radius: 9px;
@@ -1199,7 +1199,7 @@ h1.sf-hero__eyebrow {
   font-weight: 600;
 }
 .sf-select {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   background: var(--surface);
@@ -1254,13 +1254,13 @@ h1.sf-hero__eyebrow {
     border-radius: 10px;
   }
   .sf-card__badge {
-    font-size: 9px;
+    font-size: 11px;
     padding: 2px 6px;
     left: 6px;
     top: 6px;
   }
   .sf-card__off {
-    font-size: 10px;
+    font-size: 11px;
     padding: 2px 6px;
     left: 6px;
     bottom: 6px;
@@ -1327,7 +1327,7 @@ h1.sf-hero__eyebrow {
   }
   &__ph {
     font-family: ui-monospace, monospace;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--muted);
   }
 }
@@ -1360,7 +1360,7 @@ h1.sf-hero__eyebrow {
     position: absolute;
     left: 8px;
     top: 8px;
-    font-size: 10.5px;
+    font-size: 11px;
     padding: 3px 8px;
   }
   &__off {
@@ -1370,7 +1370,7 @@ h1.sf-hero__eyebrow {
     background: var(--gold);
     color: var(--on-gold);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 3px 8px;
     border-radius: 6px;
   }
@@ -1386,7 +1386,7 @@ h1.sf-hero__eyebrow {
     background: var(--surface);
     display: grid;
     place-items: center;
-    font-size: 15px;
+    font-size: 16px;
     color: var(--muted);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
     transition: transform 0.15s;
@@ -1448,7 +1448,7 @@ h1.sf-hero__eyebrow {
   text-align: center;
   padding: 9px 0;
   border-radius: 10px;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   background: var(--primary);
   color: var(--on-primary);
@@ -1526,16 +1526,16 @@ h1.sf-hero__eyebrow {
     min-width: 0;
   }
   &__meta {
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--muted);
     font-weight: 600;
   }
   &__name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
   }
   &__status {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
     margin-top: 2px;
   }
@@ -1545,8 +1545,8 @@ h1.sf-hero__eyebrow {
     display: flex;
     flex-direction: column;
     strong {
-      font-size: 17px;
-      font-weight: 800;
+      font-size: 18px;
+      font-weight: 700;
     }
     s {
       font-size: 12px;
@@ -1571,7 +1571,7 @@ h1.sf-hero__eyebrow {
   gap: 20px;
   &__fix {
     color: var(--text2);
-    font-size: 15px;
+    font-size: 16px;
   }
   &__suggest {
     background: none;
@@ -1647,7 +1647,7 @@ h1.sf-hero__eyebrow {
     margin-bottom: 10px;
     font-size: 13px;
     h2 {
-      font-size: 20px;
+      font-size: 22px;
       margin: 0;
     }
   }
@@ -1676,7 +1676,7 @@ h1.sf-hero__eyebrow {
   font-size: 14px;
   font-weight: 600;
   &__date {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
   }
   &.is-past {
@@ -1723,7 +1723,7 @@ h1.sf-hero__eyebrow {
     gap: 8px;
   }
   &__h {
-    font-weight: 800;
+    font-weight: 700;
     color: var(--gold);
     font-size: 13px;
   }
@@ -1747,7 +1747,7 @@ h1.sf-hero__eyebrow {
       color: var(--on-gold);
       padding: 10px 14px;
       border-radius: 10px;
-      font-weight: 800;
+      font-weight: 700;
     }
   }
   &__bottom {
@@ -1771,7 +1771,7 @@ h1.sf-hero__eyebrow {
 }
 .sf-currency__note {
   margin-left: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   opacity: 0.8;
 }
 .sf-currency {
@@ -1785,7 +1785,7 @@ h1.sf-hero__eyebrow {
     color: var(--on-block-muted);
     border-radius: 6px;
     padding: 2px 7px;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 700;
     margin-left: 4px;
     &.is-active {
@@ -1829,7 +1829,7 @@ h1.sf-hero__eyebrow {
   align-items: flex-start;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
-  font-size: 13.5px;
+  font-size: 14px;
   &__main {
     flex: 1;
     min-width: 0;
@@ -1843,8 +1843,8 @@ h1.sf-hero__eyebrow {
   }
   &__pre {
     align-self: flex-start;
-    font-size: 10.5px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 700;
     color: #fff;
     background: var(--blue);
     padding: 2px 7px;
@@ -1883,18 +1883,18 @@ h1.sf-hero__eyebrow {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 13px;
   &__row {
     display: flex;
     justify-content: space-between;
     font-size: 16px;
     strong {
-      font-weight: 800;
+      font-weight: 700;
     }
   }
   &__cta {
     padding: 13px;
-    font-size: 15px;
+    font-size: 16px;
     margin-top: 4px;
   }
 }
@@ -1909,7 +1909,7 @@ h1.sf-hero__eyebrow {
   }
   strong {
     color: var(--text);
-    font-size: 17px;
+    font-size: 18px;
   }
 }
 .sf-dialog {
@@ -1936,7 +1936,7 @@ h1.sf-hero__eyebrow {
   }
   h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1.2;
   }
   p {
@@ -2009,6 +2009,10 @@ h1.sf-hero__eyebrow {
   .sf-header__actions {
     margin-left: auto;
     gap: 2px;
+    .sh-icon-btn {
+      width: 32px;
+      height: 32px;
+    }
   }
   .sf-search {
     order: 3;
@@ -2048,7 +2052,7 @@ h1.sf-hero__eyebrow {
     padding: 14px 16px;
     border-radius: 16px;
     &__title {
-      font-size: 17px;
+      font-size: 18px;
     }
     &__eyebrow {
       font-size: 11px;
@@ -2264,7 +2268,7 @@ h1.sf-hero__eyebrow {
   border: 0;
   background: rgba(255, 255, 255, 0.92);
   color: #171a2b;
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   opacity: 0;
@@ -2326,7 +2330,7 @@ h1.sf-hero__eyebrow {
     border: 0;
     background: rgba(255, 255, 255, 0.14);
     color: #fff;
-    font-size: 26px;
+    font-size: 28px;
   }
   &__arrow {
     position: absolute;
@@ -2372,7 +2376,7 @@ h1.sf-hero__eyebrow {
   flex-wrap: wrap;
   gap: 6px 14px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2391,7 +2395,7 @@ h1.sf-hero__eyebrow {
   overflow-wrap: anywhere;
 }
 .sf-pp__sku {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: -6px;
   font-variant-numeric: tabular-nums;
@@ -2411,19 +2415,19 @@ h1.sf-hero__eyebrow {
   gap: 10px;
   strong {
     font-size: 32px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
   s {
     color: var(--muted);
-    font-size: 17px;
+    font-size: 18px;
   }
 }
 .sf-pp__off {
   background: var(--red);
   color: #fff;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   padding: 4px 9px;
   border-radius: 999px;
   align-self: center;
@@ -2466,7 +2470,7 @@ h1.sf-hero__eyebrow {
     color: var(--muted);
   }
   b {
-    font-size: 17px;
+    font-size: 18px;
     color: var(--text);
   }
 }
@@ -2490,7 +2494,7 @@ h1.sf-hero__eyebrow {
     border: 0;
     background: none;
     color: var(--text);
-    font-size: 20px;
+    font-size: 22px;
     &:disabled {
       opacity: 0.3;
     }
@@ -2501,7 +2505,7 @@ h1.sf-hero__eyebrow {
   span {
     min-width: 30px;
     text-align: center;
-    font-weight: 800;
+    font-weight: 700;
     font-size: 16px;
   }
 }
@@ -2515,7 +2519,7 @@ h1.sf-hero__eyebrow {
 .sf-pp__now {
   flex-basis: 100%;
   min-height: 48px;
-  font-size: 15px;
+  font-size: 16px;
   border-radius: 14px;
 }
 .sf-pp__added {
@@ -2538,7 +2542,7 @@ h1.sf-hero__eyebrow {
 }
 .sf-pp__checkout {
   padding: 8px 14px;
-  font-size: 13.5px;
+  font-size: 14px;
   border-radius: 10px;
   text-decoration: none;
 }
@@ -2557,7 +2561,7 @@ h1.sf-hero__eyebrow {
   background: var(--surface);
   color: var(--text);
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: 14px;
   &:hover {
     background: var(--surface2);
   }
@@ -2590,12 +2594,12 @@ h1.sf-hero__eyebrow {
     flex-direction: column;
     gap: 2px;
     min-width: 0;
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--muted);
     overflow-wrap: anywhere;
   }
   b {
-    font-size: 13.5px;
+    font-size: 14px;
     color: var(--text);
   }
   a {
@@ -2617,12 +2621,12 @@ h1.sf-hero__eyebrow {
   border: 1px solid var(--border);
   h2 {
     margin: 0 0 10px;
-    font-size: 20px;
+    font-size: 22px;
   }
 }
 .sf-pp__desc p {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--text2);
   white-space: pre-line;
@@ -2765,12 +2769,12 @@ h1.sf-hero__eyebrow {
       text-overflow: ellipsis;
     }
     span {
-      font-weight: 800;
+      font-weight: 700;
     }
     .sf-buy {
       width: auto;
       padding: 12px 22px;
-      font-size: 15px;
+      font-size: 16px;
     }
   }
 }
@@ -2886,7 +2890,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--muted);
   }
   b {
-    font-size: 13.5px;
+    font-size: 14px;
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
@@ -2965,8 +2969,8 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   padding: 3px 8px;
   border-radius: 6px;
   color: var(--text);
@@ -2979,7 +2983,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 .sf-grid--compact .sf-card__chip {
-  font-size: 9px;
+  font-size: 11px;
   padding: 2px 5px;
   right: 6px;
   bottom: 6px;
@@ -3079,7 +3083,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .sf-picks__title {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -3119,8 +3123,8 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--primary);
     border-radius: 9px;
     padding: 6px 10px;
-    font-size: 12.5px;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 700;
     transition:
       background 0.15s,
       color 0.15s,
@@ -3149,10 +3153,10 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     b {
       white-space: normal;
-      font-size: 12.5px;
+      font-size: 13px;
     }
     div {
-      font-size: 11.5px;
+      font-size: 12px;
     }
   }
 }
@@ -3173,7 +3177,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     margin: 0;
     max-width: 72ch;
     color: var(--text2);
-    font-size: 14.5px;
+    font-size: 14px;
     line-height: 1.55;
   }
   .sf-crumbs {
@@ -3187,7 +3191,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   flex-direction: column;
   gap: 12px;
   h2 {
-    font-size: 20px;
+    font-size: 22px;
     margin: 0;
   }
   p {
@@ -3513,7 +3517,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   border-radius: 50%;
   background: none;
   color: var(--text2);
-  font-size: 15px;
+  font-size: 16px;
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -3552,7 +3556,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   white-space: nowrap;
   text-overflow: ellipsis;
   span {
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--muted);
   }
@@ -3706,7 +3710,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   border-radius: 99px;
   background: none;
   color: var(--text2);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   padding: 5px 12px;
   cursor: pointer;
@@ -3767,7 +3771,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     text-overflow: ellipsis;
   }
   b {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
   }
   small {
@@ -3806,7 +3810,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   background: var(--surface);
   h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
   }
   &__why {
     margin: 4px 0 14px;
@@ -3830,7 +3834,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   &__plus {
     font-size: 22px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--muted);
   }
   &__list {
@@ -3884,7 +3888,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     margin: 0;
   }
   &__title {
-    font-weight: 800;
+    font-weight: 700;
   }
   &__options {
     display: flex;
@@ -3980,7 +3984,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   align-items: center;
   gap: 8px;
   margin: -4px 0 10px;
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--muted);
   text-decoration: none;
   &:hover span:last-child {
@@ -4008,7 +4012,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     border-radius: 10px;
     background: color-mix(in srgb, var(--red) 12%, var(--surface));
     color: var(--red);
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 600;
   }
   &__body {
@@ -4025,7 +4029,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   &__avg {
     font-size: 40px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
   }
   &__bars {
@@ -4079,7 +4083,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     gap: 10px;
   }
   &__by {
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--muted);
   }
   &__verified {
@@ -4092,7 +4096,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     border-left: 3px solid var(--border);
     background: var(--surface2);
     border-radius: 0 10px 10px 0;
-    font-size: 13.5px;
+    font-size: 14px;
   }
 }
 .sf-review-form {
@@ -4185,7 +4189,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 // "Order today, arrives around …" under the price (in-stock items)
 .sf-pp__arrival {
   margin: 0 0 12px;
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text2);
   .sf-muted {

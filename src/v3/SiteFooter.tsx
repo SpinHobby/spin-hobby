@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import "./siteFooter.scss";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "./links";
-
-const LOGO = "/logo/logo%20cropped.png";
+import { ShopLogo } from "./ShopLogo";
 
 /** Footer for the standalone pages (support, legal). The storefront has its own richer one. */
 export default function SiteFooter() {
@@ -10,7 +9,7 @@ export default function SiteFooter() {
     <footer className="sh-footer">
       <div className="sh-footer__grid">
         <div className="sh-footer__brand">
-          <img src={LOGO} alt="Spin Hobby" />
+          <ShopLogo />
           <p>Official anime figures, plushies &amp; more. We bring the fun to everyone — since 2022.</p>
         </div>
         <nav className="sh-footer__col" aria-label="Shop">
@@ -25,6 +24,7 @@ export default function SiteFooter() {
         </nav>
         <nav className="sh-footer__col" aria-label="Help">
           <span className="sh-footer__h">Help</span>
+          <Link to="/about">About us</Link>
           <Link to="/support">Help &amp; support</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
           <Link to="/support#returns">Returns &amp; damaged items</Link>

@@ -17,7 +17,6 @@ import {
   type Currency,
 } from "../format";
 import { useAuth, useEscape } from "../hooks";
-import { SUPPORT_EMAIL } from "../links";
 import { SITE_URL, useDocumentHead } from "../seo";
 import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
@@ -305,6 +304,9 @@ export function ProductPage({
 
       <Details p={p} currency={a.currency} />
 
+      {/* pre-order news for this series or maker: below the details, so the buy box stays about buying */}
+      <FollowSection p={p} />
+
       <Reviews itemId={p.id} list={reviews} />
 
       <section className="sf-pp__related" aria-labelledby="related-title">
@@ -570,9 +572,6 @@ function BuyBox({
 }) {
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
-  // the follow box's email: the account's, else the one typed at checkout before
-  const auth = useAuth();
-  const followEmail = auth.email ?? savedCheckoutEmail();
   const [buyVisible, setBuyVisible] = useState(true);
   const buyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -660,9 +659,8 @@ function BuyBox({
       {(s === "in" || s === "low") && !noPrice(p) && (
         // the same transit days checkout shows for the shop's Standard (5–7) and Express (2–3) shipping, plus handling
         <p className="sf-pp__arrival">
-          Order today, arrives around <b>{arrivalLabel(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max)}</b> with standard shipping in Canada, or{" "}
-          <b>{arrivalLabel(EXPRESS_TRANSIT.min, EXPRESS_TRANSIT.max)}</b> with express.{" "}
-          <span className="sf-muted">Estimate; checkout shows each courier's time for your address.</span>
+          Order today, arrives around <b>{arrivalLabel(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max)}</b> in Canada (express:{" "}
+          <b>{arrivalLabel(EXPRESS_TRANSIT.min, EXPRESS_TRANSIT.max)}</b>).
         </p>
       )}
 
@@ -683,10 +681,7 @@ function BuyBox({
             )}
           </div>
           {closing && <div className="sf-pp__closing">⏳ {closing}. Pre-orders close on the order-by date and may not reopen.</div>}
-          <p>
-            Pre-orders are charged now and ship as soon as they arrive. We'll email you when it's on its way. Release dates are set by the
-            maker and can move.
-          </p>
+          <p>Charged now, shipped the day it arrives. The maker sets the release date and it can move.</p>
         </div>
       )}
 
@@ -794,25 +789,7 @@ function BuyBox({
             <span>Carefully packed for collectors</span>
           </div>
         </li>
-        <li>
-          <span aria-hidden>🔒</span>
-          <div>
-            <b>Secure checkout</b>
-            <span>Pay by card, charged in CAD</span>
-          </div>
-        </li>
-        <li>
-          <span aria-hidden>💬</span>
-          <div>
-            <b>Questions?</b>
-            <span>
-              <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(p.name)}`}>{SUPPORT_EMAIL}</a>
-            </span>
-          </div>
-        </li>
       </ul>
-
-      <FollowBox p={p} email={followEmail} />
 
       {!buyVisible && s !== "out" && room > 0 && !noPrice(p) && (
         <div className="sf-pp__sticky" aria-hidden={buyVisible}>
@@ -827,6 +804,12 @@ function BuyBox({
       )}
     </div>
   );
+}
+
+/** The follow box's email: the account's, else the one typed at checkout before. */
+function FollowSection({ p }: { p: Product }) {
+  const auth = useAuth();
+  return <FollowBox p={p} email={auth.email ?? savedCheckoutEmail()} />;
 }
 
 /** The email this browser last typed at checkout (Checkout.tsx keeps it), or null. */

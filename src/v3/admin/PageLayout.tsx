@@ -30,6 +30,10 @@ const CHOICES = {
     ["right", "On the right"],
     ["hidden", "Behind a Filters button"],
   ],
+  logo: [
+    ["badge", "Original badge picture"],
+    ["wordmark", "Clean wordmark (mascot + name)"],
+  ],
   width: [
     ["standard", "Standard (1400px)"],
     ["wide", "Wide (1680px)"],
@@ -156,6 +160,7 @@ export function PageLayoutCard({ ctx }: { ctx: Ctx }) {
           {select("imageShape", "Product photo shape")}
           {select("sidebar", "Categories and filters")}
           {select("width", "Page width")}
+          {select("logo", "Logo in the header")}
           <label className="ad-kv">
             <span>Top bar (free shipping, Events, Support)</span>
             <input
