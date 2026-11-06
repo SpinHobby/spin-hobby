@@ -23,6 +23,7 @@ export type Screen =
   | "Categories"
   | "Orders"
   | "Reviews"
+  | "Search"
   | "Homepage"
   | "Settings"
   | "Audit"
@@ -39,6 +40,7 @@ export const SCREENS: Screen[] = [
   "Categories",
   "Orders",
   "Reviews",
+  "Search",
   "Homepage",
   "Settings",
 ];

@@ -3362,3 +3362,73 @@
     gap: 8px;
   }
 }
+
+// Admin > Search: synonym groups as chips, the new-group form, and inline editing (SearchScreen.tsx)
+.ad-search {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  &__new {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) 1fr auto;
+    gap: 12px;
+    align-items: end;
+    textarea {
+      width: 100%;
+    }
+  }
+  &__terms {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  &__filter {
+    max-width: 200px;
+  }
+  &__groups {
+    margin-top: 12px;
+  }
+  &__group {
+    align-items: center;
+    gap: 10px;
+  }
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  &__chip {
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 13px;
+  }
+  &__edit {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    textarea {
+      width: 100%;
+    }
+  }
+  &__error {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--red);
+  }
+  &__actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+@media (max-width: 720px) {
+  .ad-search__new,
+  .ad-search__edit {
+    grid-template-columns: 1fr;
+  }
+}

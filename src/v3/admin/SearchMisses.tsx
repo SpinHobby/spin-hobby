@@ -14,7 +14,7 @@ const DAYS = 30;
  * Admin > Dashboard: what shoppers searched for in the last 30 days and didn't find. Each one is a product to stock, a name to
  * add to a listing, or a synonym to add (src/modules/catalog/synonyms.ts in the server). "Done" takes it off the list.
  */
-export function SearchMisses({ flash }: { flash: (message: string) => void }) {
+export function SearchMisses({ flash, onAdd }: { flash: (message: string) => void; onAdd?: (query: string) => void }) {
   const [misses, setMisses] = useState<Miss[] | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
@@ -36,7 +36,7 @@ export function SearchMisses({ flash }: { flash: (message: string) => void }) {
   return (
     <Card title={`Searches that found nothing, last ${DAYS} days`} padded>
       <p className="ad-muted ad-sm" style={{ margin: "0 0 12px" }}>
-        What shoppers looked for and didn&apos;t find. Stock it, add the name to a listing, or ask a developer to add a synonym. Only the
+        What shoppers looked for and didn&apos;t find. Stock it, add the name to a listing, or add a synonym in Admin &gt; Search. Only the
         words are kept, never who searched.
       </p>
       {misses === null ? (
@@ -53,6 +53,11 @@ export function SearchMisses({ flash }: { flash: (message: string) => void }) {
               {m.times} {m.times === 1 ? "time" : "times"} · last{" "}
               {new Date(m.lastAt).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
             </span>
+            {onAdd && (
+              <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => onAdd(m.query)}>
+                Add synonym
+              </button>
+            )}
             <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => dismiss(m.query)}>
               Done
             </button>
