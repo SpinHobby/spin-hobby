@@ -81,6 +81,8 @@ export interface ProductPage {
   total: number;
   /** A search that found nothing: the same search with its typos fixed, when that one finds something. */
   didYouMean?: string;
+  /** Filters the server read out of a search's words ("under $50", "in stock"), to show next to the results. */
+  understood?: string[];
 }
 
 export interface HeroSlide {

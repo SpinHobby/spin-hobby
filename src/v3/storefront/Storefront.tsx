@@ -479,6 +479,17 @@ export default function Storefront() {
               {results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}
             </span>
           </h2>
+          {!!filters.query.trim() && !!results.understood?.length && (
+            <p className="sf-understood">
+              Showing{" "}
+              {results.understood.map((u) => (
+                <span key={u} className="sf-understood__chip">
+                  {u}
+                </span>
+              ))}{" "}
+              from your search
+            </p>
+          )}
           <div className="sf-shop__tools">
             <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>
               Filters{hasFilters ? " •" : ""}

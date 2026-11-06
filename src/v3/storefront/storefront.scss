@@ -170,6 +170,25 @@
   }
 }
 
+// "Showing under $50 · in stock from your search": the filters the server read out of the search's words
+.sf-understood {
+  flex-basis: 100%;
+  order: 3;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text2);
+  &__chip {
+    display: inline-block;
+    margin: 0 4px 0 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
 // the search box's suggestions (SearchField.tsx): recent searches, series, categories, products, "See all results"
 .sf-suggest {
   flex: 1;
