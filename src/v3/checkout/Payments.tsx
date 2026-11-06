@@ -44,14 +44,44 @@ export function PayPalPay({
 }
 
 // Minimal typings for the Square Web Payments SDK.
+type TokenResult = { status: string; token?: string; errors?: { message: string }[] };
 type SquareCard = {
   attach: (selector: string) => Promise<void>;
-  tokenize: () => Promise<{ status: string; token?: string; errors?: { message: string }[] }>;
+  tokenize: () => Promise<TokenResult>;
   destroy: () => Promise<void>;
 };
-type SquarePayments = { card: () => Promise<SquareCard>; verifyBuyer: (token: string, details: unknown) => Promise<{ token: string }> };
+/** Apple Pay or Google Pay: the shopper's wallet sheet confirms the payment itself, so no card form and no 3-D Secure step. */
+type SquareWallet = {
+  attach?: (selector: string, options?: Record<string, string>) => Promise<void>;
+  tokenize: () => Promise<TokenResult>;
+  destroy?: () => Promise<void>;
+};
+type PaymentRequest = { update: (changes: { total: { amount: string; label: string } }) => unknown };
+type SquarePayments = {
+  card: () => Promise<SquareCard>;
+  verifyBuyer: (token: string, details: unknown) => Promise<{ token: string }>;
+  paymentRequest: (options: unknown) => PaymentRequest;
+  applePay: (request: PaymentRequest) => Promise<SquareWallet>;
+  googlePay: (request: PaymentRequest) => Promise<SquareWallet>;
+};
 const squareSdk = () => (window as unknown as { Square?: { payments: (appId: string, locationId: string) => SquarePayments } }).Square;
 
+/** The total the wallet sheet shows; kept in step with the quote. */
+const walletTotal = (cents: number) => ({ amount: (Math.max(cents, 0) / 100).toFixed(2), label: "Spin Hobby" });
+
+/** The shopper closed the Apple Pay or Google Pay sheet: not an error worth showing. */
+export class WalletCancelled extends Error {
+  constructor() {
+    super("Payment cancelled.");
+  }
+}
+
+async function walletToken(wallet: SquareWallet) {
+  const result = await wallet.tokenize();
+  if (result.status === "Cancel" || result.status === "Abort") throw new WalletCancelled();
+  if (result.status !== "OK" || !result.token) throw new Error(result.errors?.[0]?.message ?? "The wallet couldn't complete the payment.");
+  return { sourceId: result.token };
+}
 function loadScript(src: string) {
   return new Promise<void>((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) {
@@ -71,6 +101,7 @@ export function SquarePay({
   config,
   disabled,
   amountLabel,
+  amountCents,
   billing,
   pay,
   onError,
@@ -78,6 +109,8 @@ export function SquarePay({
   config: CheckoutConfig;
   disabled: boolean;
   amountLabel: string;
+  /** The order total in cents (null until the quote is in), shown on the Apple Pay / Google Pay sheet. */
+  amountCents: number | null;
   billing: {
     givenName: string;
     familyName: string;
@@ -94,9 +127,14 @@ export function SquarePay({
   const [busy, setBusy] = useState(false);
   const cardRef = useRef<SquareCard | null>(null);
   const paymentsRef = useRef<SquarePayments | null>(null);
+  const requestRef = useRef<PaymentRequest | null>(null);
+  const [wallets, setWallets] = useState<{ apple?: SquareWallet; google?: SquareWallet }>({});
+  const amountRef = useRef(amountCents);
+  amountRef.current = amountCents;
 
   useEffect(() => {
     let cancelled = false;
+    const made: SquareWallet[] = [];
     const src =
       config.squareEnv === "production" ? "https://web.squarecdn.com/v1/square.js" : "https://sandbox.web.squarecdn.com/v1/square.js";
     (async () => {
@@ -115,6 +153,28 @@ export function SquarePay({
         paymentsRef.current = payments;
         cardRef.current = card;
         setReady(true);
+        // Wallets show only where they work: Apple Pay in Safari on an Apple device (once the domain is registered with Square),
+        // Google Pay in Chrome and on Android. Either may refuse; the card form stays.
+        const request = payments.paymentRequest({
+          countryCode: "CA",
+          currencyCode: "CAD",
+          total: walletTotal(amountRef.current ?? 0),
+        });
+        requestRef.current = request;
+        const [apple, google] = await Promise.all([
+          payments.applePay(request).catch(() => undefined),
+          payments.googlePay(request).catch(() => undefined),
+        ]);
+        for (const w of [apple, google]) if (w) made.push(w);
+        if (cancelled) return;
+        if (google) {
+          setWallets((w) => ({ ...w, google }));
+          // the container is in the page from the first render, so Square can draw its button into it
+          await google.attach?.("#sq-gpay", { buttonColor: "black", buttonType: "long", buttonSizeMode: "fill" }).catch(() => {
+            setWallets((w) => ({ ...w, google: undefined }));
+          });
+        }
+        if (apple) setWallets((w) => ({ ...w, apple }));
       } catch (e) {
         onError(e instanceof Error ? e.message : "Couldn't load the payment form.");
       }
@@ -123,8 +183,14 @@ export function SquarePay({
       cancelled = true;
       cardRef.current?.destroy();
       cardRef.current = null;
+      for (const w of made) void w.destroy?.();
+      setWallets({});
     };
   }, [config.squareApplicationId, config.squareLocationId, config.squareEnv, onError]);
+
+  useEffect(() => {
+    if (amountCents != null) requestRef.current?.update({ total: walletTotal(amountCents) });
+  }, [amountCents]);
 
   const submit = async () => {
     if (!cardRef.current || !paymentsRef.current) return;
@@ -152,8 +218,43 @@ export function SquarePay({
     }
   };
 
+  /** Apple Pay must open its sheet in the click itself, so nothing is awaited before `tokenize` runs. */
+  const payWithWallet = (wallet: SquareWallet) => {
+    if (disabled || busy) return;
+    setBusy(true);
+    void pay(async (cents) => {
+      requestRef.current?.update({ total: walletTotal(cents) });
+      return walletToken(wallet);
+    }).finally(() => setBusy(false));
+  };
+
+  const hasWallet = Boolean(wallets.apple || wallets.google);
+
   return (
     <div className="co-square">
+      <div className="co-wallets" data-disabled={disabled || busy ? "" : undefined} hidden={!hasWallet}>
+        {wallets.apple && (
+          <button
+            type="button"
+            className="co-wallet co-wallet--apple"
+            aria-label={`Pay ${amountLabel} with Apple Pay`}
+            disabled={disabled || busy}
+            onClick={() => payWithWallet(wallets.apple!)}
+          />
+        )}
+        {/* Square draws the Google Pay button in here */}
+        <div
+          id="sq-gpay"
+          className="co-wallet co-wallet--google"
+          hidden={!wallets.google}
+          onClick={() => wallets.google && payWithWallet(wallets.google)}
+        />
+      </div>
+      {hasWallet && (
+        <p className="co-or">
+          <span>or pay by card</span>
+        </p>
+      )}
       <div id="sq-card" className="co-square__card" />
       {!ready && <div className="sh-skeleton" style={{ height: 48 }} />}
       <button type="button" className="sh-btn co-pay-btn" disabled={disabled || !ready || busy} onClick={submit}>

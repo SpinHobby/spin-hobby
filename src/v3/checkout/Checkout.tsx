@@ -10,7 +10,7 @@ import { SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { loadStoreConfig } from "../storeConfig";
 import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
-import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
+import { PayPalPay, SquarePay, WalletCancelled, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { photo } from "../photo";
 import { CheckoutAddOns } from "../storefront/Suggestions";
@@ -363,6 +363,7 @@ export default function Checkout() {
 
   const onSquarePay = async (tokenize: (amountCents: number) => Promise<{ sourceId: string; verificationToken?: string }>) => {
     setTouched(true);
+    setPayError("");
     if (!canPay || !quote) {
       setPayError("Complete your details first.");
       return;
@@ -381,6 +382,7 @@ export default function Checkout() {
       });
       finish(res.orderId, res.status);
     } catch (e) {
+      if (e instanceof WalletCancelled) return; // closed the Apple Pay / Google Pay sheet
       setPayError(e instanceof Error ? e.message : "Payment failed.");
     }
   };
@@ -582,7 +584,7 @@ export default function Checkout() {
                 {(config?.provider === "test"
                   ? ["Test payment"]
                   : config?.provider === "square"
-                    ? ["Visa", "Mastercard", "Amex", "Debit"]
+                    ? ["Visa", "Mastercard", "Amex", "Debit", "Apple Pay", "Google Pay"]
                     : ["PayPal", "Visa", "Mastercard", "Amex"]
                 ).map((m) => (
                   <span key={m}>{m}</span>
@@ -621,6 +623,7 @@ export default function Checkout() {
                       config={config}
                       disabled={!quoteOk || quoting}
                       amountLabel={totalLabel}
+                      amountCents={quote?.totalCents ?? null}
                       pay={onSquarePay}
                       onError={setPayError}
                       billing={{
