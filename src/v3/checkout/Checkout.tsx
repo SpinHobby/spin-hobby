@@ -10,13 +10,13 @@ import { SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
 import { loadStoreConfig } from "../storeConfig";
 import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
-import { PayPalPay, SquarePay, type CheckoutConfig } from "./Payments";
+import { PayPalPay, SquarePay, WalletCancelled, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { photo } from "../photo";
 import { CheckoutAddOns } from "../storefront/Suggestions";
 import type { Product } from "../types";
+import { ShopLogo } from "../ShopLogo";
 
-const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
 
 interface Address {
@@ -129,6 +129,8 @@ export default function Checkout() {
   // the courier option picked (an id from the quote's shippingOptions); null until the first quote picks the cheapest
   const [option, setOption] = useState<string | null>(null);
   const [billingSame, setBillingSame] = useState(true);
+  /** Apple Pay, Google Pay or Afterpay, when Square offers them to this shopper. */
+  const [squareExtras, setSquareExtras] = useState<string[]>([]);
   const [bill, setBill] = useState<Address>(EMPTY_ADDRESS);
   const [touched, setTouched] = useState(false); // a payment attempt: show every problem
   const [blurred, setBlurred] = useState<Set<string>>(new Set()); // fields the shopper has left: show their problems
@@ -363,6 +365,7 @@ export default function Checkout() {
 
   const onSquarePay = async (tokenize: (amountCents: number) => Promise<{ sourceId: string; verificationToken?: string }>) => {
     setTouched(true);
+    setPayError("");
     if (!canPay || !quote) {
       setPayError("Complete your details first.");
       return;
@@ -381,6 +384,7 @@ export default function Checkout() {
       });
       finish(res.orderId, res.status);
     } catch (e) {
+      if (e instanceof WalletCancelled) return; // closed the Apple Pay / Google Pay / Afterpay sheet
       setPayError(e instanceof Error ? e.message : "Payment failed.");
     }
   };
@@ -443,7 +447,7 @@ export default function Checkout() {
         <header className="co-bar">
           <div className="co-bar__row">
             <a href="/" className="co-logo">
-              <img src={LOGO} alt="Spin Hobby" />
+              <ShopLogo />
             </a>
           </div>
         </header>
@@ -466,7 +470,7 @@ export default function Checkout() {
           <div className="co-main__inner">
             <header className="co-top">
               <a href="/" className="co-logo">
-                <img src={LOGO} alt="Spin Hobby" />
+                <ShopLogo />
               </a>
               <a href="/" className="co-back">
                 ← Continue shopping
@@ -582,7 +586,7 @@ export default function Checkout() {
                 {(config?.provider === "test"
                   ? ["Test payment"]
                   : config?.provider === "square"
-                    ? ["Visa", "Mastercard", "Amex", "Debit"]
+                    ? ["Visa", "Mastercard", "Amex", "Debit", ...squareExtras]
                     : ["PayPal", "Visa", "Mastercard", "Amex"]
                 ).map((m) => (
                   <span key={m}>{m}</span>
@@ -621,6 +625,8 @@ export default function Checkout() {
                       config={config}
                       disabled={!quoteOk || quoting}
                       amountLabel={totalLabel}
+                      amountCents={quote?.totalCents ?? null}
+                      onMethods={setSquareExtras}
                       pay={onSquarePay}
                       onError={setPayError}
                       billing={{
@@ -1013,7 +1019,7 @@ function Success({ orderId, preorder, email }: { orderId: number; preorder: bool
       <header className="co-bar">
         <div className="co-bar__row">
           <a href="/" className="co-logo">
-            <img src={LOGO} alt="Spin Hobby" />
+            <ShopLogo />
           </a>
         </div>
       </header>

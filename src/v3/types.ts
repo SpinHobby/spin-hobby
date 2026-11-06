@@ -1,3 +1,4 @@
+import type { StorefrontLayout } from "./storefront/layout";
 // Mirrors design_handoff_spinhobby_storefront/shared/api-types.ts and the
 // Supabase `store-api` edge function responses.
 
@@ -78,6 +79,12 @@ export interface ProductPage {
   items: Product[];
   cursor?: string;
   total: number;
+  /** A search that found nothing as typed: the same search with its typos fixed, when that one finds something. */
+  didYouMean?: string;
+  /** Nothing matched as typed, so these are products a typo or two away ("hatsne" found Hatsune). */
+  closeMatches?: boolean;
+  /** Filters the server read out of a search's words ("under $50", "in stock"), to show next to the results. */
+  understood?: string[];
 }
 
 export interface HeroSlide {
@@ -242,6 +249,10 @@ export interface StoreSettings {
   packaging_weight_g?: number;
   /** Whether the server has an EasyPost key (EASYPOST_API_KEY). */
   easypost_configured?: boolean;
+  /** The storefront layout (Admin > Homepage > Page layout), always complete. */
+  storefront_layout?: StorefrontLayout;
+  /** The storefront's look (Admin > Homepage > Theme). */
+  storefront_theme?: string;
 }
 
 export interface Readiness {

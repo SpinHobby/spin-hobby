@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { storeFormat } from "./format";
 import { setShopBackground } from "./photo";
+import type { StorefrontLayout } from "./storefront/layout";
 
 export interface StoreConfig {
   /** `test`: a local copy of the shop with no payment keys; checkout completes with a test payment, no money involved. */
@@ -23,6 +24,10 @@ export interface StoreConfig {
   musicPlaylistId?: string | null;
   /** The shop background behind every transparent product photo (null: plain white). */
   productBackground?: { id: string; url: string } | null;
+  /** The storefront layout (Admin > Homepage > Page layout), always complete. */
+  layout?: StorefrontLayout;
+  /** The storefront's look (Admin > Homepage > Theme); see storefront/themes.ts. */
+  theme?: string;
 }
 
 let cached: Promise<StoreConfig | null> | null = null;
@@ -36,6 +41,7 @@ export function loadStoreConfig() {
         handlingDaysMin: c.handlingDaysMin ?? storeFormat.handlingDaysMin,
         handlingDaysMax: c.handlingDaysMax ?? storeFormat.handlingDaysMax,
         freeShippingThresholdCents: c.freeShippingThresholdCents ?? storeFormat.freeShippingThresholdCents,
+        shippingStandardCents: c.shippingStandardCents ?? storeFormat.shippingStandardCents,
         paypal: c.provider === "paypal" && !!c.paypalClientId,
       });
       setShopBackground(c.productBackground?.url ?? null);

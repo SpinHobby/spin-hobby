@@ -3206,3 +3206,284 @@
     width: 72px;
   }
 }
+
+// ------------------------------------------------------------ Page layout (Homepage; PageLayout.tsx)
+.ad-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding: 14px 18px 18px;
+  &__col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  &__block {
+    padding: 8px 0;
+    .ad-line__main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    &.is-hidden .ad-line__main {
+      opacity: 0.5;
+    }
+  }
+  &__show {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .ad-kv > .ad-layout__select {
+    width: auto;
+    text-align: left;
+  }
+}
+@media (max-width: 900px) {
+  .ad-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+// a wireframe of the homepage; boxes only, no real content
+.ad-sketch {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface2);
+  font-size: 10px;
+  padding-bottom: 8px;
+  &__bar {
+    height: 6px;
+    background: var(--primary);
+  }
+  &__header {
+    height: 14px;
+    margin: 6px 8px;
+    border-radius: 4px;
+    background: var(--border);
+  }
+  &__body {
+    display: flex;
+    gap: 6px;
+    margin: 0 auto;
+    padding: 0 8px;
+    max-width: 82%;
+    &.is-right {
+      flex-direction: row-reverse;
+    }
+  }
+  &--wide &__body {
+    max-width: 92%;
+  }
+  &--full &__body {
+    max-width: none;
+  }
+  &__side {
+    flex: 0 0 18%;
+    min-height: 120px;
+    border-radius: 4px;
+    background: var(--border);
+  }
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  &__block {
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    &--hero {
+      padding: 14px 6px;
+      background: var(--gold);
+      color: var(--on-primary);
+    }
+  }
+  &__grid {
+    display: grid;
+    gap: 3px;
+    span {
+      border-radius: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    span.is-row {
+      height: 12px;
+    }
+  }
+}
+
+// Admin > Reviews (Reviews.tsx)
+.ad-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ad-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  &__stars {
+    color: var(--gold);
+    letter-spacing: 1px;
+    span {
+      color: var(--border);
+    }
+  }
+  &__body {
+    margin: 0;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  &__reply {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+// Admin > Search: synonym groups as chips, the new-group form, and inline editing (SearchScreen.tsx)
+.ad-search {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  &__new {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) 1fr auto;
+    gap: 12px;
+    align-items: end;
+    textarea {
+      width: 100%;
+    }
+  }
+  &__terms {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  &__filter {
+    max-width: 200px;
+  }
+  &__groups {
+    margin-top: 12px;
+  }
+  &__group {
+    align-items: center;
+    gap: 10px;
+  }
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  &__chip {
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 13px;
+  }
+  &__edit {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    textarea {
+      width: 100%;
+    }
+  }
+  &__error {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--red);
+  }
+  &__actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+@media (max-width: 720px) {
+  .ad-search__new,
+  .ad-search__edit {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Admin > Homepage > Theme: one tile per theme, each a tiny shop in its own colours (ThemePicker.tsx, themes.scss)
+.ad-shopthemes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.ad-shoptheme {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  &__pick {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    padding: 8px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    transition:
+      border-color 0.15s,
+      transform 0.15s;
+    &:hover:not(:disabled) {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+    &:disabled {
+      cursor: default;
+    }
+  }
+  &.is-current &__pick {
+    border-color: var(--gold);
+  }
+  &__name {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &__badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--on-gold);
+  }
+  &__preview {
+    align-self: flex-start;
+    margin-left: 4px;
+    color: var(--muted);
+  }
+}

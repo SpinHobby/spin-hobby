@@ -1,4 +1,5 @@
-// Design tokens from design_handoff_spinhobby_storefront / _admin (v3).
+// Design tokens from design_handoff_spinhobby_storefront / _admin (v3). Storefront themes override them in themes.scss.
+@use "themes";
 .sh {
   --bg: #f4f5f8;
   --surface: #ffffff;
@@ -17,11 +18,23 @@
   --ph1: #eceef4;
   --ph2: #e4e7ef;
   --shadow-card: 0 12px 28px -16px rgba(15, 20, 45, 0.35);
+  // text on the dark blocks (top bar, hero, footer) and on the gold accent; themes change all three with the colours behind them
+  --on-block: #ffffff;
+  --on-block-muted: #d6dae7;
+  --on-gold: #1d2a53;
+  // the tile every product photo sits on: near-white in both modes, since product photos are shot on white
+  --photo-bg: #f4f5f7;
+  // a picture behind the whole page (themes; none in the classic look)
+  --bg-art: none;
+  --bg-art-size: auto;
   --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-display: "M PLUS Rounded 1c", "Plus Jakarta Sans", system-ui, sans-serif;
 
   min-height: 100vh;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--bg-art);
+  background-size: var(--bg-art-size);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
@@ -80,6 +93,7 @@ html[data-theme="dark"] .sh {
   --blue: #93aae0;
   --ph1: #1f222b;
   --ph2: #252832;
+  --photo-bg: #e8eaee;
   color-scheme: dark;
 }
 
@@ -88,9 +102,11 @@ body {
 }
 
 // Shared primitives
+// Type: headings use the rounded display face at 700 (800 read as shouting next to the products); the shop's text sizes keep
+// to one scale: 11 (badges only), 12, 13, 14, 16, 18, 22, 28, 32, 40.
 .sh-display {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
 }
 .sh-eyebrow {
   font-size: 12px;
@@ -108,14 +124,18 @@ body {
     background: repeating-linear-gradient(135deg, var(--ph1) 0 5px, var(--ph2) 5px 10px);
   }
 }
+// small product photos (cart, rankings, checkout): whole and on the studio tile, like the cards (.sf-img)
 .sh-thumb {
   flex: none;
   overflow: hidden;
   border-radius: 10px;
+  background-color: var(--photo-bg);
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 6%;
+    mix-blend-mode: multiply;
     display: block;
   }
 }
@@ -461,6 +481,7 @@ body {
 // and small targets are hard to hit. This applies to every form field in the app; sign-in also gets 44px targets.
 @media (max-width: 960px), (pointer: coarse) {
   .sh-input,
+  .sh input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   .sh select,
   .sh textarea {
     font-size: 16px;
@@ -489,6 +510,56 @@ body {
     gap: 12px;
     &__form {
       gap: 10px;
+    }
+  }
+}
+
+// The clean wordmark logo (ShopLogo.tsx): the mascot in a gold circle and the name in the heading font. It takes the colour of
+// where it sits (dark text in the header, light on the footer's dark block).
+.sh-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: inherit;
+  white-space: nowrap;
+  &__mark {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--gold);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+  .sh-wordmark__mark img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    transform: translateY(3px);
+  }
+  &__word {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+}
+// phones: the wordmark shares one row with account, wishlist and cart (Storefront header), so it gets smaller
+@media (max-width: 640px) {
+  .sh-wordmark {
+    gap: 7px;
+    &__mark {
+      width: 28px;
+      height: 28px;
+    }
+    .sh-wordmark__mark img {
+      width: 27px;
+      height: 27px;
+    }
+    &__word {
+      font-size: 16px;
     }
   }
 }

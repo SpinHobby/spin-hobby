@@ -1,0 +1,340 @@
+// Storefront themes, picked by the owner in Admin > Homepage > Theme (ids in src/v3/storefront/themes.ts and the server's
+// themes.ts). Each theme is a light and a dark set of the tokens in tokens.scss, so the shopper's light/dark switch still works.
+// They apply where <html data-shop-theme="..."> is set (shop pages only, never Admin; ShopTheme.tsx), and to the preview tiles
+// in Admin (.sh-theme-sample[data-sample="..."]). Classic is tokens.scss itself. Every colour of a theme lives here.
+
+// ---------------------------------------------------------------- the token sets
+@mixin water-glass-light {
+  --bg: #e2f3f2;
+  --bg-art:
+    radial-gradient(ellipse 60% 45% at 12% 8%, rgba(126, 222, 214, 0.55), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 88% 22%, rgba(170, 236, 222, 0.6), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 105%, rgba(96, 196, 204, 0.45), transparent 70%),
+    linear-gradient(180deg, #ecfbf8 0%, #d6eff0 100%);
+  --surface: rgba(255, 255, 255, 0.58);
+  --surface2: rgba(255, 255, 255, 0.4);
+  --text: #0d2a33;
+  --text2: #2f5560;
+  --muted: #557780;
+  --border: rgba(255, 255, 255, 0.78);
+  --primary: #0b6b74;
+  --on-primary: #ffffff;
+  --block: rgba(7, 74, 84, 0.82);
+  --on-block: #ffffff;
+  --on-block-muted: #cdeeee;
+  --gold: #3fd0c9;
+  --on-gold: #04343a;
+  --red: #d94f55;
+  --teal: #0f8f7a;
+  --blue: #0b6b74;
+  --ph1: rgba(255, 255, 255, 0.5);
+  --ph2: rgba(255, 255, 255, 0.3);
+  --shadow-card: 0 14px 34px -16px rgba(10, 80, 90, 0.38);
+}
+@mixin water-glass-dark {
+  --bg: #04141a;
+  --bg-art:
+    radial-gradient(ellipse 60% 45% at 15% 5%, rgba(40, 170, 168, 0.28), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 30%, rgba(30, 140, 150, 0.22), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 110%, rgba(20, 120, 130, 0.3), transparent 70%),
+    linear-gradient(180deg, #03111a 0%, #062430 100%);
+  --surface: rgba(20, 58, 68, 0.5);
+  --surface2: rgba(34, 76, 86, 0.45);
+  --text: #e6fbfb;
+  --text2: #a8d4d6;
+  --muted: #80aab0;
+  --border: rgba(160, 240, 240, 0.16);
+  --primary: #6fe0d8;
+  --on-primary: #032a2e;
+  --block: rgba(6, 42, 50, 0.85);
+  --on-block: #ffffff;
+  --on-block-muted: #b6e3e3;
+  --gold: #3fd0c9;
+  --on-gold: #032a2e;
+  --red: #ff7b7f;
+  --teal: #4fd8b0;
+  --blue: #6fe0d8;
+  --ph1: rgba(255, 255, 255, 0.05);
+  --ph2: rgba(255, 255, 255, 0.08);
+  --shadow-card: 0 14px 34px -16px rgba(0, 0, 0, 0.6);
+}
+
+@mixin sakura-light {
+  --bg: #fff5f7;
+  --bg-art:
+    radial-gradient(circle at 8% 0%, rgba(255, 190, 208, 0.45), transparent 38%),
+    radial-gradient(circle at 96% 18%, rgba(255, 214, 226, 0.55), transparent 42%);
+  --surface: #ffffff;
+  --surface2: #fdebf0;
+  --text: #3a1f28;
+  --text2: #6b4652;
+  --muted: #94707c;
+  --border: #f4d6df;
+  --primary: #a3355a;
+  --on-primary: #ffffff;
+  --block: #7a2843;
+  --on-block: #ffffff;
+  --on-block-muted: #f6d3de;
+  --gold: #f48fb1;
+  --on-gold: #4a0f24;
+  --red: #d23a5c;
+  --teal: #2f8f6f;
+  --blue: #a3355a;
+  --ph1: #fbe9ee;
+  --ph2: #f8dee6;
+  --shadow-card: 0 12px 28px -16px rgba(163, 53, 90, 0.3);
+}
+@mixin sakura-dark {
+  --bg: #1b1216;
+  --bg-art: radial-gradient(circle at 10% 0%, rgba(244, 143, 177, 0.12), transparent 40%);
+  --surface: #251a1f;
+  --surface2: #2f2228;
+  --text: #fbe9ef;
+  --text2: #d9b3c0;
+  --muted: #a8848f;
+  --border: #3d2c33;
+  --primary: #f7a8c2;
+  --on-primary: #3a0f20;
+  --block: #2d1520;
+  --on-block: #ffffff;
+  --on-block-muted: #f0c9d6;
+  --gold: #f48fb1;
+  --on-gold: #3a0f20;
+  --red: #ff7d99;
+  --teal: #5fc9a0;
+  --blue: #f7a8c2;
+  --ph1: #2a1d22;
+  --ph2: #31232a;
+  --shadow-card: 0 12px 28px -16px rgba(0, 0, 0, 0.6);
+}
+
+@mixin matcha-light {
+  --bg: #f5f3e7;
+  --bg-art: none;
+  --surface: #fffdf5;
+  --surface2: #eeebd9;
+  --text: #1f2a16;
+  --text2: #4a573c;
+  --muted: #727d66;
+  --border: #e2dfc8;
+  --primary: #3f6b2a;
+  --on-primary: #ffffff;
+  --block: #2e4a1f;
+  --on-block: #ffffff;
+  --on-block-muted: #d9e6c6;
+  --gold: #a8c95a;
+  --on-gold: #1c2b0e;
+  --red: #c2453a;
+  --teal: #3f8f5a;
+  --blue: #3f6b2a;
+  --ph1: #ece9d6;
+  --ph2: #e5e1cb;
+  --shadow-card: 0 12px 28px -16px rgba(46, 74, 31, 0.3);
+}
+@mixin matcha-dark {
+  --bg: #10140c;
+  --bg-art: none;
+  --surface: #181e12;
+  --surface2: #222a19;
+  --text: #eef2e2;
+  --text2: #c3cfae;
+  --muted: #8f9a7e;
+  --border: #2c3522;
+  --primary: #b9d98a;
+  --on-primary: #142007;
+  --block: #1a2512;
+  --on-block: #ffffff;
+  --on-block-muted: #cfdcb9;
+  --gold: #a8c95a;
+  --on-gold: #142007;
+  --red: #ef7a6e;
+  --teal: #6fcf95;
+  --blue: #b9d98a;
+  --ph1: #1b2114;
+  --ph2: #20271a;
+  --shadow-card: 0 12px 28px -16px rgba(0, 0, 0, 0.6);
+}
+
+@mixin manga-light {
+  --bg: #f7f7f5;
+  --bg-art: radial-gradient(rgba(0, 0, 0, 0.07) 1px, transparent 1.3px);
+  --bg-art-size: 9px 9px;
+  --surface: #ffffff;
+  --surface2: #f0f0ee;
+  --text: #0d0d0d;
+  --text2: #333333;
+  --muted: #626262;
+  --border: #1a1a1a;
+  --primary: #0d0d0d;
+  --on-primary: #ffffff;
+  --block: #0d0d0d;
+  --on-block: #ffffff;
+  --on-block-muted: #d0d0d0;
+  --gold: #ffe14d;
+  --on-gold: #0d0d0d;
+  --red: #e02424;
+  --teal: #12805c;
+  --blue: #0d0d0d;
+  --ph1: #eeeeee;
+  --ph2: #e4e4e4;
+  --shadow-card: 4px 4px 0 0 #0d0d0d;
+}
+@mixin manga-dark {
+  --bg: #0d0d0d;
+  --bg-art: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1.3px);
+  --bg-art-size: 9px 9px;
+  --surface: #161616;
+  --surface2: #202020;
+  --text: #f5f5f5;
+  --text2: #cfcfcf;
+  --muted: #9a9a9a;
+  --border: #e6e6e6;
+  --primary: #f5f5f5;
+  --on-primary: #0d0d0d;
+  --block: #000000;
+  --on-block: #ffffff;
+  --on-block-muted: #cfcfcf;
+  --gold: #ffe14d;
+  --on-gold: #0d0d0d;
+  --red: #ff4d4d;
+  --teal: #3fcf95;
+  --blue: #f5f5f5;
+  --ph1: #1c1c1c;
+  --ph2: #222222;
+  --shadow-card: 4px 4px 0 0 #e6e6e6;
+}
+
+// ---------------------------------------------------------------- where they apply
+@mixin theme($id) {
+  html[data-shop-theme="#{$id}"] .sh,
+  .sh-theme-sample[data-sample="#{$id}"] {
+    @content (light);
+  }
+  html[data-theme="dark"][data-shop-theme="#{$id}"] .sh,
+  html[data-theme="dark"] .sh-theme-sample[data-sample="#{$id}"] {
+    @content (dark);
+  }
+}
+
+@include theme("water-glass") using ($mode) {
+  @if $mode == light {
+    @include water-glass-light;
+  } @else {
+    @include water-glass-dark;
+  }
+}
+@include theme("sakura") using ($mode) {
+  @if $mode == light {
+    @include sakura-light;
+  } @else {
+    @include sakura-dark;
+  }
+}
+@include theme("matcha") using ($mode) {
+  @if $mode == light {
+    @include matcha-light;
+  } @else {
+    @include matcha-dark;
+  }
+}
+@include theme("manga") using ($mode) {
+  @if $mode == light {
+    @include manga-light;
+  } @else {
+    @include manga-dark;
+  }
+}
+
+// ---------------------------------------------------------------- what a theme does beyond colour
+// Water Glass: the see-through panels blur what's behind them, like frosted glass over water.
+html[data-shop-theme="water-glass"] .sh {
+  :is(
+    .sf-header,
+    .sf-panel,
+    .sf-promo,
+    .sf-card,
+    .sf-empty,
+    .sf-dialog,
+    .sf-menu,
+    .sf-suggest__list,
+    .sf-trust li,
+    .sf-together,
+    .sf-pp__details,
+    .sf-pp__perks li,
+    .sf-pp__sticky,
+    .co-main,
+    .co-paybox,
+    .co-bar,
+    .ui-dialog,
+    .ui-menu__list
+  ) {
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+  }
+  :is(.sf-card, .sf-panel, .sf-promo) {
+    border: 1px solid var(--border);
+  }
+}
+
+// Manga: inked outlines and a flat offset shadow, like a comic panel.
+html[data-shop-theme="manga"] .sh {
+  :is(.sf-card, .sf-panel, .sf-promo, .sf-trust li, .sf-pp__details, .sf-together, .co-main) {
+    border: 2px solid var(--border);
+    box-shadow: var(--shadow-card);
+  }
+  .sh-display {
+    letter-spacing: 0.01em;
+  }
+}
+
+// ---------------------------------------------------------------- the Admin preview tile: a tiny shop in the theme's colours
+.sh-theme-sample {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  background-color: var(--bg);
+  background-image: var(--bg-art);
+  background-size: var(--bg-art-size);
+  color: var(--text);
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  &__bar {
+    height: 12px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  &__hero {
+    border-radius: 6px;
+    background: var(--block);
+    color: var(--on-block);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 6px 8px;
+  }
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  &__card {
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px;
+    display: grid;
+    gap: 4px;
+    &::before {
+      content: "";
+      height: 22px;
+      border-radius: 4px;
+      background: var(--surface2);
+    }
+  }
+  &__buy {
+    height: 8px;
+    border-radius: 3px;
+    background: var(--gold);
+  }
+}

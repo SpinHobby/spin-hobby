@@ -8,6 +8,7 @@ import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, S
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
 import { ShopperFunnel } from "./ShopperFunnel";
+import { SearchMisses } from "./SearchMisses";
 import {
   activeFilterCount,
   DEFAULT_SORT,
@@ -38,6 +39,8 @@ import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
 import { EbayListing } from "./EbayListing";
 import { EbaySettings } from "./EbaySettings";
+import { PageLayoutCard } from "./PageLayout";
+import { ThemePicker } from "./ThemePicker";
 import { SeriesSelect } from "./SeriesSelect";
 import { ImprovePhotosDialog } from "./PhotoQueue";
 import { LabelsDialog } from "./Labels";
@@ -233,6 +236,7 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
       <ShopperFunnel />
+      <SearchMisses flash={ctx.flash} />
     </>
   );
 }
@@ -1775,6 +1779,8 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
           onSale={() => {}}
         />
       </StorefrontPreview>
+      <ThemePicker ctx={ctx} />
+      <PageLayoutCard ctx={ctx} />
       <div className="ad-two">
         <Card
           title="Hero slides"
