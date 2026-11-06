@@ -25,6 +25,8 @@ import { askHref, noPrice } from "../../components/shop/priceOnRequest";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
+import { RecentlyViewed } from "./RecentlyViewed";
+import { rememberViewed } from "./recentData";
 import { RatingLine, Reviews } from "./Reviews";
 import { useReviews, type ReviewSummary } from "./reviewData";
 import { BoughtTogether, FollowBox } from "./Suggestions";
@@ -128,7 +130,9 @@ export function ProductPage({
   const viewedId = p?.id;
   const reviews = useReviews(p?.id);
   useEffect(() => {
-    if (viewedId) track("product_view", viewedId);
+    if (!viewedId) return;
+    track("product_view", viewedId);
+    rememberViewed(viewedId); // "Recently viewed", kept in this browser only
   }, [viewedId]);
 
   // Related: same category, then same series, then featured. Uses the normal product search.
@@ -294,6 +298,8 @@ export function ProductPage({
           </p>
         )}
       </section>
+
+      <RecentlyViewed a={a} exclude={p.id} className="sf-pp__recent" />
     </div>
   );
 }

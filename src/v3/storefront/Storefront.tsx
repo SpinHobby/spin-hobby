@@ -40,6 +40,7 @@ import { ShopPlaylistNav } from "./ShopPlaylist";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
+import { RecentlyViewed } from "./RecentlyViewed";
 import { addedMessage, shippingGap } from "./nudges";
 import {
   SECTIONS,
@@ -445,6 +446,7 @@ export default function Storefront() {
         )}
       </section>
     ),
+    recent: homeReady && <RecentlyViewed a={actions} />,
     shop: (
       <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
         <div className="sf-shop__head">

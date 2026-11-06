@@ -3972,3 +3972,14 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     grid-template-columns: 1fr;
   }
 }
+
+// Recently viewed (RecentlyViewed.tsx): a scrolling row of product cards
+.sf-recent .sf-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sf-pp__recent {
+  margin-top: 32px;
+}

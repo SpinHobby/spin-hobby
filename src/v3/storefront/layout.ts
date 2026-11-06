@@ -2,7 +2,7 @@
  * The storefront layout the owner picks in Admin > Homepage > Page layout. The API always sends it complete (defaults filled in), and
  * the server checks every value (spin-hobby-server src/modules/admin/settings/layout.ts); keep the two in step.
  */
-export type LayoutSection = "hero" | "trust" | "preorders" | "lists" | "shop" | "about" | "events";
+export type LayoutSection = "hero" | "trust" | "preorders" | "lists" | "recent" | "shop" | "about" | "events";
 export type ProductView = "grid" | "compact" | "list";
 
 export interface StorefrontLayout {
@@ -23,7 +23,7 @@ export interface StorefrontLayout {
 }
 
 export const DEFAULT_LAYOUT: StorefrontLayout = {
-  sections: (["hero", "trust", "preorders", "lists", "shop", "about", "events"] as const).map((id) => ({ id, visible: true })),
+  sections: (["hero", "trust", "preorders", "lists", "recent", "shop", "about", "events"] as const).map((id) => ({ id, visible: true })),
   productView: "grid",
   columns: "auto",
   imageShape: "square",
@@ -38,6 +38,7 @@ export const SECTION_LABELS: Record<LayoutSection, { name: string; hint: string 
   trust: { name: "Why shop with us", hint: "Four short reasons to trust the shop" },
   preorders: { name: "New pre-orders", hint: "A scrolling row of the newest pre-orders" },
   lists: { name: "Weekly ranking + Just arrived", hint: "Two side-by-side lists" },
+  recent: { name: "Recently viewed", hint: "What this shopper looked at lately (only shows once they have)" },
   shop: { name: "Product grid", hint: "The catalog itself; it can move but never hides" },
   about: { name: "About the shop", hint: "Shop by type and popular series links" },
   events: { name: "Meet us at the con", hint: "Upcoming events; hiding it hides it on every page" },
