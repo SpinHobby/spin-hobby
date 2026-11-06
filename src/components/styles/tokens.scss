@@ -461,6 +461,7 @@ body {
 // and small targets are hard to hit. This applies to every form field in the app; sign-in also gets 44px targets.
 @media (max-width: 960px), (pointer: coarse) {
   .sh-input,
+  .sh input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   .sh select,
   .sh textarea {
     font-size: 16px;

@@ -770,7 +770,10 @@ function BuyBox({
             {gapWith === 0 ? (
               <>
                 <b>{justAdded || room === 0 ? "Your order ships free" : "This order ships free"}</b>
-                <span>Your cart is over {freeShippingLabel()}: tracked, across Canada & the US</span>
+                <span>
+                  {justAdded || room === 0 ? "Your cart is" : "With this item, your cart is"} over {freeShippingLabel()}: tracked, across
+                  Canada & the US
+                </span>
               </>
             ) : (
               <>
