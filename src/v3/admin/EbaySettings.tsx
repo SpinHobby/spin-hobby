@@ -75,6 +75,8 @@ const SALE_LABEL: Record<string, string> = {
 export function EbaySettings({ ctx }: { ctx: Ctx }) {
   const [status, setStatus] = useState<EbayStatus | null>(null);
   const [choices, setChoices] = useState<Choices | null>(null);
+  // why the policies and locations could not be read (stays on the card, not a passing message)
+  const [setupProblem, setSetupProblem] = useState("");
   const [setup, setSetup] = useState({ fulfillmentPolicyId: "", paymentPolicyId: "", returnPolicyId: "", merchantLocationKey: "" });
   const [newLocation, setNewLocation] = useState<null | {
     name: string;
@@ -123,8 +125,11 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
   useEffect(() => {
     if (!status?.connected || !ctx.isOwner || status.wrongEnvironment) return;
     api<Choices>("/admin/ebay/setup")
-      .then(setChoices)
-      .catch((e) => ctx.flash(errMsg(e)));
+      .then((c) => {
+        setChoices(c);
+        setSetupProblem("");
+      })
+      .catch((e) => setSetupProblem(errMsg(e)));
   }, [status?.connected, status?.wrongEnvironment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = async (label: string, work: () => Promise<void>) => {
@@ -281,6 +286,11 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
           {!s.ready && (
             <div className="ad-banner">
               Finish the setup below before listing: eBay needs your shipping, payment and return policies, and where items ship from.
+            </div>
+          )}
+          {ctx.isOwner && setupProblem && !choices && (
+            <div className="ad-banner ad-banner--error" role="alert">
+              The setup could not be loaded. {setupProblem}
             </div>
           )}
           {ctx.isOwner && choices && (
