@@ -24,12 +24,7 @@ export default function Account() {
   return (
     <PanelLayout
       tag="ACCOUNT"
-      tabs={[
-        { key: "orders", label: "Orders" },
-        { key: "wishlist", label: "Wishlist" },
-        { key: "addresses", label: "Addresses" },
-        { key: "profile", label: "Profile" },
-      ]}
+      tabs={TABS}
       active={selectedTab}
       onSelect={setSelectedTab}
       title={selectedTab.toUpperCase()}
