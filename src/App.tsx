@@ -19,6 +19,7 @@ const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
 const OrderStatus = lazy(() => import("./v3/support/OrderStatus"));
 const Events = lazy(() => import("./v3/events/Events"));
+const Glossary = lazy(() => import("./v3/glossary/Glossary"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 // the shared building blocks shown live (local and staging only)
 const UiKit = lazy(() => import("./components/showcase/ComponentsPage"));
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/support" element={<Support />} />
           <Route path="/order-status" element={<OrderStatus />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/glossary" element={<Glossary />} />
         </Route>
         <Route
           path="/reset-password"

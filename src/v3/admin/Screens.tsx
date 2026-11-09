@@ -44,6 +44,7 @@ import { LabelsDialog } from "./Labels";
 import { useSeriesList } from "./seriesList";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
 import { isShown, setVisible } from "./sourceState";
+import { GlossaryCard } from "../glossary/GlossaryCard";
 
 export interface Ctx {
   data: AdminData;
@@ -1844,6 +1845,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
             </div>
           </Card>
           <EventsCard ctx={ctx} />
+          <GlossaryCard flash={ctx.flash} />
         </div>
       </div>
     </>
