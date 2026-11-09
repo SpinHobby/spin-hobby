@@ -17,6 +17,8 @@ interface Sale {
 export interface EbayStatus {
   configured: boolean;
   environment: "sandbox" | "production";
+  /** a local copy: eBay cannot send the owner back, so they paste the address of eBay's "thank you" page */
+  pasteBack?: boolean;
   marketplace: string;
   connected: boolean;
   username: string | null;
@@ -87,6 +89,8 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
     country: string;
   }>(null);
   const [busy, setBusy] = useState("");
+  // a local copy: the address of eBay's "thank you" page, pasted back (null = no sign-in started)
+  const [thanksAddress, setThanksAddress] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -142,10 +146,32 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
       setBusy("");
     }
   };
-  const connect = () =>
-    run("Opening eBay…", async () => {
-      const { url } = await api<{ url: string }>("/admin/ebay/connect", { method: "POST" });
-      window.location.assign(url);
+  const connect = () => {
+    // the tab opens on the click itself (a browser blocks one opened later), then goes to eBay once the server answers
+    const tab = status?.pasteBack ? window.open("about:blank", "_blank") : null;
+    if (tab) tab.opener = null;
+    return run("Opening eBay…", async () => {
+      try {
+        const { url } = await api<{ url: string }>("/admin/ebay/connect", { method: "POST" });
+        if (!status?.pasteBack) return window.location.assign(url);
+        if (tab) tab.location.href = url;
+        else window.open(url, "_blank", "noopener");
+        setThanksAddress("");
+      } catch (e) {
+        tab?.close();
+        throw e;
+      }
+    });
+  };
+  const finishConnect = () =>
+    run("Connecting…", async () => {
+      const r = await api<{ ebay: EbayStatus }>("/admin/ebay/connect/finish", {
+        method: "POST",
+        body: JSON.stringify({ address: thanksAddress }),
+      });
+      setStatus(r.ebay);
+      setThanksAddress(null);
+      ctx.flash("eBay connected");
     });
   const saveSetup = () =>
     run("Saving…", async () => {
@@ -248,6 +274,25 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
               {busy || "Connect eBay"}
             </button>
           )}
+        </div>
+      )}
+      {s.configured && !s.connected && ctx.isOwner && s.pasteBack && thanksAddress !== null && (
+        <div className="ad-ebay__connect">
+          <p className="ad-sm" style={{ margin: 0 }}>
+            eBay opened in a new tab. Sign in with your Sandbox test user and agree, then copy the address of the page eBay lands on and
+            paste it here. (This computer is a local copy: eBay can't send you back to it.)
+          </p>
+          <input
+            className="sh-input"
+            style={{ flex: "1 1 320px" }}
+            placeholder="https://signin.sandbox.ebay.com/…&code=…"
+            value={thanksAddress}
+            onChange={(e) => setThanksAddress(e.target.value)}
+            aria-label="Address of eBay's page after signing in"
+          />
+          <button type="button" className="sh-btn" onClick={finishConnect} disabled={!!busy || !thanksAddress.trim()}>
+            {busy || "Finish connecting"}
+          </button>
         </div>
       )}
 
