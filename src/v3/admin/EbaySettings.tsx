@@ -208,7 +208,9 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
     <section className="ad-card ad-pad ad-ebay" style={{ marginBottom: 16 }} aria-label="eBay">
       <div className="ad-between">
         <div>
-          <div className="ad-h3">eBay {s.environment === "sandbox" && <span className="sh-chip">sandbox (test)</span>}</div>
+          <div className="ad-h3 ad-ebay__title">
+            eBay {s.environment === "sandbox" && <span className="sh-chip ad-ebay__env">sandbox (test)</span>}
+          </div>
           <div className="ad-muted" style={{ fontSize: 13 }}>
             List products on eBay ({s.marketplace.replace("EBAY_", "eBay ")}). Square keeps the one stock count: an eBay sale takes the unit
             off Square, and Square's count goes to eBay, so an item never sells twice.
