@@ -77,6 +77,7 @@ function ChangePassword({ email }: { email: string }) {
 
   return (
     <Card title="Change password" padded>
+      <p>Signed in with Google or Discord? Saving a password here adds one to your account, so you can also sign in with your email.</p>
       {result && (
         <Banner tone={result.tone} onDismiss={() => setResult(null)}>
           {result.message}
