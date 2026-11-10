@@ -57,7 +57,7 @@
   top: -40px;
   z-index: 100;
   background: var(--gold);
-  color: #1d2a53 !important;
+  color: var(--on-gold) !important;
   padding: 8px 12px;
   border-radius: 8px;
   font-weight: 700;
@@ -69,8 +69,8 @@
 // ------------------------------------------------------------ utility bar
 .sf-utility {
   background: var(--block);
-  color: #fff;
-  font-size: 12.5px;
+  color: var(--on-block);
+  font-size: 13px;
   font-weight: 600;
   &__inner {
     padding-top: 8px;
@@ -84,7 +84,7 @@
     display: flex;
     gap: 18px;
     a {
-      color: #fff;
+      color: var(--on-block);
       &:hover {
         color: var(--gold);
       }
@@ -127,11 +127,12 @@
   min-width: 260px;
   display: flex;
   align-items: stretch;
-  overflow: hidden;
+  position: relative; // the suggestions list hangs below it, so nothing here clips (no overflow: hidden)
   border: 2px solid var(--primary);
   border-radius: 14px;
   background: var(--surface);
   select {
+    border-radius: 12px 0 0 12px;
     border: 0;
     border-right: 1px solid var(--border);
     background: var(--surface2);
@@ -149,14 +150,15 @@
     outline: 0;
     background: transparent;
     color: var(--text);
-    font-size: 15px;
+    font-size: 16px;
     padding: 12px 14px;
     &::-webkit-search-cancel-button {
       cursor: pointer;
     }
   }
-  button {
+  > button {
     border: 0;
+    border-radius: 0 12px 12px 0;
     background: var(--primary);
     color: var(--on-primary);
     padding: 0 20px;
@@ -165,6 +167,129 @@
   }
   &:focus-within {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+}
+
+// "Showing under $50 · in stock from your search": the filters the server read out of the search's words
+.sf-understood {
+  flex-basis: 100%;
+  order: 3;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text2);
+  &__chip {
+    display: inline-block;
+    margin: 0 4px 0 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-weight: 600;
+  }
+  // "Search for hatsune miku?" after close matches: a link-style button that runs the fixed search
+  &__fix {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--primary);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
+
+// the search box's suggestions (SearchField.tsx): recent searches, series, categories, products, "See all results"
+.sf-suggest {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  &__list {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: -2px;
+    right: -2px;
+    z-index: 40;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--text) 18%, transparent);
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    animation: sh-fade 0.12s;
+  }
+  &__item {
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 14px;
+    &.is-active {
+      background: var(--surface2);
+    }
+  }
+  &__group {
+    display: block;
+    margin: 4px 0 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  &__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    small {
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: 4px;
+    }
+  }
+  &__product {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    img,
+    .sf-suggest__noimg {
+      width: 40px;
+      height: 40px;
+      flex: none;
+      border-radius: 8px;
+      object-fit: contain;
+      background: var(--surface2);
+    }
+    .sf-suggest__text {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+    }
+    b {
+      flex: none;
+      font-size: 13px;
+    }
+  }
+  &__item--all {
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  &__foot {
+    padding: 6px 10px 2px;
+    button {
+      border: 0;
+      background: none;
+      padding: 0;
+      color: var(--muted);
+      font-size: 12px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
   }
 }
 
@@ -196,10 +321,10 @@
   align-items: center;
   gap: 8px;
   background: var(--gold);
-  color: #1d2a53;
+  color: var(--on-gold);
   padding: 10px 16px;
   border-radius: 12px;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 14px;
   white-space: nowrap;
   &:hover {
@@ -229,12 +354,12 @@
   background: var(--primary);
   color: var(--on-primary);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
   &--lg {
     width: 40px;
     height: 40px;
-    font-size: 17px;
+    font-size: 18px;
   }
 }
 .sf-menu__who {
@@ -250,7 +375,7 @@
     min-width: 0;
   }
   b {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--text);
   }
   span {
@@ -302,7 +427,7 @@
     border: 0;
     background: none;
     color: var(--muted);
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
     padding: 2px 4px;
     border-radius: 6px;
@@ -403,7 +528,7 @@
       0 0 0 100vmax rgba(0, 0, 0, 0.55),
       0 20px 50px rgba(0, 0, 0, 0.4);
     &__label {
-      font-size: 13.5px;
+      font-size: 14px;
       padding: 8px 4px 10px;
     }
     &__signin {
@@ -412,7 +537,7 @@
     > a,
     > button {
       padding: 13px 12px;
-      font-size: 15px;
+      font-size: 16px;
     }
   }
   .sf-menu__close {
@@ -425,7 +550,7 @@
     height: 40px;
     border: 0;
     background: none;
-    font-size: 26px;
+    font-size: 28px;
     line-height: 1;
     color: var(--muted);
     border-radius: 10px;
@@ -601,7 +726,7 @@
   position: relative;
   overflow: hidden;
   background: var(--gold);
-  color: #1d2a53 !important;
+  color: var(--on-gold) !important;
   border-radius: 16px;
   padding: 16px 18px;
   display: flex;
@@ -617,8 +742,8 @@
     transition: transform 0.2s;
   }
   strong {
-    font-weight: 800;
-    font-size: 15px;
+    font-weight: 700;
+    font-size: 16px;
     max-width: 140px;
   }
   span {
@@ -767,7 +892,7 @@
   position: relative;
   border-radius: 20px;
   background: var(--block);
-  color: #fff !important;
+  color: var(--on-block) !important;
   overflow: hidden;
   min-height: 260px;
   display: flex;
@@ -807,7 +932,7 @@
 }
 .sf-hero__eyebrow {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold);
@@ -818,7 +943,7 @@
   line-height: 1.08;
   margin: 0 0 8px;
   text-wrap: balance;
-  color: #fff;
+  color: var(--on-block);
 }
 h1.sf-hero__eyebrow {
   margin: 0 0 10px;
@@ -827,8 +952,8 @@ h1.sf-hero__eyebrow {
 }
 .sf-hero p {
   margin: 0 0 18px;
-  color: #d6dae7;
-  font-size: 15px;
+  color: var(--on-block-muted);
+  font-size: 16px;
   line-height: 1.45;
 }
 .sf-hero__dots {
@@ -879,7 +1004,7 @@ h1.sf-hero__eyebrow {
   }
   &__eyebrow {
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -895,7 +1020,7 @@ h1.sf-hero__eyebrow {
   &--gold {
     background: var(--gold);
     border-color: var(--gold);
-    color: #1d2a53 !important;
+    color: var(--on-gold) !important;
   }
 }
 
@@ -958,7 +1083,7 @@ h1.sf-hero__eyebrow {
     font-size: 12px;
     strong {
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 700;
       margin-top: 2px;
     }
   }
@@ -993,7 +1118,7 @@ h1.sf-hero__eyebrow {
     align-items: baseline;
     margin-bottom: 8px;
     h2 {
-      font-size: 20px;
+      font-size: 22px;
       margin: 0;
     }
   }
@@ -1006,7 +1131,7 @@ h1.sf-hero__eyebrow {
   border-top: 1px solid var(--border);
   &__rank {
     font-family: var(--font-display);
-    font-weight: 800;
+    font-weight: 700;
     font-size: 18px;
     width: 26px;
     text-align: center;
@@ -1017,7 +1142,7 @@ h1.sf-hero__eyebrow {
     min-width: 0;
   }
   &__name {
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -1028,12 +1153,12 @@ h1.sf-hero__eyebrow {
     font-weight: 600;
   }
   &__price {
-    font-weight: 800;
+    font-weight: 700;
     font-size: 14px;
   }
   &__add {
     border: 0;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 700;
     padding: 7px 11px;
     border-radius: 9px;
@@ -1085,7 +1210,7 @@ h1.sf-hero__eyebrow {
   font-weight: 600;
 }
 .sf-select {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   background: var(--surface);
@@ -1140,13 +1265,13 @@ h1.sf-hero__eyebrow {
     border-radius: 10px;
   }
   .sf-card__badge {
-    font-size: 9px;
+    font-size: 11px;
     padding: 2px 6px;
     left: 6px;
     top: 6px;
   }
   .sf-card__off {
-    font-size: 10px;
+    font-size: 11px;
     padding: 2px 6px;
     left: 6px;
     bottom: 6px;
@@ -1194,22 +1319,26 @@ h1.sf-hero__eyebrow {
   }
 }
 
+// Every product photo sits whole (never cropped) with the same margin on the same studio tile. multiply melts a photo's own
+// white background into the tile, so photos shot on different whites look like one set; cut-outs keep the shop background.
 .sf-img {
   position: relative;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   overflow: hidden;
-  background-color: var(--surface2);
+  background-color: var(--photo-bg);
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 7%;
+    mix-blend-mode: multiply;
     display: block;
   }
   &__ph {
     font-family: ui-monospace, monospace;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--muted);
   }
 }
@@ -1242,7 +1371,7 @@ h1.sf-hero__eyebrow {
     position: absolute;
     left: 8px;
     top: 8px;
-    font-size: 10.5px;
+    font-size: 11px;
     padding: 3px 8px;
   }
   &__off {
@@ -1250,9 +1379,9 @@ h1.sf-hero__eyebrow {
     left: 8px;
     bottom: 8px;
     background: var(--gold);
-    color: #1d2a53;
+    color: var(--on-gold);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 3px 8px;
     border-radius: 6px;
   }
@@ -1268,7 +1397,7 @@ h1.sf-hero__eyebrow {
     background: var(--surface);
     display: grid;
     place-items: center;
-    font-size: 15px;
+    font-size: 16px;
     color: var(--muted);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
     transition: transform 0.15s;
@@ -1287,13 +1416,14 @@ h1.sf-hero__eyebrow {
     flex: 1;
   }
   &__series {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--muted);
     font-weight: 600;
+    letter-spacing: 0.02em;
   }
   &__name {
     margin: 0;
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.3;
     display: -webkit-box;
@@ -1308,8 +1438,8 @@ h1.sf-hero__eyebrow {
     gap: 6px;
     margin-top: 4px;
     strong {
-      font-size: 17px;
-      font-weight: 800;
+      font-size: 16px;
+      font-weight: 700;
     }
     s {
       font-size: 12px;
@@ -1329,7 +1459,7 @@ h1.sf-hero__eyebrow {
   text-align: center;
   padding: 9px 0;
   border-radius: 10px;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   background: var(--primary);
   color: var(--on-primary);
@@ -1358,7 +1488,20 @@ h1.sf-hero__eyebrow {
     padding: 9px 16px;
   }
 }
-// "Buy now": outlined, so "Add to cart" stays the main button; on a grid card it sits just under it
+// A grid card's one button: quiet until the shopper points at the card, so a page of products doesn't read as a wall of buttons
+.sf-buy--card {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+  .sf-card:hover &:not(.is-added):not(.is-out),
+  &:focus-visible:not(.is-added):not(.is-out) {
+    background: var(--primary);
+    color: var(--on-primary);
+    border-color: var(--primary);
+    filter: none;
+  }
+}
+// "Buy now": outlined, so "Add to cart" stays the main button (product page and list cards)
 .sf-buy--now {
   background: transparent;
   color: var(--primary);
@@ -1394,16 +1537,16 @@ h1.sf-hero__eyebrow {
     min-width: 0;
   }
   &__meta {
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--muted);
     font-weight: 600;
   }
   &__name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
   }
   &__status {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
     margin-top: 2px;
   }
@@ -1413,8 +1556,8 @@ h1.sf-hero__eyebrow {
     display: flex;
     flex-direction: column;
     strong {
-      font-size: 17px;
-      font-weight: 800;
+      font-size: 18px;
+      font-weight: 700;
     }
     s {
       font-size: 12px;
@@ -1430,6 +1573,40 @@ h1.sf-hero__eyebrow {
     &.is-on {
       color: var(--red);
     }
+  }
+}
+
+.sf-noresults {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  &__fix {
+    color: var(--text2);
+    font-size: 16px;
+  }
+  &__suggest {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--blue);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  &__title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: var(--text);
   }
 }
 
@@ -1481,7 +1658,7 @@ h1.sf-hero__eyebrow {
     margin-bottom: 10px;
     font-size: 13px;
     h2 {
-      font-size: 20px;
+      font-size: 22px;
       margin: 0;
     }
   }
@@ -1510,7 +1687,7 @@ h1.sf-hero__eyebrow {
   font-size: 14px;
   font-weight: 600;
   &__date {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
   }
   &.is-past {
@@ -1522,9 +1699,9 @@ h1.sf-hero__eyebrow {
 .sf-footer {
   margin-top: 48px;
   background: var(--block);
-  color: #d6dae7;
+  color: var(--on-block-muted);
   a {
-    color: #fff;
+    color: var(--on-block);
     &:hover {
       color: var(--gold);
     }
@@ -1557,7 +1734,7 @@ h1.sf-hero__eyebrow {
     gap: 8px;
   }
   &__h {
-    font-weight: 800;
+    font-weight: 700;
     color: var(--gold);
     font-size: 13px;
   }
@@ -1578,10 +1755,10 @@ h1.sf-hero__eyebrow {
     button {
       border: 0;
       background: var(--gold);
-      color: #1d2a53;
+      color: var(--on-gold);
       padding: 10px 14px;
       border-radius: 10px;
-      font-weight: 800;
+      font-weight: 700;
     }
   }
   &__bottom {
@@ -1605,7 +1782,7 @@ h1.sf-hero__eyebrow {
 }
 .sf-currency__note {
   margin-left: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   opacity: 0.8;
 }
 .sf-currency {
@@ -1616,16 +1793,16 @@ h1.sf-hero__eyebrow {
   button {
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: none;
-    color: #d6dae7;
+    color: var(--on-block-muted);
     border-radius: 6px;
     padding: 2px 7px;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 700;
     margin-left: 4px;
     &.is-active {
       background: var(--gold);
       border-color: var(--gold);
-      color: #1d2a53;
+      color: var(--on-gold);
     }
   }
 }
@@ -1663,7 +1840,7 @@ h1.sf-hero__eyebrow {
   align-items: flex-start;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
-  font-size: 13.5px;
+  font-size: 14px;
   &__main {
     flex: 1;
     min-width: 0;
@@ -1677,8 +1854,8 @@ h1.sf-hero__eyebrow {
   }
   &__pre {
     align-self: flex-start;
-    font-size: 10.5px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 700;
     color: #fff;
     background: var(--blue);
     padding: 2px 7px;
@@ -1717,18 +1894,18 @@ h1.sf-hero__eyebrow {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 13px;
   &__row {
     display: flex;
     justify-content: space-between;
     font-size: 16px;
     strong {
-      font-weight: 800;
+      font-weight: 700;
     }
   }
   &__cta {
     padding: 13px;
-    font-size: 15px;
+    font-size: 16px;
     margin-top: 4px;
   }
 }
@@ -1743,7 +1920,7 @@ h1.sf-hero__eyebrow {
   }
   strong {
     color: var(--text);
-    font-size: 17px;
+    font-size: 18px;
   }
 }
 .sf-dialog {
@@ -1770,7 +1947,7 @@ h1.sf-hero__eyebrow {
   }
   h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1.2;
   }
   p {
@@ -1781,10 +1958,8 @@ h1.sf-hero__eyebrow {
 }
 
 // ------------------------------------------------------------ responsive
-@media (max-width: 900px) {
-  .sf {
-    --header-h: 0px;
-  }
+// The filters as a slide-over sheet behind the Filters button: on small screens, and everywhere when Page layout hides the sidebar.
+@mixin sidebar-sheet {
   .sf-filter-btn {
     display: inline-block;
   }
@@ -1817,15 +1992,38 @@ h1.sf-hero__eyebrow {
     z-index: 44;
   }
 }
+
+@media (max-width: 900px) {
+  .sf {
+    --header-h: 0px;
+  }
+  @include sidebar-sheet;
+}
 @media (max-width: 640px) {
   .sf-header__row {
     gap: 10px;
   }
+  // Discord and Instagram are in the footer; on a phone the logo, account, wishlist and cart share one row
+  .sf-header .sf-social {
+    display: none;
+  }
+  // scrolling down slides the logo row away (search and sections stay); scrolling up brings it back (headerTuck.ts)
+  .sf-header {
+    transition: transform 0.22s ease;
+    &.is-tucked {
+      transform: translateY(calc(-1 * var(--tuck, 0px)));
+    }
+  }
   .sf-logo img {
-    height: 38px;
+    height: 34px;
   }
   .sf-header__actions {
     margin-left: auto;
+    gap: 2px;
+    .sh-icon-btn {
+      width: 32px;
+      height: 32px;
+    }
   }
   .sf-search {
     order: 3;
@@ -1834,7 +2032,7 @@ h1.sf-hero__eyebrow {
     select {
       display: none;
     }
-    button {
+    > button {
       padding: 0 14px;
     }
   }
@@ -1865,7 +2063,7 @@ h1.sf-hero__eyebrow {
     padding: 14px 16px;
     border-radius: 16px;
     &__title {
-      font-size: 17px;
+      font-size: 18px;
     }
     &__eyebrow {
       font-size: 11px;
@@ -2021,7 +2219,9 @@ h1.sf-hero__eyebrow {
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 6%;
+    background: var(--photo-bg);
     display: block;
   }
 }
@@ -2034,7 +2234,7 @@ h1.sf-hero__eyebrow {
   aspect-ratio: 1;
   border-radius: 20px;
   overflow: hidden;
-  background: var(--surface2);
+  background: var(--photo-bg);
   border: 1px solid var(--border);
   display: grid;
   place-items: center;
@@ -2051,10 +2251,13 @@ h1.sf-hero__eyebrow {
   &.is-active {
     display: block;
   }
+  // the whole product on the studio tile, as on the cards (.sf-img)
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: 5%;
+    mix-blend-mode: multiply;
     display: block;
   }
 }
@@ -2076,7 +2279,7 @@ h1.sf-hero__eyebrow {
   border: 0;
   background: rgba(255, 255, 255, 0.92);
   color: #171a2b;
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   opacity: 0;
@@ -2138,7 +2341,7 @@ h1.sf-hero__eyebrow {
     border: 0;
     background: rgba(255, 255, 255, 0.14);
     color: #fff;
-    font-size: 26px;
+    font-size: 28px;
   }
   &__arrow {
     position: absolute;
@@ -2184,7 +2387,7 @@ h1.sf-hero__eyebrow {
   flex-wrap: wrap;
   gap: 6px 14px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2203,7 +2406,7 @@ h1.sf-hero__eyebrow {
   overflow-wrap: anywhere;
 }
 .sf-pp__sku {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: -6px;
   font-variant-numeric: tabular-nums;
@@ -2223,19 +2426,19 @@ h1.sf-hero__eyebrow {
   gap: 10px;
   strong {
     font-size: 32px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
   s {
     color: var(--muted);
-    font-size: 17px;
+    font-size: 18px;
   }
 }
 .sf-pp__off {
   background: var(--red);
   color: #fff;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   padding: 4px 9px;
   border-radius: 999px;
   align-self: center;
@@ -2278,7 +2481,7 @@ h1.sf-hero__eyebrow {
     color: var(--muted);
   }
   b {
-    font-size: 17px;
+    font-size: 18px;
     color: var(--text);
   }
 }
@@ -2302,7 +2505,7 @@ h1.sf-hero__eyebrow {
     border: 0;
     background: none;
     color: var(--text);
-    font-size: 20px;
+    font-size: 22px;
     &:disabled {
       opacity: 0.3;
     }
@@ -2313,7 +2516,7 @@ h1.sf-hero__eyebrow {
   span {
     min-width: 30px;
     text-align: center;
-    font-weight: 800;
+    font-weight: 700;
     font-size: 16px;
   }
 }
@@ -2327,7 +2530,7 @@ h1.sf-hero__eyebrow {
 .sf-pp__now {
   flex-basis: 100%;
   min-height: 48px;
-  font-size: 15px;
+  font-size: 16px;
   border-radius: 14px;
 }
 .sf-pp__added {
@@ -2350,7 +2553,7 @@ h1.sf-hero__eyebrow {
 }
 .sf-pp__checkout {
   padding: 8px 14px;
-  font-size: 13.5px;
+  font-size: 14px;
   border-radius: 10px;
   text-decoration: none;
 }
@@ -2369,7 +2572,7 @@ h1.sf-hero__eyebrow {
   background: var(--surface);
   color: var(--text);
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: 14px;
   &:hover {
     background: var(--surface2);
   }
@@ -2402,12 +2605,12 @@ h1.sf-hero__eyebrow {
     flex-direction: column;
     gap: 2px;
     min-width: 0;
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--muted);
     overflow-wrap: anywhere;
   }
   b {
-    font-size: 13.5px;
+    font-size: 14px;
     color: var(--text);
   }
   a {
@@ -2429,12 +2632,12 @@ h1.sf-hero__eyebrow {
   border: 1px solid var(--border);
   h2 {
     margin: 0 0 10px;
-    font-size: 20px;
+    font-size: 22px;
   }
 }
 .sf-pp__desc p {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--text2);
   white-space: pre-line;
@@ -2577,12 +2780,12 @@ h1.sf-hero__eyebrow {
       text-overflow: ellipsis;
     }
     span {
-      font-weight: 800;
+      font-weight: 700;
     }
     .sf-buy {
       width: auto;
       padding: 12px 22px;
-      font-size: 15px;
+      font-size: 16px;
     }
   }
 }
@@ -2590,6 +2793,10 @@ h1.sf-hero__eyebrow {
   .sf-pp__perks {
     grid-template-columns: 1fr;
   }
+}
+// the shop assistant's button sits above the phone "Add to cart" bar instead of covering its button
+:root:has(.sf-pp__sticky) .sa {
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
 }
 @keyframes sf-sticky-in {
   from {
@@ -2627,7 +2834,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   padding: 0 6px;
   margin-left: 2px;
   border-radius: 99px;
-  background: #1d2a53;
+  background: var(--on-gold);
   color: var(--gold);
   font-size: 12px;
   animation: sf-count-pop 0.45s $sf-ease;
@@ -2694,7 +2901,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--muted);
   }
   b {
-    font-size: 13.5px;
+    font-size: 14px;
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
@@ -2763,7 +2970,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   position: absolute;
   inset: 0;
   opacity: 0;
-  background: var(--surface2);
+  background: var(--photo-bg);
 }
 .sf-card__chip {
   position: absolute;
@@ -2773,8 +2980,8 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   padding: 3px 8px;
   border-radius: 6px;
   color: var(--text);
@@ -2787,7 +2994,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 .sf-grid--compact .sf-card__chip {
-  font-size: 9px;
+  font-size: 11px;
   padding: 2px 5px;
   right: 6px;
   bottom: 6px;
@@ -2887,7 +3094,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .sf-picks__title {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2927,8 +3134,8 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--primary);
     border-radius: 9px;
     padding: 6px 10px;
-    font-size: 12.5px;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 700;
     transition:
       background 0.15s,
       color 0.15s,
@@ -2957,10 +3164,10 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     b {
       white-space: normal;
-      font-size: 12.5px;
+      font-size: 13px;
     }
     div {
-      font-size: 11.5px;
+      font-size: 12px;
     }
   }
 }
@@ -2981,7 +3188,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     margin: 0;
     max-width: 72ch;
     color: var(--text2);
-    font-size: 14.5px;
+    font-size: 14px;
     line-height: 1.55;
   }
   .sf-crumbs {
@@ -2995,7 +3202,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   flex-direction: column;
   gap: 12px;
   h2 {
-    font-size: 20px;
+    font-size: 22px;
     margin: 0;
   }
   p {
@@ -3065,6 +3272,12 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   .sf-music-btn {
     margin-left: 0;
   }
+}
+// closed, the playlist is one quiet round icon at the end of the sections, not a labelled pill
+.sf-navrow .sf-music-btn--start {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
 }
 .sf-navrow .sf-music-btn {
   align-self: center;
@@ -3315,7 +3528,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   border-radius: 50%;
   background: none;
   color: var(--text2);
-  font-size: 15px;
+  font-size: 16px;
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -3354,7 +3567,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   white-space: nowrap;
   text-overflow: ellipsis;
   span {
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--muted);
   }
@@ -3372,7 +3585,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   border: 0;
   border-radius: 50%;
   background: var(--gold);
-  color: #1d2a53;
+  color: var(--on-gold);
   cursor: pointer;
   transition:
     transform 0.15s,
@@ -3508,7 +3721,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   border-radius: 99px;
   background: none;
   color: var(--text2);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   padding: 5px 12px;
   cursor: pointer;
@@ -3569,7 +3782,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     text-overflow: ellipsis;
   }
   b {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
   }
   small {
@@ -3608,7 +3821,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   background: var(--surface);
   h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
   }
   &__why {
     margin: 4px 0 14px;
@@ -3632,7 +3845,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   &__plus {
     font-size: 22px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--muted);
   }
   &__list {
@@ -3686,7 +3899,7 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     margin: 0;
   }
   &__title {
-    font-weight: 800;
+    font-weight: 700;
   }
   &__options {
     display: flex;
@@ -3728,4 +3941,270 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   background: var(--surface2);
   color: var(--text2);
   font-size: 14px;
+}
+
+// ------------------------------------------------------------ Page layout (Admin > Homepage > Page layout; layout.ts)
+.sf[data-width="wide"] .sf-wrap {
+  max-width: 1680px;
+}
+.sf[data-width="full"] .sf-wrap {
+  max-width: none;
+}
+.sf[data-shape="portrait"] .sf-card .sf-img {
+  aspect-ratio: 3 / 4;
+}
+.sf[data-sidebar="right"] .sf-body {
+  flex-direction: row-reverse;
+}
+.sf[data-sidebar="hidden"] {
+  @include sidebar-sheet;
+}
+// until the settings arrive the layout may still change: no sliding sheet when it does
+.sf:not([data-ready]) .sf-sidebar {
+  transition: none;
+}
+// a set number of cards per row on a computer; tablets and phones keep "as many as fit" and two per row
+@media (min-width: 901px) {
+  @each $n in 3, 4, 5, 6 {
+    .sf[data-columns="#{$n}"] .sf-shop {
+      .sf-grid {
+        grid-template-columns: repeat($n, minmax(0, 1fr));
+      }
+      .sf-grid--compact {
+        grid-template-columns: repeat($n + 2, minmax(0, 1fr));
+      }
+    }
+  }
+}
+
+// Reviews (Reviews.tsx): stars, the product page's reviews section and the form to write one.
+.sf-stars {
+  display: inline-flex;
+  gap: 1px;
+  line-height: 1;
+  &__star {
+    // a star filled from the left to --fill, the rest in the line colour
+    background: linear-gradient(90deg, var(--gold) var(--fill), var(--border) var(--fill));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+.sf-rating-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 10px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  &:hover span:last-child {
+    text-decoration: underline;
+  }
+}
+.sf-reviews {
+  margin-top: 40px;
+  scroll-margin-top: 90px;
+  .sf-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  &__note {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 14px;
+  }
+  &__error {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--red) 12%, var(--surface));
+    color: var(--red);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  &__body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  &__summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+  &__avg {
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  &__bars {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    li {
+      display: grid;
+      grid-template-columns: 26px 1fr 24px;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+    }
+  }
+  &__bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface2);
+    overflow: hidden;
+    span {
+      display: block;
+      height: 100%;
+      background: var(--gold);
+    }
+  }
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+.sf-review {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  &:first-child {
+    padding-top: 0;
+  }
+  p {
+    margin: 6px 0;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  &__by {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  &__verified {
+    color: var(--text2);
+    font-weight: 600;
+  }
+  &__reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--border);
+    background: var(--surface2);
+    border-radius: 0 10px 10px 0;
+    font-size: 14px;
+  }
+}
+.sf-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  &__lead {
+    margin: 0;
+    font-size: 13px;
+  }
+  &__stars {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    legend {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    label {
+      font-size: 28px;
+      line-height: 1;
+      color: var(--border);
+      cursor: pointer;
+      &.is-on {
+        color: var(--gold);
+      }
+      &:focus-within {
+        outline: 2px solid var(--blue);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+    }
+    input {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+  }
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+@media (max-width: 700px) {
+  .sf-reviews__body,
+  .sf-review-form__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Recently viewed (RecentlyViewed.tsx): a scrolling row of product cards
+.sf-recent .sf-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sf-pp__recent {
+  margin-top: 32px;
+}
+
+// The weekly pre-order email sign-up under the homepage's pre-orders row (PreorderDigestBox)
+.sf-digest {
+  max-width: 560px;
+}
+
+// "Order today, arrives around …" under the price (in-stock items)
+.sf-pp__arrival {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text2);
+  .sf-muted {
+    display: block;
+    font-size: 12px;
+  }
 }

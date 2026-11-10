@@ -138,6 +138,9 @@ export function useProducts(filters: Filters, wishlistIds: string[] | null) {
     items: Product[];
     total: number;
     cursor?: string;
+    didYouMean?: string;
+    closeMatches?: boolean;
+    understood?: string[];
     loading: boolean;
     loadingMore: boolean;
     error: string | null;
@@ -153,7 +156,17 @@ export function useProducts(filters: Filters, wishlistIds: string[] | null) {
       api<ProductPage>(`/products?${query}`)
         .then((page) => {
           if (latest.current === query)
-            setState({ items: page.items, total: page.total, cursor: page.cursor, loading: false, loadingMore: false, error: null });
+            setState({
+              items: page.items,
+              total: page.total,
+              cursor: page.cursor,
+              didYouMean: page.didYouMean,
+              closeMatches: page.closeMatches,
+              understood: page.understood,
+              loading: false,
+              loadingMore: false,
+              error: null,
+            });
         })
         .catch((e: Error) => {
           if (latest.current === query) setState((s) => ({ ...s, loading: false, error: e.message }));

@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Fragment, type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./storefront.scss";
@@ -12,6 +12,7 @@ import { ScrollRow } from "../../components/layout/ScrollRow";
 import { useDocumentHead } from "../seo";
 import type { Product } from "../types";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
+import { DEFAULT_LAYOUT, layoutAttrs, type LayoutSection, type ProductView, type StorefrontLayout } from "./layout";
 import {
   ALL,
   AVAIL,
@@ -39,6 +40,12 @@ import { ShopPlaylistNav } from "./ShopPlaylist";
 import { buildTree, indentLabel } from "../categoryTree";
 import { DISCORD_URL, EBAY_URL, INSTAGRAM_URL, SHOW_EBAY_STORE } from "../links";
 import { MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "./ProductViews";
+import { RecentlyViewed } from "./RecentlyViewed";
+import { SearchEmpty } from "./SearchEmpty";
+import { useHeaderTuck } from "./headerTuck";
+import { SearchField } from "./SearchField";
+import { rememberSearch } from "./searchSuggestData";
+import { PreorderDigestBox } from "./Suggestions";
 import { addedMessage, shippingGap } from "./nudges";
 import {
   SECTIONS,
@@ -55,8 +62,8 @@ import {
   titleFromSlug,
 } from "./landing";
 import { slugify } from "./data";
+import { ShopLogo } from "../ShopLogo";
 
-const LOGO = "/logo/logo%20cropped.png";
 const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
 const EVENT_COLORS = ["var(--red)", "var(--blue)", "var(--gold)", "var(--teal)"];
 
@@ -81,13 +88,23 @@ export default function Storefront() {
     series: null,
   });
   const [draftQuery, setDraftQuery] = useState("");
-  // How the shop lists products: cards, smaller cards (more per screen), or rows.
-  const [view, setView] = useLocalState<"grid" | "compact" | "list">("spinhobby-view", "grid");
+  // The owner's layout. The last one seen is kept on this device, so a return visit doesn't flash the default layout first.
+  const [seenLayout, setSeenLayout] = useLocalState<StorefrontLayout | null>("spinhobby-layout", null);
+  useEffect(() => {
+    if (config?.layout) setSeenLayout(config.layout);
+  }, [config?.layout, setSeenLayout]);
+  const layout = config?.layout ?? seenLayout ?? DEFAULT_LAYOUT;
+  // How the shop lists products: cards, smaller cards (more per screen), or rows. The shop's default until the shopper picks one.
+  const [pickedView, setView] = useLocalState<ProductView | null>("spinhobby-view-picked", null);
+  const view = pickedView ?? layout.productView;
   const [wishOnly, setWishOnly] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [notify, setNotify] = useState<Product | null>(null);
   const shopRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const searchRef = useRef<HTMLFormElement>(null);
+  const headerTuck = useHeaderTuck(headerRef, searchRef);
 
   // The cart button gives a little bounce whenever something is added, so the shopper sees where it went.
   const [bump, setBump] = useState(0);
@@ -148,7 +165,7 @@ export default function Storefront() {
   };
   /** Go to a shop address (a section, category or series page), remembering where we were for Back. */
   const go = (path: string) => {
-    if (location.pathname === path) {
+    if (location.pathname + location.search === path) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -163,8 +180,8 @@ export default function Storefront() {
   // The address decides which section, category or series the shop shows (each has its own page for search engines).
   const landing = useMemo(() => (productId ? null : landingFromPath(location.pathname)), [productId, location.pathname]);
   const landingCategory = landing?.kind === "category" ? categoryBySlug(tree, landing.slug) : null;
-  // a search typed on a landing page goes back to the main shop with it
-  const pendingQuery = useRef<string | null>(null);
+  // A search lives in the address (/?q=miku), so it can be shared, bookmarked and undone with Back.
+  const urlQuery = productId || landing ? "" : (new URLSearchParams(location.search).get("q") ?? "").trim().slice(0, 100);
   useEffect(() => {
     if (productId) return;
     setWishOnly(false);
@@ -176,12 +193,17 @@ export default function Storefront() {
       if (landingCategory)
         setFilters((f) => ({ ...f, nav: "Category", category: ALL, categoryId: landingCategory.id, query: "", series: null }));
     } else {
-      const q = pendingQuery.current ?? "";
-      pendingQuery.current = null;
-      setDraftQuery(q);
-      setFilters((f) => ({ ...f, nav: "Home", category: f.categoryId ? ALL : f.category, categoryId: null, query: q, series: null }));
+      setDraftQuery(urlQuery);
+      setFilters((f) => ({
+        ...f,
+        nav: "Home",
+        category: f.categoryId ? ALL : f.category,
+        categoryId: null,
+        query: urlQuery,
+        series: null,
+      }));
     }
-  }, [productId, landing, landingCategory]);
+  }, [productId, landing, landingCategory, urlQuery]);
 
   const facets = store.facets;
   const results = useProducts(filters, wishOnly ? wishlist.list : null);
@@ -209,11 +231,11 @@ export default function Storefront() {
     ((!landing && !["/", "/shop", "/index"].includes(bare)) || (landing?.kind === "category" && tree.flat.length > 0 && !landingCategory));
   useDocumentHead({
     enabled: !productId,
-    title: notFound ? "Page not found | Spin Hobby" : (page?.title ?? intro.title),
+    title: notFound ? "Page not found | Spin Hobby" : urlQuery ? `Search: ${urlQuery} | Spin Hobby` : (page?.title ?? intro.title),
     description: page?.description ?? intro.description,
     path: notFound ? bare : page ? (page.canonical ?? page.crumbs[page.crumbs.length - 1].path) : "/",
     jsonLd: page && !notFound ? breadcrumbJsonLd(page.crumbs) : null,
-    noindex: notFound,
+    noindex: notFound || !!urlQuery, // search results are for shoppers, not search engines
   });
 
   // Same split as the Events page. With nothing upcoming, show the latest events (newest first) so the strip isn't empty.
@@ -266,13 +288,20 @@ export default function Storefront() {
     setFilters((f) => ({ ...f, category: value, categoryId: null, nav: "Category" }));
     scrollShop();
   };
+  /** Show the results for a search (or the whole shop for an empty one). A new search is a new Back step; a retyped one isn't. */
+  const search = (text: string) => {
+    const q = text.trim().slice(0, 100);
+    rememberSearch(q);
+    const path = q ? `/?q=${encodeURIComponent(q)}` : "/";
+    if (path !== location.pathname + location.search) {
+      scrollMemory.set(location.key, window.scrollY);
+      navigate(path, { replace: !!urlQuery && !!q });
+    }
+    if (q) scrollShop();
+  };
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
-    if (productId || landing) {
-      pendingQuery.current = draftQuery;
-      go("/");
-    } else setFilters((f) => ({ ...f, query: draftQuery }));
-    if (draftQuery.trim()) scrollShop();
+    search(draftQuery);
   };
   const clearFilters = () => {
     setWishOnly(false);
@@ -287,7 +316,7 @@ export default function Storefront() {
       query: "",
       series: null,
     }));
-    if (location.pathname !== "/") go("/");
+    if (location.pathname !== "/" || location.search) go("/");
   };
 
   const hasTree = tree.flat.length > 0;
@@ -380,46 +409,341 @@ export default function Storefront() {
   // the sidebar scrolls without a bar; its edges fade while there is more
   const sidebarRef = useScrollFade<HTMLElement>();
 
+  // The homepage blocks, in the order and with the visibility the owner chose (Admin > Homepage > Page layout).
+  const homeReady = isHome && !!home;
+  const blocks: Record<LayoutSection, React.ReactNode> = {
+    hero: homeReady && home && (
+      <HeroRow
+        heading={intro.h1}
+        slides={home.slides}
+        closingSoon={closingSoon}
+        maxOff={maxOff}
+        onPreorders={() => setNav("Pre-Orders")}
+        onSale={() => setNav("Sale")}
+      />
+    ),
+    trust: homeReady && <TrustStrip />,
+    preorders: homeReady && preorders.length > 0 && (
+      <section aria-labelledby="pre-title">
+        <div className="sf-section-head">
+          <h2 id="pre-title" className="sh-display">
+            New pre-orders <span className="sf-jp">予約受付中</span>
+          </h2>
+          <button type="button" className="sf-link" onClick={() => setNav("Pre-Orders")}>
+            See all →
+          </button>
+        </div>
+        <ScrollRow className="sf-pre-row" label="New pre-orders">
+          {preorders.map((p) => (
+            <PreorderCard key={p.id} p={p} a={actions} />
+          ))}
+        </ScrollRow>
+        <PreorderDigestBox email={auth.email} />
+      </section>
+    ),
+    lists: homeReady && (ranking.length > 0 || arrived.length > 0) && (
+      <section className="sf-duo">
+        {ranking.length > 0 && (
+          <div className="sf-panel sf-list-card">
+            <div className="sf-list-card__head">
+              <h2 className="sh-display">Weekly ranking</h2>
+              <span className="sf-muted sf-small">Updated Mondays</span>
+            </div>
+            {ranking.map((p, i) => (
+              <MiniRow key={p.id} p={p} a={actions} rank={p.rank ?? i + 1} />
+            ))}
+          </div>
+        )}
+        {arrived.length > 0 && (
+          <div className="sf-panel sf-list-card">
+            <div className="sf-list-card__head">
+              <h2 className="sh-display">Just arrived</h2>
+              <span className="sf-muted sf-small">Ready to ship</span>
+            </div>
+            {arrived.map((p) => (
+              <MiniRow key={p.id} p={p} a={actions} quickAdd />
+            ))}
+          </div>
+        )}
+      </section>
+    ),
+    recent: homeReady && <RecentlyViewed a={actions} />,
+    shop: (
+      <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
+        <div className="sf-shop__head">
+          <h2 key={shopTitle} id="shop-title" className="sh-display ui-title-in">
+            <span className={page && !wishOnly && !filters.query ? "sh-visually-hidden" : ""}>
+              {page && !wishOnly ? `Shop ${page.h1.toLowerCase()}` : shopTitle}
+            </span>{" "}
+            <span key={results.loading ? "" : results.total} className="sf-count">
+              {results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}
+            </span>
+          </h2>
+          {!!filters.query.trim() && !!results.understood?.length && (
+            <p className="sf-understood">
+              Showing{" "}
+              {results.understood.map((u) => (
+                <span key={u} className="sf-understood__chip">
+                  {u}
+                </span>
+              ))}{" "}
+              from your search
+            </p>
+          )}
+          {!!filters.query.trim() && results.closeMatches && !results.loading && (
+            <p className="sf-understood">
+              Nothing matched exactly, so these are close spellings.
+              {results.didYouMean && (
+                <>
+                  {" "}
+                  Search for{" "}
+                  <button type="button" className="sf-understood__fix" onClick={() => search(results.didYouMean ?? "")}>
+                    {results.didYouMean}
+                  </button>
+                  ?
+                </>
+              )}
+            </p>
+          )}
+          <div className="sf-shop__tools">
+            <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>
+              Filters{hasFilters ? " •" : ""}
+            </button>
+            <label className="sf-muted sf-sort-label" htmlFor="sf-sort">
+              Sort
+            </label>
+            <select
+              id="sf-sort"
+              className="sf-select"
+              value={filters.sort}
+              onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ShopSort }))}
+            >
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <div className="sf-seg" role="group" aria-label="Layout">
+              <button
+                type="button"
+                className={view === "grid" ? "is-active" : ""}
+                aria-pressed={view === "grid"}
+                onClick={() => setView("grid")}
+              >
+                Grid
+              </button>
+              <button
+                type="button"
+                className={view === "compact" ? "is-active" : ""}
+                aria-pressed={view === "compact"}
+                onClick={() => setView("compact")}
+                title="Smaller cards, more products per screen"
+              >
+                Compact
+              </button>
+              <button
+                type="button"
+                className={view === "list" ? "is-active" : ""}
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                List
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {(results.loading && !results.items.length) || swap.phase === "slow" ? (
+          <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""}`} aria-busy="true" aria-label="Loading products">
+            {Array.from({ length: 10 }, (_, i) => (
+              <div key={i} className="sf-card sf-card--skeleton">
+                <div className="sh-skeleton" style={{ aspectRatio: "1" }} />
+                <div className="sh-skeleton" style={{ height: 14, margin: "12px 12px 6px" }} />
+                <div className="sh-skeleton" style={{ height: 14, width: "50%", margin: "0 12px 14px" }} />
+              </div>
+            ))}
+          </div>
+        ) : results.error ? (
+          <div className="sf-empty">
+            <strong>We couldn't load the shop right now</strong>
+            <span>{results.error}</span>
+            <button type="button" className="sh-btn" onClick={results.retry}>
+              Try again
+            </button>
+          </div>
+        ) : storeEmpty ? (
+          <div className="sf-empty">
+            <img src={MASCOT} alt="" className="sf-empty__mascot" />
+            <strong>New stock is on its way</strong>
+            <span>Our catalog is syncing from the shop. Come say hi in our Discord community while you wait.</span>
+            <a className="sh-btn sh-btn--gold" href={DISCORD_URL} target="_blank" rel="noreferrer">
+              Join the Discord
+            </a>
+          </div>
+        ) : results.items.length === 0 && filters.query.trim() && !wishOnly ? (
+          <SearchEmpty
+            query={filters.query.trim()}
+            didYouMean={results.didYouMean}
+            popular={home?.ranking ?? []}
+            a={actions}
+            onSearch={(text) => {
+              setDraftQuery(text);
+              search(text);
+            }}
+          />
+        ) : results.items.length === 0 ? (
+          <div className="sf-empty">
+            <strong>{wishOnly ? "Your wishlist is empty" : "Nothing matches these filters"}</strong>
+            <span>
+              {wishOnly ? "Tap ♡ on any product to save it here." : "Try another category or clear filters. New stock is added weekly."}
+            </span>
+            <button type="button" className="sh-btn sh-btn--ghost" onClick={clearFilters}>
+              Clear filters
+            </button>
+          </div>
+        ) : view !== "list" ? (
+          <div key={swap.round} className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""} ${listMotion}`}>
+            {results.items.map((p) => (
+              <ProductCard key={p.id} p={p} a={actions} />
+            ))}
+          </div>
+        ) : (
+          <div key={swap.round} className={`sf-panel sf-list ${listMotion}`}>
+            {results.items.map((p) => (
+              <ProductRow key={p.id} p={p} a={actions} />
+            ))}
+          </div>
+        )}
+        {!results.loading && results.cursor && (
+          <div className="sf-more">
+            <span className="sf-muted">
+              Showing {results.items.length} of {results.total}
+            </span>
+            <button type="button" className="sh-btn sh-btn--ghost" onClick={results.loadMore} disabled={results.loadingMore}>
+              {results.loadingMore ? "Loading…" : "Show more"}
+            </button>
+          </div>
+        )}
+      </section>
+    ),
+    about: isHome && (
+      <section className="sf-panel sf-about" aria-labelledby="about-shop-title">
+        <h2 id="about-shop-title" className="sh-display">
+          Your Canadian shop for authentic anime merch
+        </h2>
+        <p>{intro.intro}</p>
+        <div className="sf-about__links">
+          <span className="sh-eyebrow">Shop by type</span>
+          {SECTIONS.map((sct) => (
+            <a
+              key={sct.path}
+              href={sct.path}
+              onClick={(e) => {
+                e.preventDefault();
+                setNav(sct.nav);
+              }}
+            >
+              {sct.h1}
+            </a>
+          ))}
+        </div>
+        {popularSeries.length > 0 && (
+          <div className="sf-about__links">
+            <span className="sh-eyebrow">Popular series</span>
+            {popularSeries.map((name) => (
+              <a
+                key={name}
+                href={seriesPath(name)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  go(seriesPath(name));
+                }}
+              >
+                {name}
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+    ),
+    events: (
+      <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
+        <div className="sf-events__head">
+          <h2 id="events-title" className="sh-display">
+            Meet us at the con
+          </h2>
+          <Link to="/events" className="sf-events__all">
+            See all events →
+          </Link>
+        </div>
+        {stripIsPast && (
+          <p className="sf-events__note">No upcoming events right now. New dates are announced on Discord and Instagram. Recent events:</p>
+        )}
+        <div className="sf-events__list">
+          {stripEvents.map((e, i) => (
+            <span key={e.name + e.start} className={`sf-event ${stripIsPast ? "is-past" : ""}`}>
+              <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
+              {e.name}
+              <span className="sf-muted sf-event__date">
+                {eventDateShort(e.start, e.end)} · {e.city}
+              </span>
+            </span>
+          ))}
+        </div>
+      </section>
+    ),
+  };
+
   return (
-    <div className="sh sf" data-view={view}>
+    <div
+      className="sh sf"
+      data-view={view}
+      data-ready={config ? "" : undefined}
+      {...layoutAttrs(layout)}
+      // the homepage uses the whole width (categories are in the menu, and behind Filters by the grid); the owner's sidebar
+      // choice applies to category, series and search pages
+      data-sidebar={isHome ? "hidden" : layout.sidebar}
+    >
       <a className="sf-skip" href="#shop">
         Skip to products
       </a>
 
-      {/* Utility bar */}
-      <div className="sf-utility">
-        <div className="sf-wrap sf-utility__inner">
-          {/* once the cart has something, say how close it is to free shipping (a goal close at hand is motivating) */}
-          <span className="sf-utility__ship" key={cart.count ? (gap ? "gap" : "free") : "none"}>
-            {!cart.count ? (
-              <>
-                <span className="sf-gold">●</span> Free shipping on orders over {freeShippingLabel()} · Canada &amp; US
-              </>
-            ) : gap ? (
-              <>
-                <span className="sf-gold">●</span> You're <b>{price(gap, currency)}</b> away from free shipping
-              </>
-            ) : (
-              <>
-                <span className="sf-gold">✓</span> Your order ships free
-              </>
-            )}
-          </span>
-          {/* site links only: Discord and Instagram are the icons beside the search */}
-          <div className="sf-utility__links">
-            {SHOW_EBAY_STORE && (
-              <a href={EBAY_URL} target="_blank" rel="noreferrer">
-                eBay store ↗
-              </a>
-            )}
-            <Link to="/events">Events</Link>
-            <Link to="/support">Support</Link>
+      {/* Utility bar (the owner can switch it off in Page layout) */}
+      {layout.announcementBar && (
+        <div className="sf-utility">
+          <div className="sf-wrap sf-utility__inner">
+            {/* once the cart has something, say how close it is to free shipping (a goal close at hand is motivating) */}
+            <span className="sf-utility__ship" key={cart.count ? (gap ? "gap" : "free") : "none"}>
+              {!cart.count ? (
+                <>
+                  <span className="sf-gold">●</span> Free shipping on orders over {freeShippingLabel()} · Canada &amp; US
+                </>
+              ) : gap ? (
+                <>
+                  <span className="sf-gold">●</span> You're <b>{price(gap, currency)}</b> away from free shipping
+                </>
+              ) : (
+                <>
+                  <span className="sf-gold">✓</span> Your order ships free
+                </>
+              )}
+            </span>
+            {/* two site links; eBay, Discord and Instagram are in the footer, so the top of the page stays calm */}
+            <div className="sf-utility__links">
+              <Link to="/events">Events</Link>
+              <Link to="/support">Support</Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Header */}
-      <header className="sf-header">
+      <header
+        ref={headerRef}
+        className={`sf-header ${headerTuck.tucked ? "is-tucked" : ""}`}
+        style={{ "--tuck": `${headerTuck.tuck}px` } as CSSProperties}
+      >
         <div className="sf-wrap sf-header__row">
           <a
             href="/"
@@ -430,9 +754,9 @@ export default function Storefront() {
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
-            <img src={LOGO} alt="Spin Hobby" />
+            <ShopLogo />
           </a>
-          <form className="sf-search" role="search" onSubmit={submitSearch}>
+          <form ref={searchRef} className="sf-search" role="search" onSubmit={submitSearch}>
             <label className="sh-visually-hidden" htmlFor="sf-cat">
               Category
             </label>
@@ -459,48 +783,23 @@ export default function Storefront() {
             <label className="sh-visually-hidden" htmlFor="sf-q">
               Search
             </label>
-            <input
+            <SearchField
               id="sf-q"
-              type="search"
-              placeholder="Search by product, character, series or JAN code…"
               value={draftQuery}
-              onChange={(e) => {
-                setDraftQuery(e.target.value);
-                if (!e.target.value) setFilters((f) => ({ ...f, query: "" }));
+              placeholder="Search by product, character, series or JAN code…"
+              currency={currency}
+              onChange={(text) => {
+                setDraftQuery(text);
+                if (!text && urlQuery) navigate("/", { replace: true });
               }}
+              onSearch={search}
+              onProduct={openProduct}
+              onSeries={(name) => go(seriesPath(name))}
+              onCategory={(id) => go(categoryPath(tree, id))}
             />
             <button type="submit">Search</button>
           </form>
           <div className="sf-header__actions">
-            <a className="sh-icon-btn" href={DISCORD_URL} target="_blank" rel="noreferrer" title="Discord" aria-label="Join our Discord">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.076.076 0 0 0-.04.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.055c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.418 2.157-2.418 1.21 0 2.176 1.094 2.157 2.418 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.176 1.094 2.157 2.418 0 1.334-.946 2.419-2.157 2.419z" />
-              </svg>
-            </a>
-            <a
-              className="sh-icon-btn"
-              href={INSTAGRAM_URL}
-              target="_blank"
-              rel="noreferrer"
-              title="Instagram"
-              aria-label="Follow us on Instagram"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                <line x1="17.5" y1="6.5" x2="17.5" y2="6.5" />
-              </svg>
-            </a>
             <button type="button" className="sh-icon-btn" onClick={toggleTheme} title="Toggle theme" aria-label="Toggle dark mode">
               {theme === "dark" ? "☀" : "☾"}
             </button>
@@ -680,65 +979,6 @@ export default function Storefront() {
                 </div>
               )}
 
-              {isHome && home && (
-                <>
-                  <HeroRow
-                    heading={intro.h1}
-                    slides={home.slides}
-                    closingSoon={closingSoon}
-                    maxOff={maxOff}
-                    onPreorders={() => setNav("Pre-Orders")}
-                    onSale={() => setNav("Sale")}
-                  />
-                  <TrustStrip />
-
-                  {preorders.length > 0 && (
-                    <section aria-labelledby="pre-title">
-                      <div className="sf-section-head">
-                        <h2 id="pre-title" className="sh-display">
-                          New pre-orders <span className="sf-jp">予約受付中</span>
-                        </h2>
-                        <button type="button" className="sf-link" onClick={() => setNav("Pre-Orders")}>
-                          See all →
-                        </button>
-                      </div>
-                      <ScrollRow className="sf-pre-row" label="New pre-orders">
-                        {preorders.map((p) => (
-                          <PreorderCard key={p.id} p={p} a={actions} />
-                        ))}
-                      </ScrollRow>
-                    </section>
-                  )}
-
-                  {(ranking.length > 0 || arrived.length > 0) && (
-                    <section className="sf-duo">
-                      {ranking.length > 0 && (
-                        <div className="sf-panel sf-list-card">
-                          <div className="sf-list-card__head">
-                            <h2 className="sh-display">Weekly ranking</h2>
-                            <span className="sf-muted sf-small">Updated Mondays</span>
-                          </div>
-                          {ranking.map((p, i) => (
-                            <MiniRow key={p.id} p={p} a={actions} rank={p.rank ?? i + 1} />
-                          ))}
-                        </div>
-                      )}
-                      {arrived.length > 0 && (
-                        <div className="sf-panel sf-list-card">
-                          <div className="sf-list-card__head">
-                            <h2 className="sh-display">Just arrived</h2>
-                            <span className="sf-muted sf-small">Ready to ship</span>
-                          </div>
-                          {arrived.map((p) => (
-                            <MiniRow key={p.id} p={p} a={actions} quickAdd />
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  )}
-                </>
-              )}
-
               {notFound && (
                 <div className="sf-notfound" role="status">
                   <b>We couldn't find that page.</b> It may have moved, or the link has a typo. Here's the shop instead.
@@ -780,196 +1020,7 @@ export default function Storefront() {
                 </header>
               )}
 
-              <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
-                <div className="sf-shop__head">
-                  <h2 key={shopTitle} id="shop-title" className="sh-display ui-title-in">
-                    <span className={page && !wishOnly && !filters.query ? "sh-visually-hidden" : ""}>
-                      {page && !wishOnly ? `Shop ${page.h1.toLowerCase()}` : shopTitle}
-                    </span>{" "}
-                    <span key={results.loading ? "" : results.total} className="sf-count">
-                      {results.loading ? "" : `${results.total} item${results.total === 1 ? "" : "s"}`}
-                    </span>
-                  </h2>
-                  <div className="sf-shop__tools">
-                    <button type="button" className="sf-filter-btn" onClick={() => setFiltersOpen(true)}>
-                      Filters{hasFilters ? " •" : ""}
-                    </button>
-                    <label className="sf-muted sf-sort-label" htmlFor="sf-sort">
-                      Sort
-                    </label>
-                    <select
-                      id="sf-sort"
-                      className="sf-select"
-                      value={filters.sort}
-                      onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value as ShopSort }))}
-                    >
-                      {SORTS.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="sf-seg" role="group" aria-label="Layout">
-                      <button
-                        type="button"
-                        className={view === "grid" ? "is-active" : ""}
-                        aria-pressed={view === "grid"}
-                        onClick={() => setView("grid")}
-                      >
-                        Grid
-                      </button>
-                      <button
-                        type="button"
-                        className={view === "compact" ? "is-active" : ""}
-                        aria-pressed={view === "compact"}
-                        onClick={() => setView("compact")}
-                        title="Smaller cards, more products per screen"
-                      >
-                        Compact
-                      </button>
-                      <button
-                        type="button"
-                        className={view === "list" ? "is-active" : ""}
-                        aria-pressed={view === "list"}
-                        onClick={() => setView("list")}
-                      >
-                        List
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {(results.loading && !results.items.length) || swap.phase === "slow" ? (
-                  <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""}`} aria-busy="true" aria-label="Loading products">
-                    {Array.from({ length: 10 }, (_, i) => (
-                      <div key={i} className="sf-card sf-card--skeleton">
-                        <div className="sh-skeleton" style={{ aspectRatio: "1" }} />
-                        <div className="sh-skeleton" style={{ height: 14, margin: "12px 12px 6px" }} />
-                        <div className="sh-skeleton" style={{ height: 14, width: "50%", margin: "0 12px 14px" }} />
-                      </div>
-                    ))}
-                  </div>
-                ) : results.error ? (
-                  <div className="sf-empty">
-                    <strong>We couldn't load the shop right now</strong>
-                    <span>{results.error}</span>
-                    <button type="button" className="sh-btn" onClick={results.retry}>
-                      Try again
-                    </button>
-                  </div>
-                ) : storeEmpty ? (
-                  <div className="sf-empty">
-                    <img src={MASCOT} alt="" className="sf-empty__mascot" />
-                    <strong>New stock is on its way</strong>
-                    <span>Our catalog is syncing from the shop. Come say hi in our Discord community while you wait.</span>
-                    <a className="sh-btn sh-btn--gold" href={DISCORD_URL} target="_blank" rel="noreferrer">
-                      Join the Discord
-                    </a>
-                  </div>
-                ) : results.items.length === 0 ? (
-                  <div className="sf-empty">
-                    <strong>{wishOnly ? "Your wishlist is empty" : "Nothing matches these filters"}</strong>
-                    <span>
-                      {wishOnly
-                        ? "Tap ♡ on any product to save it here."
-                        : "Try another category or clear filters. New stock is added weekly."}
-                    </span>
-                    <button type="button" className="sh-btn sh-btn--ghost" onClick={clearFilters}>
-                      Clear filters
-                    </button>
-                  </div>
-                ) : view !== "list" ? (
-                  <div key={swap.round} className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""} ${listMotion}`}>
-                    {results.items.map((p) => (
-                      <ProductCard key={p.id} p={p} a={actions} />
-                    ))}
-                  </div>
-                ) : (
-                  <div key={swap.round} className={`sf-panel sf-list ${listMotion}`}>
-                    {results.items.map((p) => (
-                      <ProductRow key={p.id} p={p} a={actions} />
-                    ))}
-                  </div>
-                )}
-                {!results.loading && results.cursor && (
-                  <div className="sf-more">
-                    <span className="sf-muted">
-                      Showing {results.items.length} of {results.total}
-                    </span>
-                    <button type="button" className="sh-btn sh-btn--ghost" onClick={results.loadMore} disabled={results.loadingMore}>
-                      {results.loadingMore ? "Loading…" : "Show more"}
-                    </button>
-                  </div>
-                )}
-              </section>
-
-              {isHome && (
-                <section className="sf-panel sf-about" aria-labelledby="about-shop-title">
-                  <h2 id="about-shop-title" className="sh-display">
-                    Your Canadian shop for authentic anime merch
-                  </h2>
-                  <p>{intro.intro}</p>
-                  <div className="sf-about__links">
-                    <span className="sh-eyebrow">Shop by type</span>
-                    {SECTIONS.map((sct) => (
-                      <a
-                        key={sct.path}
-                        href={sct.path}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setNav(sct.nav);
-                        }}
-                      >
-                        {sct.h1}
-                      </a>
-                    ))}
-                  </div>
-                  {popularSeries.length > 0 && (
-                    <div className="sf-about__links">
-                      <span className="sh-eyebrow">Popular series</span>
-                      {popularSeries.map((name) => (
-                        <a
-                          key={name}
-                          href={seriesPath(name)}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            go(seriesPath(name));
-                          }}
-                        >
-                          {name}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              )}
-
-              <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
-                <div className="sf-events__head">
-                  <h2 id="events-title" className="sh-display">
-                    Meet us at the con
-                  </h2>
-                  <Link to="/events" className="sf-events__all">
-                    See all events →
-                  </Link>
-                </div>
-                {stripIsPast && (
-                  <p className="sf-events__note">
-                    No upcoming events right now. New dates are announced on Discord and Instagram. Recent events:
-                  </p>
-                )}
-                <div className="sf-events__list">
-                  {stripEvents.map((e, i) => (
-                    <span key={e.name + e.start} className={`sf-event ${stripIsPast ? "is-past" : ""}`}>
-                      <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
-                      {e.name}
-                      <span className="sf-muted sf-event__date">
-                        {eventDateShort(e.start, e.end)} · {e.city}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </section>
+              {layout.sections.map((s) => s.visible && <Fragment key={s.id}>{blocks[s.id]}</Fragment>)}
             </main>
           </div>
         )}
@@ -1146,7 +1197,7 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
     <footer className="sf-footer">
       <div className="sf-wrap sf-footer__grid">
         <div className="sf-footer__brand">
-          <img src={LOGO} alt="Spin Hobby" />
+          <ShopLogo />
           <p>Official anime figures, plushies &amp; more. We bring the fun to everyone — since 2022.</p>
         </div>
         <div className="sf-footer__col">
@@ -1165,8 +1216,10 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Help</span>
+          <Link to="/about">About us</Link>
           <Link to="/support#preorders">Pre-order policy</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
+          <Link to="/support#returns">Returns &amp; damaged items</Link>
           <Link to="/order-status">Order status</Link>
           <Link to="/support#contact">Contact</Link>
           <a href="/legal/terms">Terms of Service</a>

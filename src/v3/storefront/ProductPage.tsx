@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import type { CategoryTree } from "../categoryTree";
 import {
+  arrivalLabel,
   dayLabel,
   discountPct,
   handlingLabel,
@@ -12,10 +13,10 @@ import {
   normalizeStatus,
   STATUS_META,
   statusLabel,
+  storeFormat,
   type Currency,
 } from "../format";
 import { useAuth, useEscape } from "../hooks";
-import { SUPPORT_EMAIL } from "../links";
 import { SITE_URL, useDocumentHead } from "../seo";
 import { freeShippingLabel } from "../storeConfig";
 import type { Product, ProductPage as ProductList } from "../types";
@@ -25,10 +26,14 @@ import { askHref, noPrice } from "../../components/shop/priceOnRequest";
 import { isCutout, photo } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
+import { RecentlyViewed } from "./RecentlyViewed";
+import { rememberViewed } from "./recentData";
+import { RatingLine, Reviews } from "./Reviews";
+import { useReviews, type ReviewSummary } from "./reviewData";
 import { BoughtTogether, FollowBox } from "./Suggestions";
 
 // Keep in sync with productJsonLd() in scripts/generate-seo.mjs.
-function productJsonLd(p: Product) {
+function productJsonLd(p: Product, reviews?: ReviewSummary) {
   const availability =
     normalizeStatus(p.status) === "out"
       ? "https://schema.org/OutOfStock"
@@ -47,6 +52,10 @@ function productJsonLd(p: Product) {
     ...(gtin ? { gtin13: gtin } : {}),
     ...(p.manufacturer ? { brand: { "@type": "Brand", name: p.manufacturer } } : {}),
     ...(p.category ? { category: p.category } : {}),
+    // star ratings in search results (approved reviews from verified buyers; the static SEO pages leave this out)
+    ...(reviews?.count && reviews.average != null
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.average, reviewCount: reviews.count } }
+      : {}),
     offers: {
       "@type": "Offer",
       priceCurrency: p.currency,
@@ -55,9 +64,49 @@ function productJsonLd(p: Product) {
       itemCondition: "https://schema.org/NewCondition",
       url: `${SITE_URL}${productPath(p)}`,
       seller: { "@type": "Organization", name: "Spin Hobby" },
+      shippingDetails: shippingJsonLd(p),
+      hasMerchantReturnPolicy: RETURN_POLICY,
     },
   };
 }
+
+/** Standard shipping to Canada and the US, as Google Shopping asks for it: free over the threshold, the shop's rate below. */
+function shippingJsonLd(p: Product) {
+  const free = p.priceCents >= storeFormat.freeShippingThresholdCents;
+  const days = (min: number, max: number) => ({ "@type": "QuantitativeValue", minValue: min, maxValue: max, unitCode: "DAY" });
+  return {
+    "@type": "OfferShippingDetails",
+    shippingRate: {
+      "@type": "MonetaryAmount",
+      value: free ? "0.00" : (storeFormat.shippingStandardCents / 100).toFixed(2),
+      currency: "CAD",
+    },
+    shippingDestination: [
+      { "@type": "DefinedRegion", addressCountry: "CA" },
+      { "@type": "DefinedRegion", addressCountry: "US" },
+    ],
+    deliveryTime: {
+      "@type": "ShippingDeliveryTime",
+      handlingTime: days(storeFormat.handlingDaysMin, storeFormat.handlingDaysMax),
+      transitTime: days(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max),
+    },
+  };
+}
+
+/** Business days in the post with standard shipping (the "arrives around" line uses the same numbers). */
+const STANDARD_TRANSIT = { min: 5, max: 7 };
+const EXPRESS_TRANSIT = { min: 2, max: 3 };
+
+/**
+ * Section 6 of the Terms: no change-of-mind returns; a defective or damaged item is replaced or refunded when reported within
+ * 14 days. Google's word for that is "returns not permitted" (defects are a warranty matter, not a return).
+ */
+const RETURN_POLICY = {
+  "@type": "MerchantReturnPolicy",
+  applicableCountry: ["CA", "US"],
+  returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+  merchantReturnLink: `${SITE_URL}/support#returns`,
+};
 
 /** "Buy Rem 1/7 Scale Figure (Re:Zero) at Spin Hobby…": the description Google shows when the product has none of its own. */
 function productDescription(p: Product) {
@@ -120,8 +169,11 @@ export function ProductPage({
 
   // one anonymous "product viewed" per product opened (src/lib/analytics.ts)
   const viewedId = p?.id;
+  const reviews = useReviews(p?.id);
   useEffect(() => {
-    if (viewedId) track("product_view", viewedId);
+    if (!viewedId) return;
+    track("product_view", viewedId);
+    rememberViewed(viewedId); // "Recently viewed", kept in this browser only
   }, [viewedId]);
 
   // Related: same category, then same series, then featured. Uses the normal product search.
@@ -178,7 +230,7 @@ export function ProductPage({
     description: p ? productDescription(p) : "Authentic anime figures, plushies and goods, shipped across Canada and the US.",
     path: p ? productPath(p) : location.pathname,
     image: p?.images[0] ?? null,
-    jsonLd: p ? [productJsonLd(p), breadcrumbJsonLd([...crumbTrail, { name: p.name, path: productPath(p) }])] : null,
+    jsonLd: p ? [productJsonLd(p, reviews?.summary), breadcrumbJsonLd([...crumbTrail, { name: p.name, path: productPath(p) }])] : null,
     // a product that isn't there (removed, or a wrong link) is this site's 404: kept out of search results
     noindex: missing && !p,
   });
@@ -237,6 +289,7 @@ export function ProductPage({
           onViewCart={onViewCart}
           onToast={onToast}
           onCategory={p.categoryId && tree.byId.has(p.categoryId) ? () => onCategory(p.categoryId!) : undefined}
+          reviews={reviews?.summary}
         />
       </div>
 
@@ -250,6 +303,11 @@ export function ProductPage({
       />
 
       <Details p={p} currency={a.currency} />
+
+      {/* pre-order news for this series or maker: below the details, so the buy box stays about buying */}
+      <FollowSection p={p} />
+
+      <Reviews itemId={p.id} list={reviews} />
 
       <section className="sf-pp__related" aria-labelledby="related-title">
         <div className="sf-section-head">
@@ -284,6 +342,8 @@ export function ProductPage({
           </p>
         )}
       </section>
+
+      <RecentlyViewed a={a} exclude={p.id} className="sf-pp__recent" />
     </div>
   );
 }
@@ -497,6 +557,7 @@ function BuyBox({
   onViewCart,
   onToast,
   onCategory,
+  reviews,
 }: {
   p: Product;
   a: CardActions;
@@ -507,12 +568,10 @@ function BuyBox({
   onViewCart: () => void;
   onToast: (message: string) => void;
   onCategory?: () => void;
+  reviews?: ReviewSummary;
 }) {
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
-  // the follow box's email: the account's, else the one typed at checkout before
-  const auth = useAuth();
-  const followEmail = auth.email ?? savedCheckoutEmail();
   const [buyVisible, setBuyVisible] = useState(true);
   const buyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -578,6 +637,7 @@ function BuyBox({
           ))}
       </div>
       <h1 className="sh-display sf-pp__name">{p.name}</h1>
+      <RatingLine summary={reviews} />
       {p.janCode && <div className="sf-pp__sku">JAN {p.janCode}</div>}
 
       <div className="sf-pp__pricebox">
@@ -596,6 +656,14 @@ function BuyBox({
         </div>
       </div>
 
+      {(s === "in" || s === "low") && !noPrice(p) && (
+        // the same transit days checkout shows for the shop's Standard (5–7) and Express (2–3) shipping, plus handling
+        <p className="sf-pp__arrival">
+          Order today, arrives around <b>{arrivalLabel(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max)}</b> in Canada (express:{" "}
+          <b>{arrivalLabel(EXPRESS_TRANSIT.min, EXPRESS_TRANSIT.max)}</b>).
+        </p>
+      )}
+
       {s === "pre" && (
         <div className="sf-pp__notice sf-pp__notice--pre">
           <div className="sf-pp__pre-dates">
@@ -613,10 +681,7 @@ function BuyBox({
             )}
           </div>
           {closing && <div className="sf-pp__closing">⏳ {closing}. Pre-orders close on the order-by date and may not reopen.</div>}
-          <p>
-            Pre-orders are charged now and ship as soon as they arrive. We'll email you when it's on its way. Release dates are set by the
-            maker and can move.
-          </p>
+          <p>Charged now, shipped the day it arrives. The maker sets the release date and it can move.</p>
         </div>
       )}
 
@@ -700,7 +765,10 @@ function BuyBox({
             {gapWith === 0 ? (
               <>
                 <b>{justAdded || room === 0 ? "Your order ships free" : "This order ships free"}</b>
-                <span>Your cart is over {freeShippingLabel()}: tracked, across Canada & the US</span>
+                <span>
+                  {justAdded || room === 0 ? "Your cart is" : "With this item, your cart is"} over {freeShippingLabel()}: tracked, across
+                  Canada & the US
+                </span>
               </>
             ) : (
               <>
@@ -721,25 +789,7 @@ function BuyBox({
             <span>Carefully packed for collectors</span>
           </div>
         </li>
-        <li>
-          <span aria-hidden>🔒</span>
-          <div>
-            <b>Secure checkout</b>
-            <span>Pay by card, charged in CAD</span>
-          </div>
-        </li>
-        <li>
-          <span aria-hidden>💬</span>
-          <div>
-            <b>Questions?</b>
-            <span>
-              <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(p.name)}`}>{SUPPORT_EMAIL}</a>
-            </span>
-          </div>
-        </li>
       </ul>
-
-      <FollowBox p={p} email={followEmail} />
 
       {!buyVisible && s !== "out" && room > 0 && !noPrice(p) && (
         <div className="sf-pp__sticky" aria-hidden={buyVisible}>
@@ -754,6 +804,12 @@ function BuyBox({
       )}
     </div>
   );
+}
+
+/** The follow box's email: the account's, else the one typed at checkout before. */
+function FollowSection({ p }: { p: Product }) {
+  const auth = useAuth();
+  return <FollowBox p={p} email={auth.email ?? savedCheckoutEmail()} />;
 }
 
 /** The email this browser last typed at checkout (Checkout.tsx keeps it), or null. */
