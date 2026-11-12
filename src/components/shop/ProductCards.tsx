@@ -28,7 +28,7 @@ import {
 import type { MouseEvent, ReactNode } from "react";
 import type { Product } from "../../v3/types";
 import { productPath } from "../../v3/storefront/data";
-import { isCutout, photo } from "../../v3/photo";
+import { productPhoto } from "../../v3/photo";
 import { closingLabel } from "../../v3/storefront/nudges";
 import { askHref, noPrice } from "./priceOnRequest";
 import "../../v3/storefront/storefront.scss";
@@ -89,7 +89,7 @@ export function ProductImage({
   return (
     <div className={`sf-img ${src ? "" : "sh-ph"} ${alt ? "has-alt" : ""} ${className}`}>
       {src ? (
-        <img {...photo(src, 480, isCutout(p, src))} alt={p.name} loading="lazy" />
+        <img {...productPhoto(p, src, 480)} alt={p.name} loading="lazy" />
       ) : (
         label && (
           <span className="sf-img__ph" aria-hidden>
@@ -97,7 +97,7 @@ export function ProductImage({
           </span>
         )
       )}
-      {alt && <img className="sf-img__alt" {...photo(alt, 480, isCutout(p, alt))} alt="" loading="lazy" aria-hidden />}
+      {alt && <img className="sf-img__alt" {...productPhoto(p, alt, 480)} alt="" loading="lazy" aria-hidden />}
     </div>
   );
 }
@@ -115,7 +115,7 @@ function Thumb({ p, size }: { p: Product; size: number }) {
   const src = p.images[0];
   return (
     <div className={`sh-thumb ${src ? "" : "sh-ph sh-ph--sm"}`} style={{ width: size, height: size }}>
-      {src && <img {...photo(src, size * 2, isCutout(p, src))} alt="" loading="lazy" />}
+      {src && <img {...productPhoto(p, src, size * 2)} alt="" loading="lazy" />}
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { loadStoreConfig } from "../storeConfig";
 import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, WalletCancelled, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
-import { photo } from "../photo";
+import { framedPhoto } from "../photo";
 import { CheckoutAddOns } from "../storefront/Suggestions";
 import type { Product } from "../types";
 import { ShopLogo } from "../ShopLogo";
@@ -721,7 +721,7 @@ export default function Checkout() {
                   return (
                     <div key={l.variationId} className="co-line">
                       <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 68, height: 68 }}>
-                        {l.imageUrl && <img {...photo(l.imageUrl, 136)} alt="" />}
+                        {l.imageUrl && <img {...framedPhoto(l.imageUrl, 136, !!l.imageCutout, l.imageFrame)} alt="" />}
                       </div>
                       <div className="co-line__main">
                         <span className="co-line__name">{l.name}</span>

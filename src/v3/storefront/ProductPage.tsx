@@ -23,7 +23,7 @@ import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions, PriceTag } from "./ProductViews";
 import { askHref, noPrice } from "../../components/shop/priceOnRequest";
-import { isCutout, photo } from "../photo";
+import { photo, isCutout, productPhoto } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
 import { RecentlyViewed } from "./RecentlyViewed";
@@ -408,7 +408,7 @@ function Gallery({ p }: { p: Product }) {
               onClick={() => jump(n)}
               aria-label={`Photo ${n + 1}`}
             >
-              <img {...photo(src, 160, isCutout(p, src))} alt="" loading="lazy" />
+              <img {...productPhoto(p, src, 160)} alt="" loading="lazy" />
             </button>
           ))}
         </div>
@@ -427,7 +427,7 @@ function Gallery({ p }: { p: Product }) {
               aria-label={`Enlarge photo ${n + 1}`}
             >
               <img
-                {...photo(src, 1000, isCutout(p, src))}
+                {...productPhoto(p, src, 1000)}
                 alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`}
                 loading={n === 0 ? "eager" : "lazy"}
               />

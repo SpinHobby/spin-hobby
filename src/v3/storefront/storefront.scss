@@ -1331,6 +1331,10 @@ h1.sf-hero__eyebrow {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    // the admin's frame for this photo (photo.ts frameStyle): the point kept in view and the zoom
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
     display: block;
   }
   &__ph {
@@ -2220,6 +2224,10 @@ h1.sf-hero__eyebrow {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    // the admin's frame for this photo (photo.ts frameStyle): the point kept in view and the zoom
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
     display: block;
   }
 }
@@ -2252,6 +2260,10 @@ h1.sf-hero__eyebrow {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    // the admin's frame for this photo (photo.ts frameStyle): the point kept in view and the zoom
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
     display: block;
   }
 }
@@ -2947,7 +2959,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .sf-card:hover .sf-img img,
   .sf-pre:hover .sf-img img {
-    transform: scale(1.04);
+    transform: scale(calc(var(--fz, 1) * 1.04));
   }
   .sf-img.has-alt:hover .sf-img__alt,
   .sf-card:hover .sf-img.has-alt .sf-img__alt,

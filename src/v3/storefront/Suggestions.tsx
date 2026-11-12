@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { normalizeStatus, price, type Currency } from "../format";
-import { isCutout, photo } from "../photo";
+import { productPhoto } from "../photo";
 import type { Product } from "../types";
 import { productPath } from "./data";
 import { useAddOns, useBoughtTogether } from "./suggestionData";
@@ -43,7 +43,7 @@ export function BoughtTogether({ p, currency, onAddAll }: { p: Product; currency
               </span>
             )}
             <Link to={productPath(x)} className={`sh-thumb ${x.images[0] ? "" : "sh-ph sh-ph--sm"}`} aria-label={x.name}>
-              {x.images[0] && <img {...photo(x.images[0], 160, isCutout(x, x.images[0]))} alt="" />}
+              {x.images[0] && <img {...productPhoto(x, x.images[0], 160)} alt="" />}
             </Link>
           </div>
         ))}
@@ -82,7 +82,7 @@ export function CheckoutAddOns({ itemIds, currency, onAdd }: { itemIds: string[]
         <div key={p.id} className="sf-pick">
           <span className="sf-pick__open">
             <span className={`sh-thumb ${p.images[0] ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 40, height: 40 }}>
-              {p.images[0] && <img {...photo(p.images[0], 80, isCutout(p, p.images[0]))} alt="" />}
+              {p.images[0] && <img {...productPhoto(p, p.images[0], 80)} alt="" />}
             </span>
             <span className="sf-pick__name">{p.name}</span>
           </span>

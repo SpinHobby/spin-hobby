@@ -1,4 +1,5 @@
 import type { StorefrontLayout } from "./storefront/layout";
+import type { PhotoFrame } from "./photo";
 // Mirrors design_handoff_spinhobby_storefront/shared/api-types.ts and the
 // Supabase `store-api` edge function responses.
 
@@ -17,6 +18,8 @@ export interface Product {
   images: string[];
   /** Which of `images` are transparent cut-outs: shown on the shop background. */
   cutouts?: string[];
+  /** Photos an admin moved or zoomed inside their square, by address (the rest sit in the middle). */
+  frames?: Record<string, PhotoFrame>;
   priceCents: number;
   compareAtCents: number | null;
   currency: "CAD";

@@ -5,7 +5,7 @@ import { greetingName, paymentLabel, price, normalizeStatus, storeFormat, type C
 import { useEscape } from "../hooks";
 import type { AppUser, Product } from "../types";
 import type { CartLine } from "./data";
-import { isCutout, photo } from "../photo";
+import { productPhoto, framedPhoto } from "../photo";
 import type { ProductPage as ProductList } from "../types";
 import { PriceTag } from "./ProductViews";
 import { useAddOns } from "./suggestionData";
@@ -105,7 +105,7 @@ export function CartDrawer({
               {lines.map((l) => (
                 <div className="sf-cart-line" key={l.variationId}>
                   <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 56, height: 56 }}>
-                    {l.imageUrl && <img {...photo(l.imageUrl, 112, !!l.imageCutout)} alt="" />}
+                    {l.imageUrl && <img {...framedPhoto(l.imageUrl, 112, !!l.imageCutout, l.imageFrame)} alt="" />}
                   </div>
                   <div className="sf-cart-line__main">
                     <div className="sf-cart-line__name">{l.name}</div>
@@ -141,7 +141,7 @@ export function CartDrawer({
                     <div key={p.id} className="sf-pick">
                       <button type="button" className="sf-pick__open" onClick={() => onOpen(p)} aria-label={`View ${p.name}`}>
                         <span className={`sh-thumb ${p.images[0] ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 44, height: 44 }}>
-                          {p.images[0] && <img {...photo(p.images[0], 88, isCutout(p, p.images[0]))} alt="" />}
+                          {p.images[0] && <img {...productPhoto(p, p.images[0], 88)} alt="" />}
                         </span>
                         <span className="sf-pick__name">{p.name}</span>
                       </button>

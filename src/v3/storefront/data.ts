@@ -2,6 +2,7 @@ import { track } from "../../lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { normalizeStatus } from "../format";
+import { frameOf, type PhotoFrame } from "../photo";
 import { useLocalState } from "../hooks";
 import type { Homepage, Product, ProductPage, ProductStatus, ShopCategory, SortKey } from "../types";
 
@@ -200,6 +201,8 @@ export interface CartLine {
   imageUrl: string | null;
   /** The photo is a transparent cut-out (shown on the shop background). */
   imageCutout?: boolean;
+  /** Where the photo sits in its square, if an admin moved or zoomed it. */
+  imageFrame?: PhotoFrame;
   unitPriceCents: number;
   quantity: number;
   isPreorder: boolean;
@@ -243,6 +246,7 @@ function cartLine(p: Product, qty: number): CartLine {
     name: p.name,
     imageUrl: p.images[0] ?? null,
     imageCutout: !!p.images[0] && !!p.cutouts?.includes(p.images[0]),
+    imageFrame: frameOf(p, p.images[0]),
     unitPriceCents: p.priceCents,
     quantity: Math.min(qty, purchaseCap(p)),
     isPreorder: p.status === "pre",

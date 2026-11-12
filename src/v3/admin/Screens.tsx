@@ -1134,7 +1134,11 @@ function ProductDrawer({
                 </span>
                 <span className="ad-tag-manual">Added manually</span>
               </div>
-              <PhotoUploader urls={catalog.photos} onChange={(photos) => setCatalog((c) => ({ ...c, photos }))} />
+              <PhotoUploader
+                urls={catalog.photos}
+                onChange={(photos) => setCatalog((c) => ({ ...c, photos }))}
+                framing={{ productId: p.id, saved: p.images }}
+              />
               <label className="ad-field">
                 Name
                 <input
