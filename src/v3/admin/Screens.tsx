@@ -9,6 +9,7 @@ import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merc
 import { ProductFilters } from "./ProductFilters";
 import { ShopperFunnel } from "./ShopperFunnel";
 import { SearchMisses } from "./SearchMisses";
+import { GleamshelfStats } from "./GleamshelfStats";
 import {
   activeFilterCount,
   DEFAULT_SORT,
@@ -236,6 +237,7 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
       <ShopperFunnel />
+      <GleamshelfStats />
       <SearchMisses flash={ctx.flash} />
     </>
   );
