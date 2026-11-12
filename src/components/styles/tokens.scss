@@ -451,6 +451,22 @@ body {
     font-size: 13px;
     font-weight: 600;
   }
+  &__legal {
+    margin: 2px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+    text-align: center;
+    a {
+      color: inherit;
+      white-space: nowrap;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      &:hover {
+        color: var(--text);
+      }
+    }
+  }
   &__switch {
     font-size: 13px;
     color: var(--muted);

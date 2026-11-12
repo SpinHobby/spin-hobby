@@ -207,6 +207,21 @@ export function SignInPanel({
           )}
         </>
       )}
+      {/* Where accounts can be made (Google and Discord make one on first use too), the terms are named at that moment: the
+          Terms say creating an account means agreeing, and a footer link alone counts for little. A line, not a box to tick. */}
+      {allowSignup && (oauthOn.length > 0 || canSignup) && (
+        <p className="sh-signin__legal">
+          By continuing, you agree to our{" "}
+          <a href="/legal/terms" target="_blank" rel="noopener">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="/legal/privacy" target="_blank" rel="noopener">
+            Privacy Policy
+          </a>
+          .
+        </p>
+      )}
       {!providers.password && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
       {providers.dev && (
         <div className="sh-signin__sent">
