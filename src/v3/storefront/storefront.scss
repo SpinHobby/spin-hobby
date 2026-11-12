@@ -335,6 +335,22 @@
 .sf-account {
   position: relative;
 }
+// the signed-in customer's rewards points (rewards/PointsChip.tsx): short, beside the account button
+.sf-points {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  > span:first-child {
+    color: var(--gold);
+  }
+}
+.sf-points__unit {
+  color: var(--muted);
+  font-weight: 500;
+}
 .sf-account__btn {
   padding: 5px 12px 5px 5px;
   border: 1px solid var(--border);
@@ -445,6 +461,12 @@
 @media (max-width: 640px) {
   .sf-account__btn {
     padding: 3px;
+  }
+  .sf-points {
+    padding: 5px 8px;
+  }
+  .sf-points__unit {
+    display: none;
   }
   .sf-account__hi {
     display: none;

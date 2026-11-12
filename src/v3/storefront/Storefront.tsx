@@ -1,4 +1,6 @@
 import { FormEvent, Fragment, type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isOn } from "../../features";
+import { PointsChip } from "../rewards/PointsChip";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./storefront.scss";
@@ -803,6 +805,7 @@ export default function Storefront() {
             <button type="button" className="sh-icon-btn" onClick={toggleTheme} title="Toggle theme" aria-label="Toggle dark mode">
               {theme === "dark" ? "☀" : "☾"}
             </button>
+            {isOn("rewards") && <PointsChip email={auth.email} />}
             <AccountMenu email={auth.email} user={auth.user} onSignOut={auth.signOut} />
             <button
               type="button"
