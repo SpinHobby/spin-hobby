@@ -11,9 +11,21 @@ import { SignInPanel } from "../SignIn";
 export interface RewardsSummary {
   enabled: boolean;
   balance: number;
+  /** Points from orders that haven't shipped, or are still inside their return window. */
+  pending: number;
   worthCents: number;
-  rates: { pointsPerDollar: number; centsPer100Points: number; minRedeemPoints: number };
-  entries: { id: string; app: string; appName: string; points: number; reason: string; createdAt: string }[];
+  rates: { pointsPerDollar: number; centsPer100Points: number; minRedeemPoints: number; returnWindowDays: number };
+  entries: {
+    id: string;
+    app: string;
+    appName: string;
+    points: number;
+    reason: string;
+    createdAt: string;
+    /** On the way: not usable yet; `availableAt` is null until the order ships. */
+    pending: boolean;
+    availableAt: string | null;
+  }[];
   links: { app: string; name: string; linkedAt: string }[];
   codes: { code: string; valueCents: number; points: number; endsAt: string | null }[];
 }
@@ -84,7 +96,8 @@ function Signed({ data, reload }: { data: RewardsSummary; reload: () => void }) 
         {data.enabled ? (
           <>
             You get {pts(rates.pointsPerDollar)} point{rates.pointsPerDollar === 1 ? "" : "s"} for every dollar you spend on goods, and
-            points from Spin Hobby apps you link. {pts(100)} points are worth {money(rates.centsPer100Points)} off.
+            points from Spin Hobby apps you link. {pts(100)} points are worth {money(rates.centsPer100Points)} off. Points from an order can
+            be used {rates.returnWindowDays ? `${rates.returnWindowDays} days after it ships` : "once it ships"}.
           </>
         ) : (
           <>Rewards are paused right now. Your points are safe and you can use them when rewards are back.</>
@@ -97,6 +110,9 @@ function Signed({ data, reload }: { data: RewardsSummary; reload: () => void }) 
           <span className="rw-balance__label">points</span>
         </div>
         <span className="rw-balance__worth">worth {money(data.worthCents)}</span>
+        {data.pending > 0 && (
+          <span className="rw-balance__pending">+ {pts(data.pending)} on the way, from orders not yet shipped or still returnable</span>
+        )}
       </section>
 
       {data.enabled && <Redeem data={data} onDone={reload} />}
@@ -130,6 +146,12 @@ function Signed({ data, reload }: { data: RewardsSummary; reload: () => void }) 
                 <b>{e.reason}</b>
                 <span className="rw-muted">
                   {e.appName} · {dateLabel(e.createdAt)}
+                  {e.pending && (
+                    <span className="rw-pending">
+                      {" "}
+                      · On the way, {e.availableAt ? `usable from ${dateLabel(e.availableAt)}` : "usable after it ships"}
+                    </span>
+                  )}
                 </span>
               </span>
               <b className={e.points < 0 ? "rw-minus" : "rw-plus"}>{e.points > 0 ? `+${pts(e.points)}` : pts(e.points)}</b>

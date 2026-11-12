@@ -9,6 +9,16 @@ interface Settings {
   pointsPerDollar: number;
   centsPer100Points: number;
   minRedeemPoints: number;
+  returnWindowDays: number;
+}
+interface ProductRuleRow {
+  productId: string;
+  name: string | null;
+  multiplier: number;
+  endsAt: string | null;
+  note: string | null;
+  minEarnedPoints: number | null;
+  minOtherCents: number | null;
 }
 interface RewardApp {
   slug: string;
@@ -30,8 +40,16 @@ interface Entry {
 interface Overview {
   settings: Settings;
   apps: RewardApp[];
-  totals: { outstandingPoints: number; outstandingCents: number; members: number; earned30: number; spent30: number };
+  totals: {
+    outstandingPoints: number;
+    outstandingCents: number;
+    pendingPoints: number;
+    members: number;
+    earned30: number;
+    spent30: number;
+  };
   recent: Entry[];
+  products: ProductRuleRow[];
 }
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
@@ -71,6 +89,7 @@ export function RewardsScreen({ ctx }: { ctx: Ctx }) {
         <Stats
           items={[
             { label: "Points not yet used", value: pts(t.outstandingPoints), note: `worth ${money(t.outstandingCents)}` },
+            { label: "On the way", value: pts(t.pendingPoints), note: "orders not shipped or still returnable" },
             { label: "Customers with points", value: pts(t.members) },
             { label: "Given, last 30 days", value: pts(t.earned30) },
             { label: "Used or taken back, 30 days", value: pts(t.spent30) },
@@ -86,6 +105,7 @@ export function RewardsScreen({ ctx }: { ctx: Ctx }) {
           }}
         />
       )}
+      {data && <ProductRulesCard rows={data.products} />}
       {data && <AppsCard apps={data.apps} onChanged={load} flash={ctx.flash} />}
       <AdjustCard
         onDone={(msg) => {
@@ -127,6 +147,7 @@ function SettingsCard({ settings, onSaved }: { settings: Settings; onSaved: (s: 
   const [perDollar, setPerDollar] = useState(String(settings.pointsPerDollar));
   const [value, setValue] = useState((settings.centsPer100Points / 100).toFixed(2));
   const [min, setMin] = useState(String(settings.minRedeemPoints));
+  const [days, setDays] = useState(String(settings.returnWindowDays));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,6 +168,7 @@ function SettingsCard({ settings, onSaved }: { settings: Settings; onSaved: (s: 
           pointsPerDollar: perDollarN,
           centsPer100Points: valueCents,
           minRedeemPoints: Number(min) || 0,
+          returnWindowDays: Number(days) || 0,
         }),
       });
       onSaved(r.settings);
@@ -187,6 +209,13 @@ function SettingsCard({ settings, onSaved }: { settings: Settings; onSaved: (s: 
           value={min}
           onChange={(e) => setMin(e.target.value.replace(/\D/g, ""))}
           hint={valueCents ? `${pts(Number(min) || 0)} points = ${money(Math.floor(((Number(min) || 0) * valueCents) / 100))} off` : " "}
+        />
+        <TextField
+          label="Days after shipping before points can be used"
+          inputMode="numeric"
+          value={days}
+          onChange={(e) => setDays(e.target.value.replace(/\D/g, ""))}
+          hint="Your return window. Until then the points show as on the way, so a returned order can't be spent first."
         />
         <div className="ad-discount-form__actions">
           <Button type="submit" loading={saving}>
@@ -412,6 +441,48 @@ function AdjustCard({ onDone }: { onDone: (msg: string) => void }) {
           {error && <span className="ad-discount-form__error">{error}</span>}
         </div>
       </form>
+    </Card>
+  );
+}
+
+/** Products with their own rule: set on each product (Admin > Products > a product > Rewards points); listed here to see them all. */
+function ProductRulesCard({ rows }: { rows: ProductRuleRow[] }) {
+  const what = (r: ProductRuleRow) => {
+    const parts: string[] = [];
+    if (r.multiplier === 0) parts.push("No points");
+    else if (r.multiplier !== 1 && (!r.endsAt || Date.parse(r.endsAt) > Date.now()))
+      parts.push(`×${r.multiplier} points${r.endsAt ? ` until ${dateLabel(r.endsAt)}` : ""}`);
+    if (r.minEarnedPoints) parts.push(`Needs ${pts(r.minEarnedPoints)} points from past orders`);
+    if (r.minOtherCents) parts.push(`Needs ${money(r.minOtherCents)} of other items`);
+    return parts.join(" · ");
+  };
+  const columns: Column<ProductRuleRow>[] = [
+    {
+      key: "name",
+      header: "Product",
+      width: "minmax(180px, 2fr)",
+      render: (r) => (
+        <span className="ad-acct__who">
+          <b>{r.name ?? r.productId}</b>
+          {r.note && <span className="ad-muted ad-sm">{r.note}</span>}
+        </span>
+      ),
+    },
+    { key: "rule", header: "Rule", width: "minmax(220px, 3fr)", render: (r) => <span className="ad-sm">{what(r)}</span> },
+  ];
+  return (
+    <Card title="Products with their own rules" padded>
+      <p className="ad-muted ad-sm" style={{ marginTop: 0 }}>
+        Bonus points, no points, or who can buy it. Set them on each product: Products, open a product, Rewards points.
+      </p>
+      <DataTable
+        label="Products with their own rewards rules"
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.productId}
+        minWidth={520}
+        empty={<EmptyState>Every product earns the normal rate, and anyone can buy it.</EmptyState>}
+      />
     </Card>
   );
 }

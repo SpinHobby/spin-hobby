@@ -10,12 +10,17 @@ export const POINTS_SHORT = "pts";
  */
 export function PointsChip({ email }: { email: string | null }) {
   const [balance, setBalance] = useState<number | null>(null);
+  const [pending, setPending] = useState(0);
   useEffect(() => {
     setBalance(null);
     if (!email) return;
     let current = true;
-    api<{ enabled: boolean; balance: number }>("/account/rewards/balance")
-      .then((r) => current && setBalance(r.enabled ? r.balance : null))
+    api<{ enabled: boolean; balance: number; pending?: number }>("/account/rewards/balance")
+      .then((r) => {
+        if (!current) return;
+        setBalance(r.enabled ? r.balance : null);
+        setPending(r.pending ?? 0);
+      })
       .catch(() => undefined); // no chip is better than a broken one
     return () => {
       current = false;
@@ -24,7 +29,12 @@ export function PointsChip({ email }: { email: string | null }) {
   if (balance === null) return null;
   const n = balance.toLocaleString("en-CA");
   return (
-    <a className="sf-head-link sf-points" href="/rewards" title={`${n} rewards points`} aria-label={`Rewards: ${n} points`}>
+    <a
+      className="sf-head-link sf-points"
+      href="/rewards"
+      title={`${n} rewards points${pending ? ` (+${pending.toLocaleString("en-CA")} on the way)` : ""}`}
+      aria-label={`Rewards: ${n} points`}
+    >
       <span aria-hidden>★</span>
       {n}
       <span className="sf-points__unit">{POINTS_SHORT}</span>

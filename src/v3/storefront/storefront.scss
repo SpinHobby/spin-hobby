@@ -4236,3 +4236,45 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     font-size: 12px;
   }
 }
+
+// the product page's rewards line and purchase requirement (rewards/ProductPointsLine.tsx)
+.sf-pp-points {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text2);
+  > span[aria-hidden] {
+    color: var(--gold);
+  }
+  b {
+    color: var(--text);
+  }
+  a {
+    color: var(--primary);
+    margin-left: 4px;
+  }
+  &--none {
+    color: var(--muted);
+  }
+}
+.sf-pp-points__bonus {
+  color: var(--text);
+  font-weight: 600;
+}
+.sf-pp-req {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  b {
+    color: var(--text);
+  }
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+  }
+}
+.sf-pp-req__ok {
+  color: var(--text);
+  font-weight: 600;
+}

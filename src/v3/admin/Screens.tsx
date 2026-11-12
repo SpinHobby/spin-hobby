@@ -38,6 +38,8 @@ import { photo } from "../photo";
 import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Skeleton, Toolbar, type Column } from "../../components";
 import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
+import { ProductPoints } from "./ProductPoints";
+import { isOn } from "../../features";
 import { EbayListing } from "./EbayListing";
 import { EbaySettings } from "./EbaySettings";
 import { PageLayoutCard } from "./PageLayout";
@@ -1342,6 +1344,7 @@ function ProductDrawer({
               <input className="sh-input" inputMode="numeric" value={form.jan} onChange={set("jan")} />
             </label>
           </div>
+          {isOn("rewards") && <ProductPoints productId={p.id} isOwner={ctx.isOwner} />}
           {p.alertsWaiting !== undefined && (
             <div className="ad-callout">
               <span>

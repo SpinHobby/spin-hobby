@@ -1,4 +1,6 @@
 import { track } from "../../lib/analytics";
+import { isOn } from "../../features";
+import { ProductPointsLine } from "../rewards/ProductPointsLine";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -655,6 +657,8 @@ function BuyBox({
           {statusLabel(p)}
         </div>
       </div>
+
+      {isOn("rewards") && <ProductPointsLine productId={p.id} />}
 
       {(s === "in" || s === "low") && !noPrice(p) && (
         // the same transit days checkout shows for the shop's Standard (5–7) and Express (2–3) shipping, plus handling

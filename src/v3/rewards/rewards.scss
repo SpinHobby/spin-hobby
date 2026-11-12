@@ -165,3 +165,13 @@
   flex-direction: row;
   align-items: center;
 }
+
+// points from orders still on the way (not shipped, or inside the return window)
+.rw-balance__pending {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 14px;
+}
+.rw-pending {
+  color: var(--text2);
+}

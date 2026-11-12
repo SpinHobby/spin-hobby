@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isOn } from "../../features";
 import { Navigate, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./checkout.scss";
@@ -65,6 +66,8 @@ interface Quote {
   taxCents: number;
   totalCents: number;
   warnings: { variationId: string; code: string; message: string }[];
+  /** Rewards points this cart earns a signed-in customer (null while rewards are off; older APIs send nothing). */
+  rewardPoints?: number | null;
   /** The courier options for this cart and address, cheapest first (older APIs send none). */
   shippingOptions?: ShippingOption[];
   shippingOption?: ShippingOption | null;
@@ -807,6 +810,21 @@ export default function Checkout() {
                 />
                 <Row label="Tax" value={quote ? price(quote.taxCents) : "—"} />
                 <Row label="Total" value={totalLabel} strong />
+                {isOn("rewards") && !!quote?.rewardPoints && (
+                  <p className="co-note">
+                    ★{" "}
+                    {auth.session ? (
+                      <>
+                        You'll earn <b>{quote.rewardPoints.toLocaleString("en-CA")} points</b>, usable once your order has shipped and its
+                        return window has passed.
+                      </>
+                    ) : (
+                      <>
+                        Signed-in customers earn <b>{quote.rewardPoints.toLocaleString("en-CA")} points</b> on this order.
+                      </>
+                    )}
+                  </p>
+                )}
                 {quoting && <p className="co-note">Updating totals…</p>}
               </div>
               <ul className="co-trust">

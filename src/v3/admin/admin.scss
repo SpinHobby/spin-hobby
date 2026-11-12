@@ -3569,3 +3569,23 @@
     color: var(--muted);
   }
 }
+
+// Admin > product > Rewards points (ProductPoints.tsx)
+.ad-points {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  legend {
+    padding: 0 6px;
+  }
+}
+.ad-points__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
