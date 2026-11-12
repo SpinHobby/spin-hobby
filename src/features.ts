@@ -23,6 +23,9 @@ const FEATURES = {
   /** Admin > Avatar: the shop's live avatar (Gleamshelf's Avatar mode: voice, OBS stage, AI assistant, product videos, the website's
    *  assistant). On staging for testing, not on the live site yet. */
   avatarStudio: { local: true, staging: true, production: false },
+  /** /rewards (a customer's points, shared with the Spin Hobby apps) and the "Rewards" link in the account menu: on staging for testing,
+   *  not on the live site yet. The server has its own switch too (Admin > Rewards), off until the owner turns it on. */
+  rewards: { local: true, staging: true, production: false },
 } satisfies Record<string, Record<Environment, boolean>>;
 
 /** Whether a feature is on where this copy of the site is running. */

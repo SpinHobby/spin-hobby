@@ -322,6 +322,11 @@ export function AccountMenu({ email, user, onSignOut }: { email: string | null; 
                   Store admin ↗
                 </a>
               )}
+              {isOn("rewards") && (
+                <a role="menuitem" href="/rewards">
+                  Rewards
+                </a>
+              )}
               {isOn("account") && (
                 <a role="menuitem" href="/account">
                   Your Account

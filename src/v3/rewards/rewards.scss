@@ -1,0 +1,167 @@
+// /rewards (Rewards.tsx): one calm column, the same width and rhythm as About, Events and Support. Colours are theme tokens only.
+.rw-wrap {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 16px 72px;
+  h1 {
+    font-size: 32px;
+    line-height: 1.2;
+    margin: 6px 0 14px;
+    color: var(--text);
+  }
+}
+.rw-lead {
+  color: var(--text2);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+.rw-h2 {
+  font-size: 20px;
+  margin: 36px 0 10px;
+  color: var(--text);
+}
+.rw-muted {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.rw-error {
+  color: var(--red);
+  font-size: 14px;
+}
+.rw-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.rw-signin {
+  max-width: 380px;
+}
+.rw-balance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  margin-bottom: 18px;
+  &__n {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  &__label {
+    margin-left: 8px;
+    color: var(--text2);
+    font-size: 16px;
+  }
+  &__worth {
+    color: var(--text2);
+    font-size: 16px;
+  }
+}
+.rw-redeem {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text2);
+  }
+  .sh-input {
+    width: 140px;
+  }
+  .rw-muted {
+    margin: 0 0 10px;
+  }
+}
+.rw-made {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface2);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  p {
+    margin: 0;
+    color: var(--text);
+  }
+}
+.rw-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  code {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text);
+    user-select: all;
+  }
+}
+.rw-codes,
+.rw-history {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    & + li {
+      border-top: 1px solid var(--border);
+    }
+    > span {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .rw-muted {
+      margin: 0;
+    }
+  }
+}
+.rw-codes li {
+  flex-wrap: wrap;
+  > span:last-child {
+    color: var(--text2);
+    font-size: 14px;
+  }
+}
+.rw-plus {
+  color: var(--text);
+  white-space: nowrap;
+}
+.rw-minus {
+  color: var(--muted);
+  white-space: nowrap;
+}
+// a code with its Copy button stays on one line inside a list row
+.rw-codes li > .rw-code {
+  flex-direction: row;
+  align-items: center;
+}
