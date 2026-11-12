@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { PanelLayout, useTheme } from "@/components";
+import { Card, PanelLayout, Spinner, useTheme } from "@/components";
+import { Profile } from "./Profile";
 import { Wishlist } from "./Wishlist";
 import { useAuth } from "../hooks";
+import { SignInPanel } from "../SignIn";
 import { initials } from "../format";
 
 type Tab = "orders" | "wishlist" | "addresses" | "profile";
@@ -17,16 +19,12 @@ export default function Account() {
   const [selectedTab, setSelectedTab] = useState("orders");
   const { theme, toggle } = useTheme();
   const auth = useAuth();
+  const { user, ready, signOut } = auth;
 
   return (
     <PanelLayout
       tag="ACCOUNT"
-      tabs={[
-        { key: "orders", label: "Orders" },
-        { key: "wishlist", label: "Wishlist" },
-        { key: "addresses", label: "Addresses" },
-        { key: "profile", label: "Profile" },
-      ]}
+      tabs={TABS}
       active={selectedTab}
       onSelect={setSelectedTab}
       title={selectedTab.toUpperCase()}
@@ -41,7 +39,21 @@ export default function Account() {
         </>
       }
     >
-      {import.meta.env.DEV && selectedTab === "wishlist" && <Wishlist />}
+      {/* A saved session shows the page straight away; with none, wait for the sign-in check before offering to sign in. */}
+      {!user ? (
+        ready ? (
+          <Card title="Sign in to see your account" padded>
+            <SignInPanel returnPath="/account" allowSignup />
+          </Card>
+        ) : (
+          <Spinner />
+        )
+      ) : (
+        <>
+          {import.meta.env.DEV && selectedTab === "wishlist" && <Wishlist />}
+          {selectedTab === "profile" && <Profile user={user} onSignOut={() => void signOut()} />}
+        </>
+      )}
     </PanelLayout>
   );
 }
