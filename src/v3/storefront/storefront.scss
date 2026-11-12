@@ -1319,21 +1319,18 @@ h1.sf-hero__eyebrow {
   }
 }
 
-// Every product photo sits whole (never cropped) with the same margin on the same studio tile. multiply melts a photo's own
-// white background into the tile, so photos shot on different whites look like one set; cut-outs keep the shop background.
+// Product photos fill their square, edge to edge (no tile or margin around them).
 .sf-img {
   position: relative;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   overflow: hidden;
-  background-color: var(--photo-bg);
+  background-color: var(--surface2);
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    padding: 7%;
-    mix-blend-mode: multiply;
+    object-fit: cover;
     display: block;
   }
   &__ph {
@@ -2219,9 +2216,7 @@ h1.sf-hero__eyebrow {
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    padding: 6%;
-    background: var(--photo-bg);
+    object-fit: cover;
     display: block;
   }
 }
@@ -2234,7 +2229,7 @@ h1.sf-hero__eyebrow {
   aspect-ratio: 1;
   border-radius: 20px;
   overflow: hidden;
-  background: var(--photo-bg);
+  background: var(--surface2);
   border: 1px solid var(--border);
   display: grid;
   place-items: center;
@@ -2251,13 +2246,10 @@ h1.sf-hero__eyebrow {
   &.is-active {
     display: block;
   }
-  // the whole product on the studio tile, as on the cards (.sf-img)
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    padding: 5%;
-    mix-blend-mode: multiply;
+    object-fit: cover;
     display: block;
   }
 }
@@ -2970,7 +2962,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   position: absolute;
   inset: 0;
   opacity: 0;
-  background: var(--photo-bg);
+  background: var(--surface2);
 }
 .sf-card__chip {
   position: absolute;
