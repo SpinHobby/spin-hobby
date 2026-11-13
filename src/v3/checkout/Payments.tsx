@@ -73,6 +73,7 @@ const squareSdk = () => (window as unknown as { Square?: { payments: (appId: str
 const walletTotal = (cents: number) => ({ amount: (Math.max(cents, 0) / 100).toFixed(2), label: "Spin Hobby" });
 
 /** The shopper closed the Apple Pay, Google Pay or Afterpay sheet: not an error worth showing. */
+// eslint-disable-next-line react-refresh/only-export-components -- an error type the checkout catches; it lives beside the buttons that throw it
 export class WalletCancelled extends Error {
   constructor() {
     super("Payment cancelled.");
