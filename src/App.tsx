@@ -8,6 +8,7 @@ import { isRecoveryLink } from "./lib/api";
 import { isOn } from "./features";
 import { ShopMusicHost } from "./v3/storefront/ShopPlaylist";
 import { ShopTheme } from "./v3/storefront/ShopTheme";
+import Hello from "./v3/hello/Hello";
 
 // the shop assistant's chat button: only fetched where it is on (src/features.ts)
 const ShopAssistant = lazy(() => import("./v3/assistant/ShopAssistant"));
@@ -82,6 +83,7 @@ export default function App() {
         />
         <Route path="/terms" element={<Navigate to="/legal/terms" replace />} />
         <Route path="/privacy" element={<Navigate to="/legal/privacy" replace />} />
+        <Route path="/hello" element={<Hello />} />
         <Route path="/*" element={<GatedApp />} />
       </Routes>
       {/* the shop playlist, outside the routes so it keeps playing from page to page */}
