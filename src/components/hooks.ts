@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 /** A short message shown for a moment (pass `toast` to PanelLayout, call `flash("Saved")`). */
 export function useToast(duration = 2200) {
   const [toast, setToast] = useState("");
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
   const flash = useCallback(
     (message: string) => {
       setToast(message);
