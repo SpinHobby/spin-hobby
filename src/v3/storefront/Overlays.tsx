@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { SignInPanel } from "../SignIn";
@@ -11,23 +12,21 @@ import { PriceTag } from "./ProductViews";
 import { useAddOns } from "./suggestionData";
 import { isOn } from "../../features";
 
+const NO_PRODUCTS: Product[] = [];
+
 /**
  * Up to three add-ons for the cart. Short of free shipping: in stock, not in the cart already, and priced to just cover what's
  * missing (the cheapest that does first), topped up with the next best; items bought with what's in the cart come first among
  * equals. Free shipping reached: cheap items other collectors bought with these (useAddOns).
  */
 function useShippingPicks(lines: CartLine[], remaining: number) {
-  const [pool, setPool] = useState<Product[]>([]);
   const together = useAddOns(lines.map((l) => l.itemId));
-  useEffect(() => {
-    let live = true;
-    api<ProductList>(`/products?${new URLSearchParams({ limit: "40", sort: "featured" })}`)
-      .then((r) => live && setPool(r.items))
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, []);
+  // the same request as the shop's first list would be a different size, so this has its own saved answer
+  const { data: pool = NO_PRODUCTS } = useQuery({
+    queryKey: ["products", "shipping-picks"],
+    queryFn: async () => (await api<ProductList>(`/products?${new URLSearchParams({ limit: "40", sort: "featured" })}`)).items,
+    staleTime: 60_000,
+  });
   const inCart = new Set(lines.map((l) => l.variationId));
   if (remaining <= 0) return together.filter((p) => !inCart.has(p.variationId));
   const seen = new Set<string>();
