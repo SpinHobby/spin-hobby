@@ -35,6 +35,7 @@ import {
   type ShopSort,
 } from "./data";
 import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
+import { Welcome } from "../welcome/Welcome";
 import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
@@ -127,6 +128,10 @@ export default function Storefront() {
     prevSignedInId.current = signedInId;
   }, [signedInId]);
   const closeWelcome = useCallback(() => setWelcome(null), []);
+  // A new account gets the welcome step (confirm the email, a few optional details) until it's saved or skipped, even after a
+  // reload. A session saved before this existed has no `welcomed` and is left alone.
+  const [welcomeDone, setWelcomeDone] = useState(false);
+  const needsWelcome = Boolean(auth.user && auth.user.welcomed === false && !welcomeDone);
 
   // Product pages live at /product/<id> and share the header, cart and footer with the shop.
   // Back returns to the same scroll position in the shop.
@@ -1056,7 +1061,17 @@ export default function Storefront() {
           }}
         />
       )}
-      {welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />}
+      {needsWelcome && auth.user ? (
+        <Welcome
+          user={auth.user}
+          onClose={() => {
+            setWelcomeDone(true);
+            setWelcome(null);
+          }}
+        />
+      ) : (
+        welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />
+      )}
       {toast && !cartOpen && (
         <div key={toast} className="sh-toast" role="status" aria-live="polite">
           {toast}

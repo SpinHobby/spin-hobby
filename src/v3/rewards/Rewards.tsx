@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import "./rewards.scss";
-import { api } from "../../lib/api";
+import { api, getSession } from "../../lib/api";
 import { dateLabel, money } from "../format";
 import { useAuth } from "../hooks";
 import { useDocumentHead } from "../seo";
 import { SignInPanel } from "../SignIn";
+import { EmailCode } from "../welcome/EmailCode";
+import "../welcome/welcome.scss";
 
 /** GET /account/rewards */
 export interface RewardsSummary {
   enabled: boolean;
+  /** Using points and linking apps wait until the email is confirmed (shopping doesn't). */
+  emailConfirmed?: boolean;
   balance: number;
   /** Points from orders that haven't shipped, or are still inside their return window. */
   pending: number;
@@ -115,7 +119,17 @@ function Signed({ data, reload }: { data: RewardsSummary; reload: () => void }) 
         )}
       </section>
 
-      {data.enabled && <Redeem data={data} onDone={reload} />}
+      {data.emailConfirmed === false ? (
+        <section className="rw-confirm" aria-labelledby="rw-confirm-title">
+          <h2 id="rw-confirm-title" className="rw-h2">
+            Confirm your email to use your points
+          </h2>
+          <p className="rw-muted">You keep earning points either way. Confirming takes one code from your inbox.</p>
+          <EmailCode email={getSession()?.user.email ?? "your email"} onConfirmed={reload} />
+        </section>
+      ) : (
+        data.enabled && <Redeem data={data} onDone={reload} />
+      )}
 
       {data.codes.length > 0 && (
         <>

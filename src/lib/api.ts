@@ -188,7 +188,7 @@ export async function signInWithPassword(email: string, password: string) {
   setSession(await request<Session>("/auth/login", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, null));
 }
 
-/** Creates a customer account (no confirmation email) and signs straight in. */
+/** Creates a customer account and signs straight in; the server emails a 6-digit code to confirm the address (see Welcome). */
 // Set by a fresh sign-up so the welcome message can say "welcome" rather than "welcome back".
 let justSignedUp = false;
 export function consumeSignupFlag() {
@@ -197,12 +197,12 @@ export function consumeSignupFlag() {
   return v;
 }
 
-export async function signUpWithPassword(email: string, password: string, firstName?: string) {
+export async function signUpWithPassword(email: string, password: string, firstName: string) {
   justSignedUp = true;
   setSession(
     await request<Session>(
       "/auth/signup",
-      { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() || undefined }) },
+      { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() ?? "" }) },
       null,
     ),
   );

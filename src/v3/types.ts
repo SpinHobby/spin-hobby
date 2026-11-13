@@ -146,6 +146,11 @@ export interface AppUser {
   firstName?: string | null;
   /** May open Admin > Audit: every owner, and staff the owner allowed. */
   canAudit?: boolean;
+  /** Confirmed their email with a code (or signed in with Google/Discord). Needed to use points and buy limited items, not to shop. */
+  emailVerified?: boolean;
+  /** Saw or skipped the welcome step after signing up. A session saved before this existed has no value: treat it as welcomed. */
+  welcomed?: boolean;
+  phone?: string | null;
 }
 
 export type OrderStatus = "pending" | "paid" | "preorder_reserved" | "fulfilled" | "shipped" | "cancelled" | "refunded";

@@ -11,6 +11,8 @@ interface ProductPoints {
   requirement: { minEarnedPoints: number | null; minOtherCents: number | null } | null;
   /** The signed-in customer's points from past orders (only when the product asks for some). */
   earned: number | null;
+  /** Whether the signed-in customer confirmed their email (only when the product asks for points); limited items need it. */
+  emailConfirmed?: boolean | null;
 }
 
 const pts = (n: number) => n.toLocaleString("en-CA");
@@ -49,7 +51,13 @@ export function ProductPointsLine({ productId }: { productId: string }) {
                 Customers with {pts(req.minEarnedPoints)} points from past orders.{" "}
                 {data.earned !== null ? (
                   data.earned >= req.minEarnedPoints ? (
-                    <span className="sf-pp-req__ok">You have {pts(data.earned)}: you can buy it.</span>
+                    data.emailConfirmed === false ? (
+                      <>
+                        You have {pts(data.earned)}. <a href="/rewards">Confirm your email</a> to buy it.
+                      </>
+                    ) : (
+                      <span className="sf-pp-req__ok">You have {pts(data.earned)}: you can buy it.</span>
+                    )
                   ) : (
                     <>You have {pts(data.earned)}.</>
                   )

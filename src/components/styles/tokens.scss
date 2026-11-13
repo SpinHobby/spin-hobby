@@ -465,6 +465,16 @@ body {
       }
     }
   }
+  &__inline {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
   &__switch {
     font-size: 13px;
     color: var(--muted);
@@ -575,5 +585,34 @@ body {
     &__word {
       font-size: 16px;
     }
+  }
+}
+
+// New-password strength under the sign-up password: three bars that fill (red, gold, teal) and a word.
+.sh-pw-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -2px;
+  font-size: 12px;
+  color: var(--muted);
+  &__bar {
+    display: flex;
+    gap: 3px;
+    i {
+      width: 22px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+    }
+  }
+  &--1 i:nth-child(-n + 1) {
+    background: var(--red);
+  }
+  &--2 i:nth-child(-n + 2) {
+    background: var(--gold);
+  }
+  &--3 i {
+    background: var(--teal);
   }
 }

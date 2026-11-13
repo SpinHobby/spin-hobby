@@ -175,3 +175,21 @@
 .rw-pending {
   color: var(--text2);
 }
+
+// "Confirm your email to use your points" in place of Redeem, for a new account that hasn't entered its code yet.
+.rw-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  .rw-h2 {
+    margin: 0;
+  }
+  p {
+    margin: 0;
+  }
+}
