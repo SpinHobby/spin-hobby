@@ -76,6 +76,16 @@ this folder itself so `.vscode/` applies), so formatting only ever touches what 
 - **Check phones (about 390 px wide) and dark mode** before asking for review.
 - **Features not ready for customers** go behind a feature flag: see [Feature flags](#feature-flags) below.
 
+## Loading data from the API
+
+New pages read from the API with TanStack Query, set up in `src/lib/query.ts` (read its first comment: it has the
+pattern for a read and for refreshing after a save). It shares one answer between every component that asks, keeps it
+so Back is instant, and refreshes it when it is stale. `useStorefront` and `useProducts` in `src/v3/storefront/data.ts`
+are worked examples.
+
+Older pages still use `useEffect` + `useState` + `api()`. Leave them as they are until you are changing that page
+anyway; don't convert pages someone else has a pull request open on.
+
 ## Feature flags
 
 A feature flag lets unfinished work be merged and tried on staging while the live site doesn't show it yet. The flags are

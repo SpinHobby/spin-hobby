@@ -1,6 +1,8 @@
 import { track } from "../../lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { errorMessage } from "../../lib/query";
 import { normalizeStatus } from "../format";
 import { useLocalState } from "../hooks";
 import type { Homepage, Product, ProductPage, ProductStatus, ShopCategory, SortKey } from "../types";
@@ -105,92 +107,79 @@ export type HomeData = Omit<Homepage, "success"> & {
   freeShippingThresholdCents?: number;
 };
 
-/** Homepage sections + sidebar counts: loaded once per visit. */
+/** Homepage sections + sidebar counts: shared by every page that asks, and refreshed when a shopper comes back to them. */
 export function useStorefront() {
-  const [home, setHome] = useState<HomeData | null>(null);
-  const [facets, setFacets] = useState<Facets | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [nonce, setNonce] = useState(0);
-  useEffect(() => {
-    let on = true;
-    setError(null);
-    Promise.all([api<HomeData>("/homepage"), api<Facets>("/products/facets")])
-      .then(([h, f]) => {
-        if (on) {
-          setHome(h);
-          setFacets(f);
-        }
-      })
-      .catch((e: Error) => {
-        if (on) setError(e.message);
-      });
-    return () => {
-      on = false;
-    };
-  }, [nonce]);
-  return { home, facets, error, reload: useCallback(() => setNonce((n) => n + 1), []) };
+  const home = useQuery({ queryKey: ["homepage"], queryFn: () => api<HomeData>("/homepage"), staleTime: 60_000 });
+  const facets = useQuery({ queryKey: ["products", "facets"], queryFn: () => api<Facets>("/products/facets"), staleTime: 60_000 });
+  // the page is drawn from both together, so neither is handed over until both have arrived
+  const ready = !!home.data && !!facets.data;
+  const { refetch: reloadHome } = home;
+  const { refetch: reloadFacets } = facets;
+  const reload = useCallback(() => {
+    void reloadHome();
+    void reloadFacets();
+  }, [reloadHome, reloadFacets]);
+  // a reload in progress shows no error, as before
+  const error = home.isFetching || facets.isFetching ? null : errorMessage(home.error ?? facets.error);
+  return { home: ready ? home.data : null, facets: ready ? facets.data : null, error, reload };
 }
 
 /** One page of products for the current filters, with "load more". Re-queries when filters change. */
 export function useProducts(filters: Filters, wishlistIds: string[] | null) {
   const query = useMemo(() => toQuery(filters, wishlistIds).toString(), [filters, wishlistIds]);
-  const [state, setState] = useState<{
-    items: Product[];
-    total: number;
-    cursor?: string;
-    didYouMean?: string;
-    closeMatches?: boolean;
-    understood?: string[];
-    loading: boolean;
-    loadingMore: boolean;
-    error: string | null;
-  }>({ items: [], total: 0, loading: true, loadingMore: false, error: null });
-  const latest = useRef(query);
-  const [attempt, setAttempt] = useState(0);
-
+  const client = useQueryClient();
+  // Small debounce so typing in search or toggling filters doesn't fire a request per keystroke. A list already seen
+  // (Back from a product, a filter switched off again) needs no request, so it shows at once.
+  const [settled, setSettled] = useState(query);
   useEffect(() => {
-    latest.current = query;
-    setState((s) => ({ ...s, loading: true, error: null }));
-    // Small debounce so typing in search or toggling filters doesn't fire a request per keystroke.
-    const timer = window.setTimeout(() => {
-      api<ProductPage>(`/products?${query}`)
-        .then((page) => {
-          if (latest.current === query)
-            setState({
-              items: page.items,
-              total: page.total,
-              cursor: page.cursor,
-              didYouMean: page.didYouMean,
-              closeMatches: page.closeMatches,
-              understood: page.understood,
-              loading: false,
-              loadingMore: false,
-              error: null,
-            });
-        })
-        .catch((e: Error) => {
-          if (latest.current === query) setState((s) => ({ ...s, loading: false, error: e.message }));
-        });
-    }, 150);
+    const timer = window.setTimeout(() => setSettled(query), 150);
     return () => window.clearTimeout(timer);
-  }, [query, attempt]);
+  }, [query]);
+  const seen = client.getQueryData(productsKey(query)) !== undefined;
+  const active = seen ? query : settled;
+
+  const list = useInfiniteQuery({
+    queryKey: productsKey(active),
+    queryFn: ({ pageParam }) => {
+      const q = new URLSearchParams(active);
+      if (pageParam) q.set("cursor", pageParam);
+      return api<ProductPage>(`/products?${q}`);
+    },
+    initialPageParam: "",
+    getNextPageParam: (last) => (last.items.length ? last.cursor : undefined),
+    // the previous list stays on screen (dimmed by `loading`) until the new one arrives
+    placeholderData: keepPreviousData,
+  });
+
+  // what was last shown, kept when a read fails so the page doesn't empty under the error
+  const shown = useRef(list.data);
+  if (list.data) shown.current = list.data;
+  const pages = (list.data ?? shown.current)?.pages;
+  const first = pages?.[0];
+  const { fetchNextPage, refetch, hasNextPage, isFetchingNextPage } = list;
 
   const loadMore = useCallback(() => {
-    if (!state.cursor || state.loadingMore) return;
-    const q = new URLSearchParams(query);
-    q.set("cursor", state.cursor);
-    setState((s) => ({ ...s, loadingMore: true }));
-    api<ProductPage>(`/products?${q}`)
-      .then((page) => {
-        if (latest.current === query)
-          setState((s) => ({ ...s, items: [...s.items, ...page.items], cursor: page.cursor, loadingMore: false }));
-      })
-      .catch((e: Error) => setState((s) => ({ ...s, loadingMore: false, error: e.message })));
-  }, [query, state.cursor, state.loadingMore]);
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const retry = useCallback(() => void refetch(), [refetch]);
 
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
-  return { ...state, loadMore, retry };
+  // waiting for the debounce, the first answer, the answer to new filters, or a retry
+  const loading = active !== query || list.isPending || list.isPlaceholderData || (list.isError && list.isFetching && !isFetchingNextPage);
+  return {
+    items: useMemo(() => pages?.flatMap((page) => page.items) ?? [], [pages]),
+    total: first?.total ?? 0,
+    cursor: hasNextPage ? pages?.at(-1)?.cursor : undefined,
+    didYouMean: first?.didYouMean,
+    closeMatches: first?.closeMatches,
+    understood: first?.understood,
+    loading,
+    loadingMore: isFetchingNextPage,
+    error: loading ? null : errorMessage(list.error),
+    loadMore,
+    retry,
+  };
 }
+const productsKey = (query: string) => ["products", "list", query] as const;
 
 // ---------------------------------------------------------------- cart
 export interface CartLine {
