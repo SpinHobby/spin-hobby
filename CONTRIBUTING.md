@@ -60,7 +60,7 @@ You can push to this repo, so these rules are what keep everyone's work safe:
 ## Before you push
 
 ```sh
-npm run lint && npm run format:check && npx tsc -p . --noEmit && npm run build
+npm run lint && npm run format:check && npm run typecheck && npm run build
 ```
 
 `npm run format` fixes formatting. Every file is already formatted, and VS Code formats a file when you save it (open
