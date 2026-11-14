@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { isOn } from "../../features";
-import { api } from "../../lib/api";
+import { api, firstCodeWasQueued } from "../../lib/api";
 import { formatPhone, formatPostal } from "../checkout/formatInput";
 import { PROVINCES, STATES } from "../checkout/regions";
 import { useAuth, useEscape } from "../hooks";
@@ -126,7 +126,7 @@ export function Welcome({ user, onClose }: { user: AppUser; onClose: () => void 
               You can shop right away. Confirming your email lets you buy limited releases
               {isOn("rewards") ? " and use rewards points" : ""}.
             </p>
-            <EmailCode email={user.email} sent onConfirmed={() => setStep("details")} />
+            <EmailCode email={user.email} sent queued={firstCodeWasQueued()} onConfirmed={() => setStep("details")} />
             <button type="button" className="sh-welcome__later" onClick={() => setStep("details")}>
               Do this later
             </button>

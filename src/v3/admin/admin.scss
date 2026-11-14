@@ -3589,3 +3589,37 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+
+// Admin > Dashboard > Email (EmailUsage.tsx): sent vs Resend's limits.
+.ad-email-meter {
+  margin-bottom: 12px;
+  &__text {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  &__bar {
+    height: 8px;
+    border-radius: 99px;
+    background: var(--surface2);
+    overflow: hidden;
+    span {
+      display: block;
+      height: 100%;
+      background: var(--teal);
+    }
+  }
+  &.is-warn &__bar span {
+    background: var(--gold);
+  }
+  &.is-full &__bar span {
+    background: var(--red);
+  }
+}
+.ad-email-alert {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  color: var(--text);
+}

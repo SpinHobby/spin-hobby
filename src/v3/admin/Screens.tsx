@@ -8,6 +8,7 @@ import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, S
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
 import { ProductFilters } from "./ProductFilters";
 import { ShopperFunnel } from "./ShopperFunnel";
+import { EmailUsage } from "./EmailUsage";
 import { SearchMisses } from "./SearchMisses";
 import { GleamshelfStats } from "./GleamshelfStats";
 import {
@@ -242,6 +243,7 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
       <ShopperFunnel />
       <GleamshelfStats />
       <SearchMisses flash={ctx.flash} />
+      <EmailUsage />
     </>
   );
 }

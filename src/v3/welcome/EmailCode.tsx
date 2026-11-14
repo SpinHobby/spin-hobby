@@ -8,25 +8,40 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went
  * "Enter the 6-digit code we emailed": the box, Confirm, and Send a new code. Used by the welcome step after sign-up, and wherever a
  * confirmed email is needed (Rewards, a limited item). `sent` says a code already went out (sign-up sends the first one).
  */
-export function EmailCode({ email, sent = false, onConfirmed }: { email: string; sent?: boolean; onConfirmed: () => void }) {
+/** What the customer is told when the shop's email limit for today is reached and their code waits its turn. */
+const queuedNote = (email: string) =>
+  `Lots of emails are going out today, so your code to ${email} is in line. It will arrive within a day and works for 2 days. You can shop in the meantime.`;
+
+export function EmailCode({
+  email,
+  sent = false,
+  queued = false,
+  onConfirmed,
+}: {
+  email: string;
+  sent?: boolean;
+  /** The code from sign-up is waiting for the shop's email limit to reset. */
+  queued?: boolean;
+  onConfirmed: () => void;
+}) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [note, setNote] = useState(sent ? `We sent a 6-digit code to ${email}.` : "");
-  const [hasCode, setHasCode] = useState(sent);
+  const [note, setNote] = useState(queued ? queuedNote(email) : sent ? `We sent a 6-digit code to ${email}.` : "");
+  const [hasCode, setHasCode] = useState(sent || queued);
 
   const send = async () => {
     setError("");
     setBusy(true);
     try {
-      const r = await api<{ verified: boolean }>("/auth/email-code", { method: "POST" });
+      const r = await api<{ verified: boolean; queued?: boolean }>("/auth/email-code", { method: "POST" });
       if (r.verified) {
         await reloadUser();
         onConfirmed();
         return;
       }
       setHasCode(true);
-      setNote(`We sent a new code to ${email}. It works for 30 minutes.`);
+      setNote(r.queued ? queuedNote(email) : `We sent a new code to ${email}. It works for 30 minutes.`);
     } catch (e) {
       setError(errMsg(e));
     } finally {
