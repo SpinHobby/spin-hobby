@@ -198,12 +198,13 @@ export function consumeSignupFlag() {
   return v;
 }
 
-export async function signUpWithPassword(email: string, password: string, firstName: string) {
+/** Email and password only: the name, phone and address are asked for after the email is confirmed (src/v3/welcome). */
+export async function signUpWithPassword(email: string, password: string) {
   justSignedUp = true;
   setSession(
     await request<Session>(
       "/auth/signup",
-      { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() ?? "" }) },
+      { method: "POST", body: JSON.stringify({ email: email.trim(), password }) },
       null,
     ),
   );

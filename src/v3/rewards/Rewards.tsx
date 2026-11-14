@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import "./rewards.scss";
 import { api, getSession } from "../../lib/api";
-import { dateLabel, money } from "../format";
+import { dateLabel } from "../format";
 import { useAuth } from "../hooks";
 import { useDocumentHead } from "../seo";
 import { SignInPanel } from "../SignIn";
@@ -17,8 +17,8 @@ export interface RewardsSummary {
   balance: number;
   /** Points from orders that haven't shipped, or are still inside their return window. */
   pending: number;
-  worthCents: number;
-  rates: { pointsPerDollar: number; centsPer100Points: number; minRedeemPoints: number; returnWindowDays: number };
+  // What points are worth in money is never shown (it can change for a promotion): customers find out at checkout.
+  rates: { pointsPerDollar: number; minRedeemPoints: number; returnWindowDays: number };
   entries: {
     id: string;
     app: string;
@@ -36,7 +36,6 @@ export interface RewardsSummary {
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 const pts = (n: number) => n.toLocaleString("en-CA");
-const worth = (points: number, centsPer100: number) => Math.floor((Math.max(0, points) * centsPer100) / 100);
 
 /**
  * /rewards: a signed-in customer's points, one balance shared by the shop and every Spin Hobby app. Shows the balance and history,
@@ -100,8 +99,8 @@ function Signed({ data, reload }: { data: RewardsSummary; reload: () => void }) 
         {data.enabled ? (
           <>
             You get {pts(rates.pointsPerDollar)} point{rates.pointsPerDollar === 1 ? "" : "s"} for every dollar you spend on goods, and
-            points from Spin Hobby apps you link. {pts(100)} points are worth {money(rates.centsPer100Points)} off. Points from an order can
-            be used {rates.returnWindowDays ? `${rates.returnWindowDays} days after it ships` : "once it ships"}.
+            points from Spin Hobby apps you link. Turn them into a discount code whenever you like. Points from an order can be used{" "}
+            {rates.returnWindowDays ? `${rates.returnWindowDays} days after it ships` : "once it ships"}.
           </>
         ) : (
           <>Rewards are paused right now. Your points are safe and you can use them when rewards are back.</>
@@ -113,7 +112,6 @@ function Signed({ data, reload }: { data: RewardsSummary; reload: () => void }) 
           <span className="rw-balance__n">{pts(data.balance)}</span>
           <span className="rw-balance__label">points</span>
         </div>
-        <span className="rw-balance__worth">worth {money(data.worthCents)}</span>
         {data.pending > 0 && (
           <span className="rw-balance__pending">+ {pts(data.pending)} on the way, from orders not yet shipped or still returnable</span>
         )}
@@ -139,7 +137,7 @@ function Signed({ data, reload }: { data: RewardsSummary; reload: () => void }) 
               <li key={c.code}>
                 <CopyCode code={c.code} />
                 <span>
-                  {money(c.valueCents)} off one order{c.endsAt ? `, until ${dateLabel(c.endsAt)}` : ""}
+                  {pts(c.points)} points, for one order{c.endsAt ? `, until ${dateLabel(c.endsAt)}` : ""}
                 </span>
               </li>
             ))}
@@ -184,26 +182,22 @@ function Redeem({ data, onDone }: { data: RewardsSummary; onDone: () => void }) 
   const [points, setPoints] = useState(String(Math.max(rates.minRedeemPoints, Math.min(most, rates.minRedeemPoints))));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [made, setMade] = useState<{ code: string; valueCents: number } | null>(null);
+  const [made, setMade] = useState<{ code: string; points: number } | null>(null);
   const n = Number(points) || 0;
 
   if (data.balance < rates.minRedeemPoints && !made)
-    return (
-      <p className="rw-muted">
-        You can use points once you have {pts(rates.minRedeemPoints)} ({money(worth(rates.minRedeemPoints, rates.centsPer100Points))} off).
-      </p>
-    );
+    return <p className="rw-muted">You can use points once you have {pts(rates.minRedeemPoints)}.</p>;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      const r = await api<{ code: string; valueCents: number }>("/account/rewards/redeem", {
+      const r = await api<{ code: string }>("/account/rewards/redeem", {
         method: "POST",
         body: JSON.stringify({ points: n }),
       });
-      setMade(r);
+      setMade({ code: r.code, points: n });
       onDone();
     } catch (err) {
       setError(errMsg(err));
@@ -215,7 +209,7 @@ function Redeem({ data, onDone }: { data: RewardsSummary; onDone: () => void }) 
   if (made)
     return (
       <div className="rw-made" role="status">
-        <p>Here is your code for {money(made.valueCents)} off. Type it at checkout. It works once.</p>
+        <p>Here is your code for {pts(made.points)} points. Type it at checkout to see your discount. It works once.</p>
         <CopyCode code={made.code} />
         <button type="button" className="rw-link" onClick={() => setMade(null)}>
           Done
@@ -227,17 +221,8 @@ function Redeem({ data, onDone }: { data: RewardsSummary; onDone: () => void }) 
     <form className="rw-redeem" onSubmit={submit}>
       <label>
         <span>Points to use</span>
-        <input
-          className="sh-input"
-          inputMode="numeric"
-          value={points}
-          onChange={(e) => setPoints(e.target.value.replace(/\D/g, ""))}
-          aria-describedby="rw-redeem-worth"
-        />
+        <input className="sh-input" inputMode="numeric" value={points} onChange={(e) => setPoints(e.target.value.replace(/\D/g, ""))} />
       </label>
-      <span id="rw-redeem-worth" className="rw-muted">
-        = {money(worth(n, rates.centsPer100Points))} off
-      </span>
       <button className="sh-btn" disabled={busy || n < rates.minRedeemPoints || n > data.balance}>
         {busy ? "Making code…" : "Get a code"}
       </button>

@@ -165,6 +165,21 @@ export default function Checkout() {
     if (!email && auth.email) setEmail(auth.email);
   }, [auth.email, email, setEmail]);
 
+  // A signed-in customer with a saved address (from the welcome step after signing up) gets it filled in, if the form is still empty.
+  const shipEmpty = !ship.address1.trim() && !ship.firstName.trim();
+  useEffect(() => {
+    if (!auth.email || !shipEmpty) return;
+    let live = true;
+    api<{ address: (Omit<Address, "address2" | "phone"> & { address2: string | null; phone: string | null }) | null }>("/account/address")
+      .then(({ address }) => {
+        if (live && address) setShip((s) => ({ ...s, ...address, address2: address.address2 ?? "", phone: address.phone ?? s.phone }));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [auth.email, shipEmpty, setShip]);
+
   // A cart reminder email's link (/checkout?restore=<token>): put that cart back, then drop the token from the address.
   const restoreToken = new URLSearchParams(location.search).get("restore");
   const [restoring, setRestoring] = useState(!!restoreToken);

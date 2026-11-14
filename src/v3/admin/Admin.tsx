@@ -55,7 +55,8 @@ export default function Admin() {
     ...SCREENS,
     ...(showAvatar ? (["Avatar"] as const) : []),
     ...(canAudit ? (["Audit"] as const) : []),
-    ...(isOwner ? (["Accounts", "Discounts", "Rewards"] as const) : []),
+    ...(isOwner ? (["Accounts", "Discounts"] as const) : []),
+    ...(isOwner && isOn("rewards") ? (["Rewards"] as const) : []),
   ];
   const { data, setData, reload } = useAdminData(isStaff);
 
@@ -65,7 +66,7 @@ export default function Admin() {
       hash === "Audit" ||
       hash === "Accounts" ||
       hash === "Discounts" ||
-      hash === "Rewards" ||
+      (hash === "Rewards" && isOn("rewards")) ||
       (hash === "Avatar" && isOn("avatarStudio"))
       ? (hash as Screen)
       : "Dashboard";
@@ -192,7 +193,9 @@ export default function Admin() {
       {screen === "Audit" && (canAudit ? <AuditScreen ctx={ctx} /> : <p className="ad-muted">Ask the owner for access to Audit.</p>)}
       {screen === "Discounts" &&
         (isOwner ? <DiscountsScreen ctx={ctx} /> : <p className="ad-muted">Only owners can manage discount codes.</p>)}
-      {screen === "Rewards" && (isOwner ? <RewardsScreen ctx={ctx} /> : <p className="ad-muted">Only owners can manage rewards.</p>)}
+      {screen === "Rewards" &&
+        isOn("rewards") &&
+        (isOwner ? <RewardsScreen ctx={ctx} /> : <p className="ad-muted">Only owners can manage rewards.</p>)}
       {screen === "Accounts" &&
         (isOwner ? (
           <AccountsScreen ctx={ctx} myId={auth.user?.id ?? null} />

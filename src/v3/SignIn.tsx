@@ -24,7 +24,6 @@ export function SignInPanel({
 }) {
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,7 +62,7 @@ export function SignInPanel({
     setError("");
     setExists(false);
     try {
-      if (signingUp) await signUpWithPassword(email, password, firstName);
+      if (signingUp) await signUpWithPassword(email, password);
       else await signInWithPassword(email, password); // useAuth picks up the new session
     } catch (err) {
       // The email already has an account: offer to sign in with it, keeping what was typed.
@@ -147,20 +146,6 @@ export function SignInPanel({
             </div>
           )}
           <form className="sh-signin__form" onSubmit={submit}>
-            {signingUp && (
-              <input
-                className="sh-input"
-                type="text"
-                required
-                autoComplete="given-name"
-                enterKeyHint="next"
-                placeholder="First name"
-                maxLength={80}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                aria-label="First name"
-              />
-            )}
             <input
               className="sh-input"
               type={usernameOk ? "text" : "email"}

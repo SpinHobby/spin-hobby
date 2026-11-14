@@ -68,26 +68,64 @@
       flex: none;
     }
   }
-  &__series {
-    border: 0;
+  &__lead {
+    margin: -4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    @media (max-width: 420px) {
+      grid-template-columns: 1fr;
+    }
+  }
+  &__address {
+    border: 1px solid var(--border);
+    border-radius: 14px;
     margin: 0;
-    padding: 0;
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     legend {
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text2);
-      margin-bottom: 8px;
+      padding: 0 4px;
     }
-    div {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+  }
+  &__note {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  &__add {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    span {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
     }
-    .sh-chip {
-      cursor: pointer;
-      white-space: normal;
-      text-align: left;
+    &:hover {
+      border-color: var(--primary);
     }
+  }
+  &.is-done {
+    overflow: hidden;
   }
   &__later {
     align-self: center;
@@ -130,5 +168,153 @@
     font-size: 13px;
     color: var(--muted);
     text-align: center;
+  }
+}
+
+// The welcome at the end of signing up (WelcomeDone.tsx).
+.sh-welcome-done {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 18px 4px 6px;
+  &__burst {
+    position: absolute;
+    left: 50%;
+    top: 78px;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  &__piece {
+    position: absolute;
+    width: 8px;
+    height: 12px;
+    margin: -6px 0 0 -4px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: sh-confetti 1.5s cubic-bezier(0.15, 0.7, 0.3, 1) var(--delay) forwards;
+    &.is-round {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+    &.c0 {
+      background: var(--primary);
+    }
+    &.c1 {
+      background: var(--gold);
+    }
+    &.c2 {
+      background: var(--red);
+    }
+    &.c3 {
+      background: var(--teal);
+    }
+  }
+  &__mascot {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    animation:
+      sh-mascot-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+      sh-mascot-bob 2.4s ease-in-out 0.7s infinite;
+  }
+  &__title {
+    margin: 4px 0 0;
+    font-size: 24px;
+    line-height: 1.2;
+    animation: sh-rise 0.5s ease-out 0.25s both;
+  }
+  &__text {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text2);
+    animation: sh-rise 0.5s ease-out 0.4s both;
+  }
+  &__go {
+    margin-top: 10px;
+    min-width: 200px;
+    animation: sh-rise 0.5s ease-out 0.55s both;
+  }
+  // a thin line that runs out while the welcome stays
+  &__timer {
+    align-self: stretch;
+    height: 3px;
+    margin-top: 12px;
+    border-radius: 3px;
+    background: var(--primary);
+    opacity: 0.35;
+    transform-origin: left;
+    animation-name: sh-timer;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+}
+
+@keyframes sh-confetti {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateY(0) rotate(0deg);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(calc(var(--distance) * -1)) rotate(var(--spin));
+  }
+}
+@keyframes sh-mascot-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-12deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+@keyframes sh-mascot-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(3deg);
+  }
+}
+@keyframes sh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sh-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-welcome-done__piece {
+    display: none;
+  }
+  .sh-welcome-done__mascot,
+  .sh-welcome-done__title,
+  .sh-welcome-done__text,
+  .sh-welcome-done__go,
+  .sh-welcome-done__timer {
+    animation: none;
   }
 }
