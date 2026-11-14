@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { isOn } from "../../features";
 import { api } from "../../lib/api";
+import { formatPhone, formatPostal } from "../checkout/formatInput";
 import { PROVINCES, STATES } from "../checkout/regions";
 import { useAuth, useEscape } from "../hooks";
 import type { AppUser } from "../types";
@@ -62,8 +63,12 @@ export function Welcome({ user, onClose }: { user: AppUser; onClose: () => void 
 
   const set = (k: keyof Address) => (e: { target: { value: string } }) =>
     setAddress((a) => {
-      const next = { ...a, [k]: e.target.value };
-      if (k === "country") next.province = e.target.value === "CA" ? "ON" : "WA";
+      const typed = e.target.value;
+      const next = { ...a, [k]: k === "postalCode" ? formatPostal(typed, a.country) : typed };
+      if (k === "country") {
+        next.province = typed === "CA" ? "ON" : "WA";
+        next.postalCode = formatPostal(a.postalCode, typed as Address["country"]);
+      }
       return next;
     });
 
@@ -163,9 +168,9 @@ export function Welcome({ user, onClose }: { user: AppUser; onClose: () => void 
                 type="tel"
                 autoComplete="tel"
                 inputMode="tel"
-                placeholder="416 555 0123"
+                placeholder="416-555-0123"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatPhone(e.target.value))}
               />
               <small>Only for delivery questions. We never call to sell.</small>
             </label>

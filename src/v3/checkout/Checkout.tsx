@@ -15,6 +15,7 @@ import { useDocumentHead } from "../seo";
 import { useStoreConfigState } from "../storeConfig";
 import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, WalletCancelled, type CheckoutConfig } from "./Payments";
+import { formatPhone, formatPostal } from "./formatInput";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { framedPhoto } from "../photo";
 import { CheckoutAddOns } from "../storefront/Suggestions";
@@ -533,8 +534,10 @@ export default function Checkout() {
                     className="sh-input"
                     type="tel"
                     autoComplete="tel"
+                    inputMode="tel"
+                    placeholder="416-555-0123"
                     value={ship.phone}
-                    onChange={(e) => setShip({ ...ship, phone: e.target.value })}
+                    onChange={(e) => setShip({ ...ship, phone: formatPhone(e.target.value) })}
                   />
                 </Field>
               </div>
@@ -969,8 +972,14 @@ function AddressForm({
   phone?: boolean;
 }) {
   const set = (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const next = { ...value, [k]: e.target.value } as Address;
-    if (k === "country") next.province = e.target.value === "CA" ? "AB" : "WA";
+    // phone and postal code take their usual shape as they're typed (formatInput.ts)
+    const typed = e.target.value;
+    const shaped = k === "phone" ? formatPhone(typed) : k === "postalCode" ? formatPostal(typed, value.country) : typed;
+    const next = { ...value, [k]: shaped } as Address;
+    if (k === "country") {
+      next.province = typed === "CA" ? "AB" : "WA";
+      next.postalCode = formatPostal(value.postalCode, typed as Address["country"]);
+    }
     onChange(next);
   };
   const ac = (s: string) => `${prefix} ${s}`;
@@ -1033,11 +1042,22 @@ function AddressForm({
           onChange={set("postalCode")}
           onBlur={left("postalCode")}
           autoComplete={ac("postal-code")}
+          autoCapitalize="characters"
+          inputMode={value.country === "US" ? "numeric" : "text"}
+          placeholder={value.country === "CA" ? "A1A 1A1" : "12345"}
         />
       </Field>
       {phone && (
         <Field label="Phone (optional)" className="co-c6">
-          <input className="sh-input" type="tel" value={value.phone} onChange={set("phone")} autoComplete={ac("tel")} />
+          <input
+            className="sh-input"
+            type="tel"
+            inputMode="tel"
+            placeholder="416-555-0123"
+            value={value.phone}
+            onChange={set("phone")}
+            autoComplete={ac("tel")}
+          />
         </Field>
       )}
     </div>
