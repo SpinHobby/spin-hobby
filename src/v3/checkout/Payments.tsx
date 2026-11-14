@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { isOn } from "../../features";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 export interface CheckoutConfig {
@@ -168,11 +169,12 @@ export function SquarePay({
           total: walletTotal(amountRef.current ?? 0),
         });
         requestRef.current = request;
-        // Afterpay (pay in 4): only where Square has it turned on for the shop, and only for totals Afterpay accepts
+        // Afterpay (pay in 4): only with its feature switch on (src/features.ts, off for now), where Square has it turned on for the
+        // shop, and only for totals Afterpay accepts
         const [apple, google, afterpay] = await Promise.all([
           payments.applePay(request).catch(() => undefined),
           payments.googlePay(request).catch(() => undefined),
-          payments.afterpayClearpay(request).catch(() => undefined),
+          isOn("afterpay") ? payments.afterpayClearpay(request).catch(() => undefined) : undefined,
         ]);
         for (const w of [apple, google, afterpay]) if (w) made.push(w);
         if (cancelled) return;

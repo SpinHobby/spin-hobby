@@ -26,6 +26,9 @@ const FEATURES = {
   /** /rewards (a customer's points, shared with the Spin Hobby apps) and the "Rewards" link in the account menu: on staging for testing,
    *  not on the live site yet. The server has its own switch too (Admin > Rewards), off until the owner turns it on. */
   rewards: { local: true, staging: true, production: false },
+  /** Afterpay (pay in 4 instalments) at checkout, through Square. Off everywhere (owner, 2026-11-14): checkout offers card, Apple Pay and
+   *  Google Pay for now. Square also has to approve the shop for Afterpay before the button can appear. */
+  afterpay: { local: false, staging: false, production: false },
 } satisfies Record<string, Record<Environment, boolean>>;
 
 /** Whether a feature is on where this copy of the site is running. */
