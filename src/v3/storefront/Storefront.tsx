@@ -713,10 +713,9 @@ export default function Storefront() {
       className="sh sf"
       data-view={view}
       data-ready={config ? "" : undefined}
+      // the owner's sidebar choice (Admin > Homepage > Page layout) applies to every shop page, the homepage included: without
+      // the category bar the homepage looked lopsided (user, 2026-11-14)
       {...layoutAttrs(layout)}
-      // the homepage uses the whole width (categories are in the menu, and behind Filters by the grid); the owner's sidebar
-      // choice applies to category, series and search pages
-      data-sidebar={isHome ? "hidden" : layout.sidebar}
     >
       <a className="sf-skip" href="#shop">
         Skip to products
