@@ -22,6 +22,7 @@ const OrderStatus = lazy(() => import("./v3/support/OrderStatus"));
 const Events = lazy(() => import("./v3/events/Events"));
 const About = lazy(() => import("./v3/about/About"));
 const Rewards = lazy(() => import("./v3/rewards/Rewards"));
+const Glossary = lazy(() => import("./v3/glossary/Glossary"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 // the shared building blocks shown live (local and staging only)
 const UiKit = lazy(() => import("./components/showcase/ComponentsPage"));
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/events" element={<Events />} />
           <Route path="/about" element={<About />} />
           {isOn("rewards") && <Route path="/rewards" element={<Rewards />} />}
+          <Route path="/glossary" element={<Glossary />} />
         </Route>
         <Route
           path="/reset-password"
