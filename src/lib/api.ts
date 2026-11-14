@@ -201,13 +201,7 @@ export function consumeSignupFlag() {
 /** Email and password only: the name, phone and address are asked for after the email is confirmed (src/v3/welcome). */
 export async function signUpWithPassword(email: string, password: string) {
   justSignedUp = true;
-  setSession(
-    await request<Session>(
-      "/auth/signup",
-      { method: "POST", body: JSON.stringify({ email: email.trim(), password }) },
-      null,
-    ),
-  );
+  setSession(await request<Session>("/auth/signup", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, null));
 }
 
 /** Sends the browser to Google/Discord; it comes back to the same page (see completeOAuthRedirect). */
