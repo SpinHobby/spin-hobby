@@ -9,6 +9,7 @@ import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merc
 import { ProductFilters } from "./ProductFilters";
 import { ShopperFunnel } from "./ShopperFunnel";
 import { SearchMisses } from "./SearchMisses";
+import { GleamshelfStats } from "./GleamshelfStats";
 import {
   activeFilterCount,
   DEFAULT_SORT,
@@ -37,6 +38,8 @@ import { photo } from "../photo";
 import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Skeleton, Toolbar, type Column } from "../../components";
 import { FrontRank, MoveArrows } from "./FrontPage";
 import { SquarePhotos } from "./SquarePhotos";
+import { ProductPoints } from "./ProductPoints";
+import { isOn } from "../../features";
 import { EbayListing } from "./EbayListing";
 import { EbaySettings } from "./EbaySettings";
 import { PageLayoutCard } from "./PageLayout";
@@ -47,6 +50,7 @@ import { LabelsDialog } from "./Labels";
 import { useSeriesList } from "./seriesList";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
 import { isShown, setVisible } from "./sourceState";
+import { GlossaryCard } from "../glossary/GlossaryCard";
 
 export interface Ctx {
   data: AdminData;
@@ -236,6 +240,7 @@ export function DashboardScreen({ ctx }: { ctx: Ctx }) {
         </div>
       </div>
       <ShopperFunnel />
+      <GleamshelfStats />
       <SearchMisses flash={ctx.flash} />
     </>
   );
@@ -1132,7 +1137,11 @@ function ProductDrawer({
                 </span>
                 <span className="ad-tag-manual">Added manually</span>
               </div>
-              <PhotoUploader urls={catalog.photos} onChange={(photos) => setCatalog((c) => ({ ...c, photos }))} />
+              <PhotoUploader
+                urls={catalog.photos}
+                onChange={(photos) => setCatalog((c) => ({ ...c, photos }))}
+                framing={{ productId: p.id, saved: p.images }}
+              />
               <label className="ad-field">
                 Name
                 <input
@@ -1336,6 +1345,7 @@ function ProductDrawer({
               <input className="sh-input" inputMode="numeric" value={form.jan} onChange={set("jan")} />
             </label>
           </div>
+          {isOn("rewards") && <ProductPoints productId={p.id} isOwner={ctx.isOwner} />}
           {p.alertsWaiting !== undefined && (
             <div className="ad-callout">
               <span>
@@ -1850,6 +1860,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
             </div>
           </Card>
           <EventsCard ctx={ctx} />
+          <GlossaryCard flash={ctx.flash} />
         </div>
       </div>
     </>

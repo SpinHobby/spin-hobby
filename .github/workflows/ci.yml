@@ -1,0 +1,37 @@
+# Runs the checks from CONTRIBUTING.md ("Before you push") on every pull request and on pushes to the long-lived
+# branches, so a change that doesn't type-check, lint or build is caught before Netlify publishes it.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [production, staging]
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same Node as Netlify (netlify.toml).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Same npm major as our laptops: Node 22's bundled npm 10 can reject lockfiles written by npm 11.
+      - run: npm install -g npm@11
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      # The app only. `npm run build` also writes the search-engine pages (scripts/generate-seo.mjs), which reads the
+      # live API: Netlify does that on a real deploy, and a check shouldn't depend on another service being up.
+      - run: npx vite build

@@ -4,8 +4,9 @@
 import type { AppUser } from "../v3/types";
 import { watchedFetch } from "./serverStatus";
 
-// Production builds default to the Render service; override with VITE_API_URL (e.g. a custom api.spinhobby.com).
-const DEFAULT_API = import.meta.env.PROD ? "https://spin-hobby-server.onrender.com" : "http://localhost:8080";
+// Production builds default to the shop's own address for the API (it points at the Render service, which also still answers at
+// https://spin-hobby-server.onrender.com); override with VITE_API_URL. Keep in step with scripts/generate-seo.mjs.
+const DEFAULT_API = import.meta.env.PROD ? "https://api.spinhobby.com" : "http://localhost:8080";
 export const API_URL: string = (import.meta.env.VITE_API_URL || DEFAULT_API).replace(/\/$/, "");
 
 export type ApiRequest = RequestInit & { body?: BodyInit | null };
@@ -188,7 +189,7 @@ export async function signInWithPassword(email: string, password: string) {
   setSession(await request<Session>("/auth/login", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, null));
 }
 
-/** Creates a customer account (no confirmation email) and signs straight in. */
+/** Creates a customer account and signs straight in; the server emails a 6-digit code to confirm the address (see Welcome). */
 // Set by a fresh sign-up so the welcome message can say "welcome" rather than "welcome back".
 let justSignedUp = false;
 export function consumeSignupFlag() {
@@ -197,15 +198,10 @@ export function consumeSignupFlag() {
   return v;
 }
 
-export async function signUpWithPassword(email: string, password: string, firstName?: string) {
+/** Email and password only: the name, phone and address are asked for after the email is confirmed (src/v3/welcome). */
+export async function signUpWithPassword(email: string, password: string) {
   justSignedUp = true;
-  setSession(
-    await request<Session>(
-      "/auth/signup",
-      { method: "POST", body: JSON.stringify({ email: email.trim(), password, firstName: firstName?.trim() || undefined }) },
-      null,
-    ),
-  );
+  setSession(await request<Session>("/auth/signup", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, null));
 }
 
 /** Sends the browser to Google/Discord; it comes back to the same page (see completeOAuthRedirect). */

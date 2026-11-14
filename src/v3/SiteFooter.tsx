@@ -28,6 +28,7 @@ export default function SiteFooter() {
           <Link to="/support">Help &amp; support</Link>
           <Link to="/support#shipping">Shipping &amp; duties</Link>
           <Link to="/support#returns">Returns &amp; damaged items</Link>
+          <Link to="/glossary">Collector&apos;s glossary</Link>
           <Link to="/legal/terms">Terms of Service</Link>
           <Link to="/legal/privacy">Privacy Policy</Link>
         </nav>

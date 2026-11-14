@@ -1674,6 +1674,71 @@
   font-weight: 700;
 }
 
+// Position a photo in its square (PhotoFrameEditor): drag it, zoom it, as the shop shows it (photos fill their card).
+.ad-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface2);
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  &__box {
+    position: relative;
+    width: min(280px, 100%);
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--surface);
+    cursor: grab;
+    touch-action: none;
+    &:active {
+      cursor: grabbing;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: var(--fx, 50%) var(--fy, 50%);
+      transform-origin: var(--fx, 50%) var(--fy, 50%);
+      transform: scale(var(--fz, 1));
+      display: block;
+      user-select: none;
+      pointer-events: none;
+    }
+  }
+  &__side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 160px;
+  }
+  &__zoom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    input {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+  }
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 // Photo and text options: each step with its price; the paid ones are never ticked by default.
 .ad-polish-box {
   display: flex;
@@ -2649,6 +2714,11 @@
   gap: 6px 14px;
   font-size: 13px;
 }
+// beside "Transparent": "Positioned" (moved or zoomed in its square on the shop)
+.ad-photos__clear--right {
+  left: auto;
+  right: 6px;
+}
 .ad-photos__clear {
   position: absolute;
   bottom: 6px;
@@ -3498,4 +3568,24 @@
     margin-left: 4px;
     color: var(--muted);
   }
+}
+
+// Admin > product > Rewards points (ProductPoints.tsx)
+.ad-points {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  legend {
+    padding: 0 6px;
+  }
+}
+.ad-points__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }

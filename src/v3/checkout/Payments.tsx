@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ENVIRONMENT, isOn } from "../../features";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 export interface CheckoutConfig {
@@ -73,6 +74,7 @@ const squareSdk = () => (window as unknown as { Square?: { payments: (appId: str
 const walletTotal = (cents: number) => ({ amount: (Math.max(cents, 0) / 100).toFixed(2), label: "Spin Hobby" });
 
 /** The shopper closed the Apple Pay, Google Pay or Afterpay sheet: not an error worth showing. */
+// eslint-disable-next-line react-refresh/only-export-components -- an error type the checkout catches; it lives beside the buttons that throw it
 export class WalletCancelled extends Error {
   constructor() {
     super("Payment cancelled.");
@@ -167,11 +169,12 @@ export function SquarePay({
           total: walletTotal(amountRef.current ?? 0),
         });
         requestRef.current = request;
-        // Afterpay (pay in 4): only where Square has it turned on for the shop, and only for totals Afterpay accepts
+        // Afterpay (pay in 4): only with its feature switch on (src/features.ts, off for now), where Square has it turned on for the
+        // shop, and only for totals Afterpay accepts
         const [apple, google, afterpay] = await Promise.all([
           payments.applePay(request).catch(() => undefined),
           payments.googlePay(request).catch(() => undefined),
-          payments.afterpayClearpay(request).catch(() => undefined),
+          isOn("afterpay") ? payments.afterpayClearpay(request).catch(() => undefined) : undefined,
         ]);
         for (const w of [apple, google, afterpay]) if (w) made.push(w);
         if (cancelled) return;
@@ -282,11 +285,49 @@ export function SquarePay({
           <span>or pay by card</span>
         </p>
       )}
+      {ENVIRONMENT === "local" && config.squareEnv === "sandbox" && <SandboxTestCard />}
       <div id="sq-card" className="co-square__card" />
       {!ready && <div className="sh-skeleton" style={{ height: 48 }} />}
       <button type="button" className="sh-btn co-pay-btn" disabled={disabled || !ready || busy} onClick={submit}>
         {busy ? "Processing…" : `Pay ${amountLabel}`}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Local only (npm run dev with Square's sandbox keys): Square's published test card, each value with a Copy button. Square's card
+ * boxes are its own locked frame, so no page can type into them; copy and paste is the closest. Never shown on staging or live.
+ */
+const TEST_CARD: [string, string][] = [
+  ["Card number", "4111 1111 1111 1111"],
+  ["Expiry", "12/30"],
+  ["CVV", "111"],
+  ["ZIP", "12345"],
+];
+function SandboxTestCard() {
+  const [copied, setCopied] = useState("");
+  const copy = (label: string, value: string) => {
+    void navigator.clipboard
+      ?.writeText(value.replace(/\s/g, ""))
+      .then(() => setCopied(label))
+      .catch(() => undefined);
+  };
+  return (
+    <div className="co-testcard">
+      <strong>Local test card (Square sandbox, no real money)</strong>
+      <ul>
+        {TEST_CARD.map(([label, value]) => (
+          <li key={label}>
+            <span>{label}</span>
+            <code>{value}</code>
+            <button type="button" className="sh-btn sh-btn--ghost" onClick={() => copy(label, value)}>
+              {copied === label ? "Copied" : "Copy"}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <small>Square asks for a US ZIP because its test card is an American card.</small>
     </div>
   );
 }

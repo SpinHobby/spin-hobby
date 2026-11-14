@@ -536,6 +536,9 @@
   img {
     width: 140px;
   }
+  &.co-success img {
+    width: 180px;
+  }
   h1 {
     margin: 0;
     font-size: 28px;
@@ -755,5 +758,63 @@
     content: "";
     flex: 1;
     border-top: 1px solid var(--border);
+  }
+}
+
+// Local only (Payments.tsx SandboxTestCard): Square's sandbox test card with Copy buttons.
+.co-testcard {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  font-size: 13px;
+  color: var(--text2);
+  ul {
+    list-style: none;
+    margin: 8px 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  li {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    align-items: center;
+    gap: 8px;
+  }
+  code {
+    color: var(--text);
+    font-size: 13px;
+  }
+  .sh-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  small {
+    color: var(--muted);
+  }
+}
+
+// Checkout phone: a fixed +1 (Canada and the US) joined to the left of the number box.
+.co-phone {
+  display: flex;
+  align-items: stretch;
+  &__code {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-right: 0;
+    border-radius: 10px 0 0 10px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-weight: 600;
+  }
+  .sh-input {
+    flex: 1;
+    min-width: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
   }
 }
