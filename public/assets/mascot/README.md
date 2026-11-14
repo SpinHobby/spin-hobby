@@ -13,7 +13,10 @@ these copies; never edit them by hand.
 | clover-thank-you.png | mascot/AidiChibi/IMG_0213.png, trimmed, 480 wide | order confirmed page and email |
 
 mascot-wave.png: the white background was removed by filling in from the edges (the drawing's outlines stop it), so a few
-tiny white slivers between hair strands on the right remain. The clover copies have near-invisible stray pixels (alpha under 40) cleared before trimming. Code refers to them through
+tiny white slivers between hair strands on the right remain. sparkle.png, sparkle-small.png, heart-pink.png, heart-red.png: the little doodles cut out of mascot/AidiChibi/IMG_0211.png
+(only the main shape kept, 64 px tall). Emails use them as bullets and dividers instead of emoji.
+
+The clover copies have near-invisible stray pixels (alpha under 40) cleared before trimming. Code refers to them through
 `src/v3/mascots.ts`.
 
 Only official, artist-drawn art goes here. No AI-generated pictures: anime fans and artists dislike them.
