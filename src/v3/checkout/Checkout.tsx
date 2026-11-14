@@ -1,3 +1,4 @@
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isOn } from "../../features";
 import { Navigate, useLocation } from "react-router-dom";
@@ -5,11 +6,12 @@ import "../../components/styles/tokens.scss";
 import "./checkout.scss";
 import { track } from "../../lib/analytics";
 import { api } from "../../lib/api";
+import { errorMessage } from "../../lib/query";
 import { price } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
-import { loadStoreConfig } from "../storeConfig";
+import { useStoreConfigState } from "../storeConfig";
 import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, WalletCancelled, type CheckoutConfig } from "./Payments";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
@@ -102,6 +104,19 @@ const optionTime = (o: ShippingOption) =>
 // and only if the client ID matches the server's PAYPAL_CLIENT_ID.
 const ENV_PAYPAL_ID: string | undefined = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 
+/** Used only when the shop's settings can't be read and the build names a PayPal client itself. */
+const ENV_PAYPAL_CONFIG: CheckoutConfig = {
+  provider: "paypal",
+  paypalClientId: ENV_PAYPAL_ID ?? null,
+  paypalEnv: "sandbox",
+  squareApplicationId: null,
+  squareLocationId: null,
+  squareEnv: "sandbox",
+  shippingStandardCents: 899,
+  shippingExpressCents: 1999,
+  freeShippingThresholdCents: 7500,
+};
+
 function addressErrors(a: Address) {
   const e: Partial<Record<keyof Address, string>> = {};
   if (!a.firstName.trim()) e.firstName = "Required";
@@ -138,11 +153,6 @@ export default function Checkout() {
   const [touched, setTouched] = useState(false); // a payment attempt: show every problem
   const [blurred, setBlurred] = useState<Set<string>>(new Set()); // fields the shopper has left: show their problems
   const leave = (field: string) => setBlurred((b) => (b.has(field) ? b : new Set(b).add(field)));
-  const [config, setConfig] = useState<CheckoutConfig | null>(null);
-  const [configError, setConfigError] = useState("");
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [quoteError, setQuoteError] = useState("");
-  const [quoting, setQuoting] = useState(false);
   const [payError, setPayError] = useState("");
   const [done, setDone] = useState<{ orderId: number; status: string } | null>(null);
   const orderIdRef = useRef<number | null>(null);
@@ -202,26 +212,10 @@ export default function Checkout() {
     return () => window.clearTimeout(timer);
   }, [remind, remindEmail, remindLines]);
 
-  useEffect(() => {
-    loadStoreConfig().then((c) => {
-      if (c) setConfig(c);
-      else if (ENV_PAYPAL_ID) {
-        setConfig({
-          provider: "paypal",
-          paypalClientId: ENV_PAYPAL_ID,
-          paypalEnv: "sandbox",
-          squareApplicationId: null,
-          squareLocationId: null,
-          squareEnv: "sandbox",
-          shippingStandardCents: 899,
-          shippingExpressCents: 1999,
-          freeShippingThresholdCents: 7500,
-        });
-      } else {
-        setConfigError("Online payment isn't available right now.");
-      }
-    });
-  }, []);
+  // The shop's payment settings, shared with the rest of the site (src/v3/storeConfig.ts): null when they can't be read.
+  const settings = useStoreConfigState();
+  const config: CheckoutConfig | null = settings ?? (settings === null && ENV_PAYPAL_ID ? ENV_PAYPAL_CONFIG : null);
+  const configError = settings === null && !ENV_PAYPAL_ID ? "Online payment isn't available right now." : "";
 
   // the postal code goes with the quote once it looks complete: couriers price to it
   const postalReady = POSTAL_RE[ship.country].test(ship.postalCode.trim());
@@ -238,44 +232,43 @@ export default function Checkout() {
     [cart.lines, ship.country, ship.province, postalReady, ship.postalCode, ship.city, option, appliedCode],
   );
 
+  // The priced cart (GET-like: nothing is saved by asking). A short pause after each change, so typing a postal code
+  // doesn't ask per key; totals priced before (the other courier picked again, coming back to this page) show at once
+  // and are still asked for again, because stock and prices move. Paying waits for that fresh answer (`quoting`).
+  const quoteKey = JSON.stringify(quoteInput);
+  const [pausedKey, setPausedKey] = useState(quoteKey);
   useEffect(() => {
-    if (!cart.lines.length) {
-      setQuote(null);
-      return;
-    }
-    let active = true;
-    setQuoting(true);
-    const timer = window.setTimeout(() => {
-      api<Quote & { success: true }>("/cart/quote", { method: "POST", body: JSON.stringify(quoteInput) })
-        .then((q) => {
-          if (active) {
-            setQuote(q);
-            setQuoteError("");
-            // the option picked isn't offered for this address (or none was picked yet): use the one the quote priced
-            const priced = q.shippingOption?.id ?? null;
-            if (priced) setOption((cur) => (cur === priced ? cur : priced));
-            // a code that doesn't (or no longer) applies is dropped with its reason, so it never blocks paying
-            if (q.discountMessage) {
-              setCodeMessage(q.discountMessage);
-              setAppliedCode("");
-            } else if (q.discount) setCodeMessage("");
-          }
-        })
-        .catch((e: Error) => {
-          if (active) {
-            setQuote(null);
-            setQuoteError(e.message);
-          }
-        })
-        .finally(() => {
-          if (active) setQuoting(false);
-        });
-    }, 250);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [quoteInput, cart.lines.length]);
+    const timer = window.setTimeout(() => setPausedKey(quoteKey), 250);
+    return () => window.clearTimeout(timer);
+  }, [quoteKey]);
+  const client = useQueryClient();
+  const askedKey = client.getQueryData(["cart", "quote", quoteKey]) !== undefined ? quoteKey : pausedKey;
+  const hasLines = cart.lines.length > 0;
+  const priced = useQuery({
+    queryKey: ["cart", "quote", askedKey],
+    enabled: hasLines && !done,
+    queryFn: () => api<Quote & { success: true }>("/cart/quote", { method: "POST", body: askedKey }),
+    staleTime: 0,
+    placeholderData: keepPreviousData, // the last totals stay on screen while new ones are worked out
+    // coming back from a payment window must not hold up the payment that is under way
+    refetchOnWindowFocus: false,
+  });
+  const quote: Quote | null = hasLines ? (priced.data ?? null) : null;
+  const quoteError = hasLines && !quote ? (errorMessage(priced.error) ?? "") : "";
+  const quoting = hasLines && !done && (askedKey !== quoteKey || priced.isFetching);
+  // what a fresh quote says about the choices sent with it
+  const answer = priced.isPlaceholderData ? undefined : priced.data;
+  useEffect(() => {
+    if (!answer) return;
+    // the option picked isn't offered for this address (or none was picked yet): use the one the quote priced
+    const pricedOption = answer.shippingOption?.id ?? null;
+    if (pricedOption) setOption((cur) => (cur === pricedOption ? cur : pricedOption));
+    // a code that doesn't (or no longer) applies is dropped with its reason, so it never blocks paying
+    if (answer.discountMessage) {
+      setCodeMessage(answer.discountMessage);
+      setAppliedCode("");
+    } else if (answer.discount) setCodeMessage("");
+  }, [answer]);
 
   const shipErrors = addressErrors(ship);
   const billErrors = billingSame ? {} : addressErrors(bill);
@@ -340,6 +333,10 @@ export default function Checkout() {
   const finish = (orderId: number, status: string) => {
     for (const l of cart.lines) cart.setQty(l.variationId, 0);
     setDone({ orderId, status });
+    // the order took stock: its quotes are history, and the shop's lists and product pages ask again when next shown
+    client.removeQueries({ queryKey: ["cart", "quote"] });
+    void client.invalidateQueries({ queryKey: ["products"] });
+    void client.invalidateQueries({ queryKey: ["product"] });
     window.history.replaceState(null, "", `/checkout/success?order=${orderId}`);
     window.scrollTo({ top: 0 });
   };

@@ -1,3 +1,4 @@
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import type { Product } from "../types";
@@ -41,7 +42,6 @@ export function clearViewed() {
 /** The shopper's recently viewed products with today's price and stock (`exclude`: the product on screen). Empty when there are none. */
 export function useRecentlyViewed(exclude?: string) {
   const [ids, setIds] = useState(readIds);
-  const [items, setItems] = useState<Product[]>([]);
   useEffect(() => {
     const update = () => setIds(readIds());
     window.addEventListener(CHANGED, update);
@@ -54,23 +54,18 @@ export function useRecentlyViewed(exclude?: string) {
 
   const wanted = ids.filter((id) => id.toLowerCase() !== exclude?.toLowerCase());
   const key = wanted.join(",");
-  useEffect(() => {
-    if (!key) {
-      setItems([]);
-      return;
-    }
-    let live = true;
-    api<{ items: Product[] }>(`/products?${new URLSearchParams({ ids: key, limit: String(MAX) })}`)
-      .then((r) => {
-        if (!live) return;
-        const byId = new Map(r.items.map((p) => [p.id.toLowerCase(), p]));
-        // newest first, as remembered; products no longer for sale drop out
-        setItems(key.split(",").flatMap((id) => byId.get(id.toLowerCase()) ?? []));
-      })
-      .catch(() => live && setItems([]));
-    return () => {
-      live = false;
-    };
-  }, [key]);
-  return items;
+  // A row already shown (Back from a product) is there at once, so the page below it doesn't jump when it arrives.
+  const { data } = useQuery({
+    queryKey: ["products", "viewed", key],
+    enabled: !!key,
+    placeholderData: keepPreviousData, // the row stays as it was while its new answer is on the way
+    queryFn: async () => {
+      const r = await api<{ items: Product[] }>(`/products?${new URLSearchParams({ ids: key, limit: String(MAX) })}`);
+      const byId = new Map(r.items.map((p) => [p.id.toLowerCase(), p]));
+      // newest first, as remembered; products no longer for sale drop out
+      return key.split(",").flatMap((id) => byId.get(id.toLowerCase()) ?? []);
+    },
+  });
+  return key && data ? data : NONE;
 }
+const NONE: Product[] = [];

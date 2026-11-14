@@ -411,8 +411,14 @@ export default function Storefront() {
   const pageRef = useEnterAnimation<HTMLDivElement>(productId ?? "shop");
   const mainRef = useEnterAnimation<HTMLElement>(location.pathname, 0); // a fade only: the titles bring their own rise
   // Changing tab, category, search or wishlist: the old products fade out, then the new ones rise in one after another.
-  const swap = useContentSwap(`${location.pathname}|${wishOnly}|${filters.query}`, results.items);
-  const listMotion = `ui-stagger ${swap.phase !== "shown" ? "ui-leaving" : results.loading ? "is-refreshing" : ""}`;
+  // A product page is not another list: the list's name stays as it was, so Back from a product finds the list as it was left.
+  const listKey = useRef("");
+  if (!productId) listKey.current = `${location.pathname}|${wishOnly}|${filters.query}`;
+  const swap = useContentSwap(listKey.current, results.items);
+  // The old list is only hidden while its replacement is really on the way. A list kept from before (Back, Forward) is
+  // there at once, and hiding it then would leave an empty space until the swap gave up waiting.
+  const swapping = swap.phase !== "shown" && results.loading;
+  const listMotion = `ui-stagger ${swapping ? "ui-leaving" : results.loading ? "is-refreshing" : ""}`;
   // the sidebar scrolls without a bar; its edges fade while there is more
   const sidebarRef = useScrollFade<HTMLElement>();
 
@@ -561,7 +567,7 @@ export default function Storefront() {
           </div>
         </div>
 
-        {(results.loading && !results.items.length) || swap.phase === "slow" ? (
+        {(results.loading && !results.items.length) || (swapping && swap.phase === "slow") ? (
           <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""}`} aria-busy="true" aria-label="Loading products">
             {Array.from({ length: 10 }, (_, i) => (
               <div key={i} className="sf-card sf-card--skeleton">

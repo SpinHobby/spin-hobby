@@ -6,6 +6,7 @@
   "dependencies": {
     "@gleamshelf/react": "file:vendor/gleamshelf-react-0.6.0.tgz",
     "@paypal/react-paypal-js": "^8.1.3",
+    "@tanstack/react-query": "^5.107.1",
     "barcode-detector": "^3.2.2",
     "heic-decode": "^2.1.0",
     "react": "^18.2.0",
