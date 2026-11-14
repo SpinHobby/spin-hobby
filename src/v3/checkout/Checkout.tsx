@@ -167,14 +167,25 @@ export default function Checkout() {
     if (!email && auth.email) setEmail(auth.email);
   }, [auth.email, email, setEmail]);
 
-  // A signed-in customer with a saved address (from the welcome step after signing up) gets it filled in, if the form is still empty.
+  // A signed-in customer gets their saved address filled in (saved at the welcome step or by "Save for next time" below), or at
+  // least their own name and phone when no address is saved yet. Only into an empty form: never over what they typed.
   const shipEmpty = !ship.address1.trim() && !ship.firstName.trim();
   useEffect(() => {
     if (!auth.email || !shipEmpty) return;
     let live = true;
-    api<{ address: (Omit<Address, "address2" | "phone"> & { address2: string | null; phone: string | null }) | null }>("/account/address")
-      .then(({ address }) => {
-        if (live && address) setShip((s) => ({ ...s, ...address, address2: address.address2 ?? "", phone: address.phone ?? s.phone }));
+    api<{
+      address: (Omit<Address, "address2" | "phone"> & { address2: string | null; phone: string | null }) | null;
+      profile?: { firstName: string | null; lastName: string | null; phone: string | null };
+    }>("/account/address")
+      .then(({ address, profile }) => {
+        if (!live) return;
+        setShip((s) => ({
+          ...s,
+          ...(address ? { ...address, address2: address.address2 ?? "" } : {}),
+          firstName: address?.firstName || profile?.firstName || s.firstName,
+          lastName: address?.lastName || profile?.lastName || s.lastName,
+          phone: formatPhone(address?.phone || profile?.phone || s.phone),
+        }));
       })
       .catch(() => undefined);
     return () => {
@@ -213,6 +224,8 @@ export default function Checkout() {
 
   // "Email me my cart if I don't finish": never ticked for the shopper. While ticked, the cart is saved for one reminder.
   const [remind, setRemind] = useLocalState("spinhobby-cart-reminder", false);
+  // signed in: after a paid order, the name, phone and address become the account's saved address (ticked unless they untick it)
+  const [saveForNext, setSaveForNext] = useLocalState("spinhobby-checkout-save", true);
   const remindEmail = email.trim().toLowerCase();
   const remindLines = useMemo(() => cart.lines.map((l) => ({ variationId: l.variationId, quantity: l.quantity })), [cart.lines]);
   const remindSent = useRef<string>("");
@@ -348,6 +361,26 @@ export default function Checkout() {
   }, [canPay, quoteInput, email, ship, bill, billingSame]);
 
   const finish = (orderId: number, status: string) => {
+    if (auth.email && saveForNext) {
+      const a = toServerAddress(ship);
+      // best effort: the order is placed either way
+      void api("/account/address", {
+        method: "PUT",
+        body: JSON.stringify({
+          firstName: a.firstName,
+          lastName: a.lastName,
+          phone: a.phone ?? null,
+          address: {
+            address1: a.address1,
+            address2: a.address2,
+            city: a.city,
+            province: a.province,
+            postalCode: a.postalCode,
+            country: a.country,
+          },
+        }),
+      }).catch(() => undefined);
+    }
     for (const l of cart.lines) cart.setQty(l.variationId, 0);
     setDone({ orderId, status });
     // the order took stock: its quotes are history, and the shop's lists and product pages ask again when next shown
@@ -565,6 +598,12 @@ export default function Checkout() {
                 prefix="shipping"
                 phone={false}
               />
+              {auth.email && (
+                <label className="co-check">
+                  <input type="checkbox" checked={saveForNext} onChange={(e) => setSaveForNext(e.target.checked)} />
+                  <span>Save this address and phone for next time</span>
+                </label>
+              )}
               <h3>Delivery</h3>
               {options.length ? (
                 <div className="co-methods" role="radiogroup" aria-label="Delivery">
