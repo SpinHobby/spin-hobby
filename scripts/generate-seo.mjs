@@ -241,7 +241,7 @@ async function main() {
   } catch (error) {
     // The live site must not go out built against an API address that doesn't answer: every page would fail for every shopper,
     // and the sitemap would lose every product. Failing here stops the build, and Netlify keeps showing the last good one.
-    if (IS_LIVE_BUILD) throw new Error(`The API at ${API_URL} did not answer (${error.message}). Not publishing the live site against it.`);
+    if (IS_LIVE_BUILD) throw new Error(`The API at ${API_URL} did not answer (${error.message}). Not publishing the live site against it.`, { cause: error });
     console.warn(`[generate-seo] Could not fetch products (${error.message}); skipping product, category and series pages.`);
   }
   try {
