@@ -19,11 +19,14 @@ interface Address {
   postalCode: string;
   country: "CA" | "US";
 }
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/** Days in a month for a birthday (February has 29: some people are born on the 29th). */
+const daysIn = (month: number) => (month ? [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1] : 31);
 const NO_ADDRESS: Address = { address1: "", address2: "", city: "", province: "ON", postalCode: "", country: "CA" };
 
 /**
- * Right after signing up: 1) confirm the email with the code we sent, 2) a few optional details (name, phone, a shipping address that
- * checkout fills in, weekly pre-order news), 3) a short welcome. Everything can be skipped; shopping never waits for it. Closing it
+ * Right after signing up: 1) confirm the email with the code we sent, 2) a few optional details (name, phone, birthday, a shipping address
+ * that checkout fills in, pre-order news), 3) a short welcome. Everything can be skipped; shopping never waits for it. Closing it
  * in any way marks the welcome as seen, so it doesn't come back on every page; the email can still be confirmed later from a limited
  * item (or Rewards, where rewards are on).
  */
@@ -32,6 +35,8 @@ export function Welcome({ user, onClose }: { user: AppUser; onClose: () => void 
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState(user.phone ?? "");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthDay, setBirthDay] = useState("");
   const [addressOpen, setAddressOpen] = useState(false);
   const [address, setAddress] = useState<Address>(NO_ADDRESS);
   const [news, setNews] = useState(false);
@@ -74,6 +79,7 @@ export function Welcome({ user, onClose }: { user: AppUser; onClose: () => void 
             firstName: firstName.trim() || undefined,
             lastName: lastName.trim() || undefined,
             phone: phone.trim(),
+            ...(birthMonth && birthDay ? { birthday: { month: Number(birthMonth), day: Number(birthDay) } } : {}),
             ...(addressOpen && address.address1.trim() ? { address } : {}),
           };
       await api("/account/profile", { method: "PATCH", body: JSON.stringify(body) });
@@ -163,6 +169,43 @@ export function Welcome({ user, onClose }: { user: AppUser; onClose: () => void 
               />
               <small>Only for delivery questions. We never call to sell.</small>
             </label>
+            <fieldset className="sh-welcome__birthday">
+              <legend>Birthday</legend>
+              <div className="sh-welcome__row">
+                <select
+                  className="sh-input"
+                  aria-label="Birthday month"
+                  autoComplete="bday-month"
+                  value={birthMonth}
+                  onChange={(e) => {
+                    setBirthMonth(e.target.value);
+                    if (Number(birthDay) > daysIn(Number(e.target.value))) setBirthDay("");
+                  }}
+                >
+                  <option value="">Month</option>
+                  {MONTHS.map((m, i) => (
+                    <option key={m} value={i + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="sh-input"
+                  aria-label="Birthday day"
+                  autoComplete="bday-day"
+                  value={birthDay}
+                  onChange={(e) => setBirthDay(e.target.value)}
+                >
+                  <option value="">Day</option>
+                  {Array.from({ length: daysIn(Number(birthMonth)) }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <small>Month and day only, never the year.</small>
+            </fieldset>
 
             {addressOpen ? (
               <fieldset className="sh-welcome__address">
@@ -234,7 +277,7 @@ export function Welcome({ user, onClose }: { user: AppUser; onClose: () => void 
 
             <label className="sh-welcome__check">
               <input type="checkbox" checked={news} onChange={(e) => setNews(e.target.checked)} />
-              <span>Email me new pre-orders once a week. Stop any time.</span>
+              <span>Email me about new pre-orders. Stop any time.</span>
             </label>
             {error && (
               <span className="sh-code__error" role="alert">

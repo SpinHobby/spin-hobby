@@ -215,13 +215,13 @@ export function PreorderDigestBox({ email }: { email: string | null }) {
   if (state === "done")
     return (
       <div className="sf-follow sf-digest is-done" role="status">
-        ✓ Every week we'll email {value.trim()} the new pre-orders, before they close.
+        ✓ We'll email {value.trim()} when new pre-orders open, before they close.
       </div>
     );
   return (
     <form className="sf-follow sf-digest" onSubmit={submit} aria-labelledby="digest-title">
       <div id="digest-title" className="sf-follow__title">
-        New pre-orders in your inbox, once a week
+        New pre-orders in your inbox
       </div>
       <div className="sf-follow__row">
         <input
@@ -234,11 +234,11 @@ export function PreorderDigestBox({ email }: { email: string | null }) {
           onChange={(e) => setValue(e.target.value)}
         />
         <button className="sh-btn" disabled={state === "busy"}>
-          {state === "busy" ? "Saving…" : "Email me weekly"}
+          {state === "busy" ? "Saving…" : "Email me"}
         </button>
       </div>
       {error && <span className="sf-error">{error}</span>}
-      <span className="sf-muted sf-follow__small">One email a week, only when there's something new. Every email has a link to stop.</span>
+      <span className="sf-muted sf-follow__small">Only when there's something new. Every email has a link to stop.</span>
     </form>
   );
 }
