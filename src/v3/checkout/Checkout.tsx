@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MASCOTS } from "../mascots";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isOn } from "../../features";
 import { Navigate, useLocation } from "react-router-dom";
@@ -20,7 +21,7 @@ import { CheckoutAddOns } from "../storefront/Suggestions";
 import type { Product } from "../types";
 import { ShopLogo } from "../ShopLogo";
 
-const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
+const MASCOT = MASCOTS.chibi;
 
 interface Address {
   firstName: string;
@@ -467,7 +468,7 @@ export default function Checkout() {
           </div>
         </header>
         <div className="co-empty">
-          <img src={MASCOT} alt="" />
+          <img src={MASCOTS.clover} alt="" />
           <h1 className="sh-display">Your cart is empty</h1>
           <p>Add something from the shop and come back here to check out.</p>
           <a href="/" className="sh-btn">
@@ -1054,7 +1055,7 @@ function Success({ orderId, preorder, email }: { orderId: number; preorder: bool
         </div>
       </header>
       <div className="co-empty co-success">
-        <img src={MASCOT} alt="" />
+        <img src={MASCOTS.thankYou} alt="Thank you!" />
         <span className="sh-eyebrow" style={{ color: "var(--teal)" }}>
           Order confirmed
         </span>

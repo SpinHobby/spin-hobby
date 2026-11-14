@@ -11,6 +11,7 @@ import type { ProductPage as ProductList } from "../types";
 import { PriceTag } from "./ProductViews";
 import { useAddOns } from "./suggestionData";
 import { isOn } from "../../features";
+import { MASCOTS } from "../mascots";
 
 const NO_PRODUCTS: Product[] = [];
 
@@ -77,7 +78,7 @@ export function CartDrawer({
         </div>
         {lines.length === 0 ? (
           <div className="sh-drawer__body sf-cart-empty">
-            <img src="/assets/transparent%20mascot%20chibi%20rotated.png" alt="" />
+            <img src={MASCOTS.clover} alt="" />
             <strong>Your cart is empty</strong>
             <span>New figures, plushies and goods land every week.</span>
             <button type="button" className="sh-btn" onClick={onClose}>
