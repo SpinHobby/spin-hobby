@@ -15,7 +15,7 @@ import { useDocumentHead } from "../seo";
 import { useStoreConfigState } from "../storeConfig";
 import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, WalletCancelled, type CheckoutConfig } from "./Payments";
-import { formatPhone, formatPostal } from "./formatInput";
+import { formatPhone, formatPostal, localPhone, phoneWithCountry } from "./formatInput";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
 import { framedPhoto } from "../photo";
 import { CheckoutAddOns } from "../storefront/Suggestions";
@@ -184,7 +184,7 @@ export default function Checkout() {
           ...(address ? { ...address, address2: address.address2 ?? "" } : {}),
           firstName: address?.firstName || profile?.firstName || s.firstName,
           lastName: address?.lastName || profile?.lastName || s.lastName,
-          phone: formatPhone(address?.phone || profile?.phone || s.phone),
+          phone: localPhone(address?.phone || profile?.phone || s.phone),
         }));
       })
       .catch(() => undefined);
@@ -337,7 +337,7 @@ export default function Checkout() {
     province: a.province,
     postalCode: a.postalCode.trim().toUpperCase(),
     country: a.country,
-    phone: a.phone.trim() || undefined,
+    phone: phoneWithCountry(a.phone),
   });
 
   const createIntent = useCallback(async () => {
@@ -549,7 +549,7 @@ export default function Checkout() {
               <div className="co-fields">
                 <Field
                   label="Email"
-                  className="co-c4"
+                  className="co-c3"
                   error={(touched || blurred.has("email")) && !emailOk ? "Enter a valid email" : undefined}
                 >
                   <input
@@ -562,16 +562,23 @@ export default function Checkout() {
                     placeholder="you@example.com"
                   />
                 </Field>
-                <Field label="Phone (optional)" className="co-c2">
-                  <input
-                    className="sh-input"
-                    type="tel"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    placeholder="416-555-0123"
-                    value={ship.phone}
-                    onChange={(e) => setShip({ ...ship, phone: formatPhone(e.target.value) })}
-                  />
+                <Field label="Phone (optional)" className="co-c3">
+                  {/* Canada and the US share +1, so it's shown, not chosen; the box holds the local number */}
+                  <div className="co-phone">
+                    <span className="co-phone__code" title="Canada and the US">
+                      +1
+                    </span>
+                    <input
+                      className="sh-input"
+                      type="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      placeholder="416-555-0123"
+                      aria-label="Phone number after +1"
+                      value={ship.phone}
+                      onChange={(e) => setShip({ ...ship, phone: localPhone(e.target.value) })}
+                    />
+                  </div>
                 </Field>
               </div>
               <p className="co-note">

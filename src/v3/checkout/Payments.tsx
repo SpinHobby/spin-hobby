@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { isOn } from "../../features";
+import { ENVIRONMENT, isOn } from "../../features";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 export interface CheckoutConfig {
@@ -285,11 +285,49 @@ export function SquarePay({
           <span>or pay by card</span>
         </p>
       )}
+      {ENVIRONMENT === "local" && config.squareEnv === "sandbox" && <SandboxTestCard />}
       <div id="sq-card" className="co-square__card" />
       {!ready && <div className="sh-skeleton" style={{ height: 48 }} />}
       <button type="button" className="sh-btn co-pay-btn" disabled={disabled || !ready || busy} onClick={submit}>
         {busy ? "Processing…" : `Pay ${amountLabel}`}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Local only (npm run dev with Square's sandbox keys): Square's published test card, each value with a Copy button. Square's card
+ * boxes are its own locked frame, so no page can type into them; copy and paste is the closest. Never shown on staging or live.
+ */
+const TEST_CARD: [string, string][] = [
+  ["Card number", "4111 1111 1111 1111"],
+  ["Expiry", "12/30"],
+  ["CVV", "111"],
+  ["ZIP", "12345"],
+];
+function SandboxTestCard() {
+  const [copied, setCopied] = useState("");
+  const copy = (label: string, value: string) => {
+    void navigator.clipboard
+      ?.writeText(value.replace(/\s/g, ""))
+      .then(() => setCopied(label))
+      .catch(() => undefined);
+  };
+  return (
+    <div className="co-testcard">
+      <strong>Local test card (Square sandbox, no real money)</strong>
+      <ul>
+        {TEST_CARD.map(([label, value]) => (
+          <li key={label}>
+            <span>{label}</span>
+            <code>{value}</code>
+            <button type="button" className="sh-btn sh-btn--ghost" onClick={() => copy(label, value)}>
+              {copied === label ? "Copied" : "Copy"}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <small>Square asks for a US ZIP because its test card is an American card.</small>
     </div>
   );
 }

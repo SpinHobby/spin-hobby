@@ -32,3 +32,16 @@ export function formatPostal(raw: string, country: "CA" | "US"): string {
   const d = raw.replace(/\D/g, "").slice(0, 9);
   return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
 }
+
+/**
+ * Checkout's phone box sits after a fixed "+1" (Canada and the US share it), so the box holds only the local number: a pasted or
+ * autofilled "+1 416 555 0123" shows as "416-555-0123". Other countries' numbers are left as typed.
+ */
+export const localPhone = (raw: string) => formatPhone(raw).replace(/^\+1 ?/, "");
+
+/** What is saved with the order: "+1 416-555-0123" for a full Canadian/US number; anything else as typed; empty for none. */
+export function phoneWithCountry(local: string): string | undefined {
+  const t = local.trim();
+  if (!t) return undefined;
+  return /^\d{3}-\d{3}-\d{4}$/.test(t) ? `+1 ${t}` : t;
+}
