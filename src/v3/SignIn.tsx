@@ -13,6 +13,13 @@ import {
 const LABEL: Record<OAuthProvider, string> = { google: "Continue with Google", discord: "Continue with Discord" };
 
 /** Sign-in options that adapt to whichever providers are enabled in Supabase Auth. */
+/** The local dev accounts (server scripts/dev-local.mjs), signed in with one click where the local dev login is on. */
+const DEV_ACCOUNTS: [string, string][] = [
+  ["owner", "owner@spinhobby.test"],
+  ["staff", "staff@spinhobby.test"],
+];
+const DEV_PASSWORD = "spinhobby";
+
 export function SignInPanel({
   returnPath,
   compact = false,
@@ -218,9 +225,28 @@ export function SignInPanel({
         </p>
       )}
       {!providers.password && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
+      {/* Only when the API runs with the local dev login (npm run dev:local): never on staging or the live site. The accounts
+          and the shared password are the local test ones from the server's scripts/dev-local.mjs. */}
       {providers.dev && (
-        <div className="sh-signin__sent">
-          Local dev: <b>owner@spinhobby.test</b> / <b>spinhobby</b>
+        <div className="sh-signin__sent sh-signin__dev">
+          <span>Local only</span>
+          {DEV_ACCOUNTS.map(([label, devEmail]) => (
+            <button
+              key={devEmail}
+              type="button"
+              className="sh-btn sh-btn--ghost"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setError("");
+                signInWithPassword(devEmail, DEV_PASSWORD)
+                  .catch((err: Error) => setError(err.message))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              Sign in as {label}
+            </button>
+          ))}
         </div>
       )}
       {error && (
