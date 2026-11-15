@@ -3623,3 +3623,31 @@
   border: 1px solid var(--gold);
   color: var(--text);
 }
+
+// The tick box that leads a photo dialog (Polish into a clean product photo): on its own tinted card so it is the first thing seen
+.ad-check.ad-check--lead {
+  // the box in its own column, the bold name and the explanation under each other beside it (a flex row squeezed them side by side)
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  column-gap: 8px;
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  color: var(--text);
+  font-weight: 500;
+  line-height: 1.4;
+  input {
+    grid-row: 1 / span 2;
+    margin-top: 2px;
+  }
+  b,
+  small {
+    grid-column: 2;
+  }
+  small {
+    margin-top: 2px;
+  }
+}
