@@ -201,8 +201,18 @@ export function consumeSignupFlag() {
 /** Email and password only: the name, phone and address are asked for after the email is confirmed (src/v3/welcome). */
 export async function signUpWithPassword(email: string, password: string) {
   justSignedUp = true;
-  setSession(await request<Session>("/auth/signup", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, null));
+  const session = await request<Session & { emailCodeQueued?: boolean }>(
+    "/auth/signup",
+    { method: "POST", body: JSON.stringify({ email: email.trim(), password }) },
+    null,
+  );
+  firstCodeQueued = Boolean(session.emailCodeQueued);
+  setSession(session);
 }
+
+// The shop hit its email limit for today, so the sign-up code waits in the queue (it arrives later and lasts 2 days).
+let firstCodeQueued = false;
+export const firstCodeWasQueued = () => firstCodeQueued;
 
 /** Sends the browser to Google/Discord; it comes back to the same page (see completeOAuthRedirect). */
 export async function signIn(provider: OAuthProvider, returnPath = window.location.pathname) {
