@@ -134,6 +134,7 @@ export interface AppUser {
   email: string;
   role: Role;
   firstName?: string | null;
+  lastName?: string | null;
   /** May open Admin > Audit: every owner, and staff the owner allowed. */
   canAudit?: boolean;
 }

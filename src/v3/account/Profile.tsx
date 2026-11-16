@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Banner, Button, Card, Field, Form, TextField } from "@/components";
-import { updatePassword } from "@/lib/api";
+import { Banner, Button, Card, Field, Form, FormRow, TextField } from "@/components";
+import { updatePassword, updateProfileName } from "@/lib/api";
 import PasswordInput from "../PasswordInput";
 import type { AppUser } from "../types";
 
@@ -14,11 +14,7 @@ export function Profile({ user, onSignOut }: { user: AppUser; onSignOut: () => v
 
   return (
     <>
-      {/* Read-only for now: editing the name waits for the server's PUT /account/profile (spin-hobby-server #99). */}
-      <Card title="Your details" padded>
-        <TextField label="First name" value={user.firstName ?? ""} placeholder="Not set" readOnly />
-        <TextField label="Email" type="email" value={user.email} readOnly />
-      </Card>
+      <EditName user={user} />
 
       <ChangePassword email={user.email} />
 
@@ -37,6 +33,50 @@ export function Profile({ user, onSignOut }: { user: AppUser; onSignOut: () => v
         </div>
       </Card>
     </>
+  );
+}
+
+function EditName({ user }: { user: AppUser }) {
+  const [firstName, setFirstName] = useState(user.firstName ?? "");
+  const [lastName, setLastName] = useState(user.lastName ?? "");
+  const [result, setResult] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setResult(null);
+    setSaving(true);
+    try {
+      await updateProfileName(firstName.trim(), lastName.trim());
+      setResult({ tone: "success", message: "Saved." });
+    } catch (err) {
+      setResult({ tone: "error", message: err instanceof Error ? err.message : "Your name could not be saved." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card title="Your details" padded>
+      {result && (
+        <Banner tone={result.tone} onDismiss={() => setResult(null)}>
+          {result.message}
+        </Banner>
+      )}
+      <Form
+        onSubmit={submit}
+        actions={
+          <Button type="submit" loading={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        }
+      >
+        <FormRow>
+          <TextField label="First name" value={firstName} maxLength={80} onChange={(e) => setFirstName(e.target.value)} />
+          <TextField label="Last name" value={lastName} maxLength={80} onChange={(e) => setLastName(e.target.value)} />
+        </FormRow>
+        <TextField label="Email" type="email" value={user.email} readOnly />
+      </Form>
+    </Card>
   );
 }
 
