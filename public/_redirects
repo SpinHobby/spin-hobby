@@ -1,1 +1,10 @@
+# Other addresses for the shop go to https://spinhobby.com. The API only answers spinhobby.com, so the shop on any other address
+# would load but could not show products. These come first and are forced (!), so they win over the page rule below.
+# Branch and preview addresses (staging--spinhobby.netlify.app, deploy-preview-N--...) are different hosts and are not touched.
+https://spinhobby.ca/*          https://spinhobby.com/:splat  301!
+https://www.spinhobby.ca/*      https://spinhobby.com/:splat  301!
+http://spinhobby.ca/*           https://spinhobby.com/:splat  301!
+http://www.spinhobby.ca/*       https://spinhobby.com/:splat  301!
+https://spinhobby.netlify.app/* https://spinhobby.com/:splat  301!
+
 /* /app.html 200
