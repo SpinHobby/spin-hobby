@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { price, type Currency } from "../format";
-import { isCutout, photo } from "../photo";
+import { productPhoto } from "../photo";
 import type { Product } from "../types";
 import { clearRecentSearches, recentSearches, useSearchSuggest } from "./searchSuggestData";
 
@@ -164,13 +164,7 @@ export function SearchField({
               {o.kind === "product" && (
                 <span className="sf-suggest__product">
                   {o.product.images[0] ? (
-                    <img
-                      {...photo(o.product.images[0], 96, isCutout(o.product, o.product.images[0]))}
-                      alt=""
-                      width={40}
-                      height={40}
-                      loading="lazy"
-                    />
+                    <img {...productPhoto(o.product, o.product.images[0], 96)} alt="" width={40} height={40} loading="lazy" />
                   ) : (
                     <span className="sf-suggest__noimg" aria-hidden />
                   )}

@@ -15,6 +15,7 @@ interface Options {
   stickers: boolean;
   enlarge: boolean;
   look: boolean;
+  clean?: boolean;
 }
 interface Batch {
   id: string;
@@ -82,6 +83,8 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
   const [stickers, setStickers] = useState(true);
   const [enlarge, setEnlarge] = useState(true);
   const [look, setLook] = useState(true);
+  // on by default: the figure alone, with no box print, drawn by the photo computer (Clean product photo)
+  const [clean, setClean] = useState(true);
   const [scope, setScope] = useState<"main" | "all">("main");
   const [mode, setMode] = useState<"product" | "character">("product");
   const [busy, setBusy] = useState(false);
@@ -94,7 +97,7 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
       setDone(
         await api("/admin/photo-batches", {
           method: "POST",
-          body: JSON.stringify({ productIds, scope, options: { mode, stickers, enlarge, look } }),
+          body: JSON.stringify({ productIds, scope, options: { mode, stickers, enlarge, look, clean } }),
         }),
       );
     } catch (e) {
@@ -162,8 +165,10 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
                 <b>
                   {productIds.length} product{productIds.length === 1 ? "" : "s"}
                 </b>{" "}
-                selected. Their photos are cleaned up on the photo computer: the background is removed, and the product is saved transparent
-                so it shows on your shop background.
+                selected. Their photos are cleaned up on the photo computer:{" "}
+                {clean
+                  ? "each becomes a clean product photo of the figure alone."
+                  : "the background is removed, and the product is saved transparent so it shows on your shop background."}
               </p>
               <p className="ad-muted ad-sm">
                 Nothing on the website changes until you have looked at each new photo and said yes. The old photo is always kept.
@@ -178,27 +183,47 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
                 <input type="radio" name="scope" checked={scope === "all"} onChange={() => setScope("all")} /> Every photo of each product
               </label>
 
-              <div className="ad-label">What to keep</div>
-              <label className="ad-check">
-                <input type="radio" name="mode" checked={mode === "product"} onChange={() => setMode("product")} /> The whole box or product{" "}
-                <small className="ad-muted">(recommended)</small>
-              </label>
-              <label className="ad-check">
-                <input type="radio" name="mode" checked={mode === "character"} onChange={() => setMode("character")} /> Only the character
-                on the box cover
+              <div className="ad-label">How</div>
+              <label className="ad-check ad-check--lead">
+                <input type="checkbox" checked={clean} onChange={(e) => setClean(e.target.checked)} />{" "}
+                <b>Polish into a clean product photo</b>{" "}
+                <small className="ad-muted">
+                  (the figure alone, with no box print, logos or price stickers, on a studio backdrop; drawn by AI, so check each against
+                  the real figure. Best for closed boxes with art on the front, not window boxes. If the photo computer cannot make one, the
+                  usual clean-up below is done)
+                </small>
               </label>
 
+              {/* the clean photo has no cut-out and does its own clean-up: these are for the usual photo (clean photo turned off) */}
+              {!clean && (
+                <>
+                  <div className="ad-label">What to keep</div>
+                  <label className="ad-check">
+                    <input type="radio" name="mode" checked={mode === "product"} onChange={() => setMode("product")} /> The whole box or
+                    product <small className="ad-muted">(recommended)</small>
+                  </label>
+                  <label className="ad-check">
+                    <input type="radio" name="mode" checked={mode === "character"} onChange={() => setMode("character")} /> Only the
+                    character on the box cover
+                  </label>
+                </>
+              )}
+
               <div className="ad-label">Also</div>
-              <label className="ad-check">
-                <input type="checkbox" checked={stickers} onChange={(e) => setStickers(e.target.checked)} /> Take off our price stickers
-              </label>
+              {!clean && (
+                <label className="ad-check">
+                  <input type="checkbox" checked={stickers} onChange={(e) => setStickers(e.target.checked)} /> Take off our price stickers
+                </label>
+              )}
               <label className="ad-check">
                 <input type="checkbox" checked={enlarge} onChange={(e) => setEnlarge(e.target.checked)} /> Make the picture sharper and
                 bigger <small className="ad-muted">(best quality, takes longer)</small>
               </label>
-              <label className="ad-check">
-                <input type="checkbox" checked={look} onChange={(e) => setLook(e.target.checked)} /> Brighter, livelier colours
-              </label>
+              {!clean && (
+                <label className="ad-check">
+                  <input type="checkbox" checked={look} onChange={(e) => setLook(e.target.checked)} /> Brighter, livelier colours
+                </label>
+              )}
 
               <div className="ad-imports__actions">
                 <button type="button" className="sh-btn" onClick={send} disabled={busy}>

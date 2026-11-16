@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 
 /**
@@ -26,19 +26,19 @@ export interface ReviewList {
   items: Review[];
 }
 
+const NO_REVIEWS: ReviewList = { summary: { count: 0, average: null, stars: [0, 0, 0, 0, 0] }, items: [] };
+
 /** A product's approved reviews; null while loading, and an empty list when the server can't say. */
 export function useReviews(itemId: string | undefined) {
-  const [list, setList] = useState<ReviewList | null>(null);
-  useEffect(() => {
-    if (!itemId) return;
-    let live = true;
-    setList(null);
-    api<ReviewList>(`/products/${encodeURIComponent(itemId)}/reviews`)
-      .then((r) => live && setList({ summary: r.summary, items: r.items }))
-      .catch(() => live && setList({ summary: { count: 0, average: null, stars: [0, 0, 0, 0, 0] }, items: [] }));
-    return () => {
-      live = false;
-    };
-  }, [itemId]);
-  return list;
+  const list = useQuery({
+    queryKey: ["products", "reviews", itemId?.toLowerCase()],
+    enabled: !!itemId,
+    // reviews appear only after staff approve them, so an answer is good for five minutes
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<ReviewList> => {
+      const r = await api<ReviewList>(`/products/${encodeURIComponent(itemId ?? "")}/reviews`);
+      return { summary: r.summary, items: r.items };
+    },
+  });
+  return list.data ?? (list.isError ? NO_REVIEWS : null);
 }

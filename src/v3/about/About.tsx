@@ -6,6 +6,7 @@ import { handlingLabel } from "../format";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import { homeCopy } from "../storefront/landing";
 import { EVENTS } from "../events/data";
+import { MASCOTS } from "../mascots";
 import { eventDateLabel, eventPlace, isPastEvent } from "../events/dates";
 
 /**
@@ -37,9 +38,14 @@ export default function About() {
 
   return (
     <main className="ab-wrap">
-      <p className="sh-eyebrow">About us</p>
-      <h1 className="sh-display">Anime merch from fans, for fans, since 2022</h1>
-      <p className="ab-lead">{homeCopy().intro}</p>
+      <div className="ab-hero">
+        <div>
+          <p className="sh-eyebrow">About us</p>
+          <h1 className="sh-display">Anime merch from fans, for fans, since 2022</h1>
+          <p className="ab-lead">{homeCopy().intro}</p>
+        </div>
+        <img className="ab-hero__mascot" src={MASCOTS.full} alt="The Spin Hobby mascot" width={580} height={800} />
+      </div>
 
       <section aria-labelledby="ab-promise">
         <h2 id="ab-promise" className="sh-display ab-h2">

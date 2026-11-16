@@ -5,6 +5,7 @@ import "./siteLayout.scss";
 import { useTheme } from "./hooks";
 import SiteFooter from "./SiteFooter";
 import { ShopLogo } from "./ShopLogo";
+import { WelcomeGate } from "./welcome/Welcome";
 
 /**
  * Header + footer for the plain content pages (support, terms, privacy). Add a page to the layout route in
@@ -29,6 +30,7 @@ export default function SiteLayout() {
         </Suspense>
       </div>
       <SiteFooter />
+      <WelcomeGate />
     </div>
   );
 }

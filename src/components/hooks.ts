@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 /** A short message shown for a moment (pass `toast` to PanelLayout, call `flash("Saved")`). */
 export function useToast(duration = 2200) {
   const [toast, setToast] = useState("");
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
   const flash = useCallback(
     (message: string) => {
       setToast(message);
@@ -70,14 +70,28 @@ export function useContentSwap(key: unknown, content: unknown, { slowAfter = 400
   const [round, setRound] = useState(0);
   const shownKey = useRef(key);
   const stale = useRef<unknown>(undefined);
+  const before = useRef(content); // the content of the previous render
+  const settled = useRef({ key, content }); // the last key and content that were fully shown together
   useLayoutEffect(() => {
-    if (shownKey.current === key) return;
+    const previous = before.current;
+    before.current = content;
+    if (shownKey.current === key) {
+      if (phase === "shown") settled.current = { key, content };
+      return;
+    }
     shownKey.current = key;
+    // The new content is here already (a list kept from an earlier visit arrives in the same render as its key, and
+    // going back to the list that was just on screen brings the very same one): nothing to wait for.
+    const back = settled.current.key === key && settled.current.content === content;
+    if (content !== previous || back) {
+      settled.current = { key, content };
+      setPhase("shown");
+      if (!back || phase !== "shown") setRound((r) => r + 1);
+      return;
+    }
     stale.current = content;
     setPhase("leaving");
-    // only a change of `key` starts a swap; `content` is read as it is at that moment
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [content, key, phase]);
   useLayoutEffect(() => {
     if (phase === "shown" || content === stale.current) return;
     setPhase("shown");

@@ -29,6 +29,8 @@ interface Worker {
   lastSeen: string | null;
   online: boolean;
   canCreateListings: boolean;
+  /** The clean product photo model is set up on it. */
+  canCleanPhotos?: boolean;
   note?: string | null;
   working: number;
 }
@@ -95,6 +97,9 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState<"product" | "character">("product");
   const [enlarge, setEnlarge] = useState(true);
+  // on by default: the figure alone, with no box print (the photo computer's Clean product photo), and the maker's own photos from its website
+  const [clean, setClean] = useState(true);
+  const [official, setOfficial] = useState(true);
   const [state, setState] = useState<Listing | null>(null);
   // the shop server could not be reached on the last look: said on screen (not just flashed once), and looked at again until it answers
   const [unreachable, setUnreachable] = useState(false);
@@ -161,7 +166,7 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
     try {
       const form = new FormData();
       for (const f of files) form.append("photos", f, f.name);
-      form.append("options", JSON.stringify({ mode, enlarge }));
+      form.append("options", JSON.stringify({ mode, enlarge, clean, official }));
       const r = await api<{ queued: number }>("/admin/listing-jobs", { method: "POST", body: form });
       ctx.flash(
         worker
@@ -293,6 +298,25 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
             ))}
           </div>
           <div className="ad-uploads__options">
+            <label className="ad-check ad-check--lead">
+              <input type="checkbox" checked={clean} onChange={(e) => setClean(e.target.checked)} />{" "}
+              <b>Polish into a clean product photo</b>{" "}
+              <small className="ad-muted">
+                (the figure alone, with no box print, logos or price stickers, on a studio backdrop; drawn by AI, so check it against the
+                real figure. Best for closed boxes with art on the front, not window boxes)
+              </small>
+            </label>
+            {clean && worker && !worker.canCleanPhotos && (
+              <div className="ad-uploads__warn">
+                {worker.label} cannot make clean photos yet: run <code>npm run clean-photo:setup</code> in the Gleamshelf folder there, then
+                restart <code>npm run worker</code>. Until then the usual photos are made.
+              </div>
+            )}
+            <label className="ad-check">
+              <input type="checkbox" checked={official} onChange={(e) => setOfficial(e.target.checked)} /> Find the maker's official photos
+              online to use in the shop{" "}
+              <small className="ad-muted">(from the maker's own website; offered beside your photo to choose)</small>
+            </label>
             <label className="ad-check">
               <input type="radio" name="up-mode" checked={mode === "product"} onChange={() => setMode("product")} /> Keep the whole box{" "}
               <small className="ad-muted">(recommended: every detail on the cover stays)</small>

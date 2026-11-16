@@ -1,4 +1,4 @@
-import type { SyntheticEvent } from "react";
+import type { CSSProperties, SyntheticEvent } from "react";
 
 /**
  * Product photos synced from Square are large originals (about 1920 px, ~500 KB each). Netlify's image service
@@ -12,6 +12,40 @@ const SQUARE_PHOTOS = /^https:\/\/items-images-[a-z]+\.s3\.[a-z0-9-]+\.amazonaws
 let shopBackground: string | null = null;
 export function setShopBackground(url: string | null) {
   shopBackground = url;
+}
+
+/**
+ * Where a photo sits in its square. Product photos always fill their square (cropped, never shrunk with a margin); an admin can move one
+ * (x, y: the point kept in view, 0-100 % across and down) and zoom in (1 = none). Saved per product and photo (Admin > product > Photos).
+ */
+export interface PhotoFrame {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/** The frame an admin gave `url` on this product, if any. */
+export const frameOf = (p: { frames?: Record<string, PhotoFrame> }, url: string | null | undefined): PhotoFrame | undefined =>
+  url ? p.frames?.[url] : undefined;
+
+/**
+ * Style for a product photo's <img> that applies its frame. Only CSS variables (--fx, --fy, --fz): the stylesheets turn them into
+ * object-position, transform-origin and scale (see .sf-img img), so a card's hover zoom still works on top.
+ */
+export function frameStyle(frame: PhotoFrame | undefined): Record<string, string> {
+  if (!frame) return {};
+  return { "--fx": `${frame.x}%`, "--fy": `${frame.y}%`, "--fz": String(frame.zoom) };
+}
+
+/** Props for a product photo: `photo()` plus the photo's frame and cut-out background. */
+export function productPhoto(p: { cutouts?: string[]; frames?: Record<string, PhotoFrame> }, url: string, width: number) {
+  return framedPhoto(url, width, isCutout(p, url), frameOf(p, url));
+}
+
+/** `photo()` with a frame (for a photo known only by its address, like a cart line's). */
+export function framedPhoto(url: string, width: number, cutout = false, frame?: PhotoFrame) {
+  const base = photo(url, width, cutout);
+  return { ...base, style: { ...base.style, ...frameStyle(frame) } as CSSProperties };
 }
 
 /** Whether `url` is one of the product's transparent cut-out photos. */

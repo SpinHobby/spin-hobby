@@ -243,7 +243,7 @@ export function useCatalog(filters: CatalogFilters, sort: Sort, page: number, pa
 // ---------------------------------------------------------------- layout + preferences
 
 /** Width of an element, kept current as it resizes (0 until measured). Drives layout by the space the list actually has. */
-export function useElementWidth(ref: RefObject<HTMLElement>) {
+export function useElementWidth(ref: RefObject<HTMLElement | null>) {
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
     const el = ref.current;

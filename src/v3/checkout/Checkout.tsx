@@ -1,23 +1,28 @@
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MASCOTS } from "../mascots";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isOn } from "../../features";
 import { Navigate, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./checkout.scss";
 import { track } from "../../lib/analytics";
 import { api } from "../../lib/api";
+import { errorMessage } from "../../lib/query";
 import { price } from "../format";
 import { useAuth, useLocalState, useTheme } from "../hooks";
 import { SUPPORT_EMAIL } from "../links";
 import { useDocumentHead } from "../seo";
-import { loadStoreConfig } from "../storeConfig";
+import { useStoreConfigState } from "../storeConfig";
 import { BUY_NOW_PATH, useBuyNow, useCart } from "../storefront/data";
 import { PayPalPay, SquarePay, WalletCancelled, type CheckoutConfig } from "./Payments";
+import { formatPhone, formatPostal, localPhone, phoneWithCountry } from "./formatInput";
 import { POSTAL_RE, PROVINCES, STATES } from "./regions";
-import { photo } from "../photo";
+import { framedPhoto } from "../photo";
 import { CheckoutAddOns } from "../storefront/Suggestions";
 import type { Product } from "../types";
 import { ShopLogo } from "../ShopLogo";
 
-const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
+const MASCOT = MASCOTS.chibi;
 
 interface Address {
   firstName: string;
@@ -65,6 +70,8 @@ interface Quote {
   taxCents: number;
   totalCents: number;
   warnings: { variationId: string; code: string; message: string }[];
+  /** Rewards points this cart earns a signed-in customer (null while rewards are off; older APIs send nothing). */
+  rewardPoints?: number | null;
   /** The courier options for this cart and address, cheapest first (older APIs send none). */
   shippingOptions?: ShippingOption[];
   shippingOption?: ShippingOption | null;
@@ -98,6 +105,19 @@ const optionTime = (o: ShippingOption) =>
 // Fallback when the server doesn't expose /checkout/config yet. Only PayPal can work without it,
 // and only if the client ID matches the server's PAYPAL_CLIENT_ID.
 const ENV_PAYPAL_ID: string | undefined = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+
+/** Used only when the shop's settings can't be read and the build names a PayPal client itself. */
+const ENV_PAYPAL_CONFIG: CheckoutConfig = {
+  provider: "paypal",
+  paypalClientId: ENV_PAYPAL_ID ?? null,
+  paypalEnv: "sandbox",
+  squareApplicationId: null,
+  squareLocationId: null,
+  squareEnv: "sandbox",
+  shippingStandardCents: 899,
+  shippingExpressCents: 1999,
+  freeShippingThresholdCents: 7500,
+};
 
 function addressErrors(a: Address) {
   const e: Partial<Record<keyof Address, string>> = {};
@@ -135,11 +155,6 @@ export default function Checkout() {
   const [touched, setTouched] = useState(false); // a payment attempt: show every problem
   const [blurred, setBlurred] = useState<Set<string>>(new Set()); // fields the shopper has left: show their problems
   const leave = (field: string) => setBlurred((b) => (b.has(field) ? b : new Set(b).add(field)));
-  const [config, setConfig] = useState<CheckoutConfig | null>(null);
-  const [configError, setConfigError] = useState("");
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [quoteError, setQuoteError] = useState("");
-  const [quoting, setQuoting] = useState(false);
   const [payError, setPayError] = useState("");
   const [done, setDone] = useState<{ orderId: number; status: string } | null>(null);
   const orderIdRef = useRef<number | null>(null);
@@ -151,6 +166,32 @@ export default function Checkout() {
   useEffect(() => {
     if (!email && auth.email) setEmail(auth.email);
   }, [auth.email, email, setEmail]);
+
+  // A signed-in customer gets their saved address filled in (saved at the welcome step or by "Save for next time" below), or at
+  // least their own name and phone when no address is saved yet. Only into an empty form: never over what they typed.
+  const shipEmpty = !ship.address1.trim() && !ship.firstName.trim();
+  useEffect(() => {
+    if (!auth.email || !shipEmpty) return;
+    let live = true;
+    api<{
+      address: (Omit<Address, "address2" | "phone"> & { address2: string | null; phone: string | null }) | null;
+      profile?: { firstName: string | null; lastName: string | null; phone: string | null };
+    }>("/account/address")
+      .then(({ address, profile }) => {
+        if (!live) return;
+        setShip((s) => ({
+          ...s,
+          ...(address ? { ...address, address2: address.address2 ?? "" } : {}),
+          firstName: address?.firstName || profile?.firstName || s.firstName,
+          lastName: address?.lastName || profile?.lastName || s.lastName,
+          phone: localPhone(address?.phone || profile?.phone || s.phone),
+        }));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [auth.email, shipEmpty, setShip]);
 
   // A cart reminder email's link (/checkout?restore=<token>): put that cart back, then drop the token from the address.
   const restoreToken = new URLSearchParams(location.search).get("restore");
@@ -183,6 +224,8 @@ export default function Checkout() {
 
   // "Email me my cart if I don't finish": never ticked for the shopper. While ticked, the cart is saved for one reminder.
   const [remind, setRemind] = useLocalState("spinhobby-cart-reminder", false);
+  // signed in: after a paid order, the name, phone and address become the account's saved address (ticked unless they untick it)
+  const [saveForNext, setSaveForNext] = useLocalState("spinhobby-checkout-save", true);
   const remindEmail = email.trim().toLowerCase();
   const remindLines = useMemo(() => cart.lines.map((l) => ({ variationId: l.variationId, quantity: l.quantity })), [cart.lines]);
   const remindSent = useRef<string>("");
@@ -199,26 +242,10 @@ export default function Checkout() {
     return () => window.clearTimeout(timer);
   }, [remind, remindEmail, remindLines]);
 
-  useEffect(() => {
-    loadStoreConfig().then((c) => {
-      if (c) setConfig(c);
-      else if (ENV_PAYPAL_ID) {
-        setConfig({
-          provider: "paypal",
-          paypalClientId: ENV_PAYPAL_ID,
-          paypalEnv: "sandbox",
-          squareApplicationId: null,
-          squareLocationId: null,
-          squareEnv: "sandbox",
-          shippingStandardCents: 899,
-          shippingExpressCents: 1999,
-          freeShippingThresholdCents: 7500,
-        });
-      } else {
-        setConfigError("Online payment isn't available right now.");
-      }
-    });
-  }, []);
+  // The shop's payment settings, shared with the rest of the site (src/v3/storeConfig.ts): null when they can't be read.
+  const settings = useStoreConfigState();
+  const config: CheckoutConfig | null = settings ?? (settings === null && ENV_PAYPAL_ID ? ENV_PAYPAL_CONFIG : null);
+  const configError = settings === null && !ENV_PAYPAL_ID ? "Online payment isn't available right now." : "";
 
   // the postal code goes with the quote once it looks complete: couriers price to it
   const postalReady = POSTAL_RE[ship.country].test(ship.postalCode.trim());
@@ -235,44 +262,43 @@ export default function Checkout() {
     [cart.lines, ship.country, ship.province, postalReady, ship.postalCode, ship.city, option, appliedCode],
   );
 
+  // The priced cart (GET-like: nothing is saved by asking). A short pause after each change, so typing a postal code
+  // doesn't ask per key; totals priced before (the other courier picked again, coming back to this page) show at once
+  // and are still asked for again, because stock and prices move. Paying waits for that fresh answer (`quoting`).
+  const quoteKey = JSON.stringify(quoteInput);
+  const [pausedKey, setPausedKey] = useState(quoteKey);
   useEffect(() => {
-    if (!cart.lines.length) {
-      setQuote(null);
-      return;
-    }
-    let active = true;
-    setQuoting(true);
-    const timer = window.setTimeout(() => {
-      api<Quote & { success: true }>("/cart/quote", { method: "POST", body: JSON.stringify(quoteInput) })
-        .then((q) => {
-          if (active) {
-            setQuote(q);
-            setQuoteError("");
-            // the option picked isn't offered for this address (or none was picked yet): use the one the quote priced
-            const priced = q.shippingOption?.id ?? null;
-            if (priced) setOption((cur) => (cur === priced ? cur : priced));
-            // a code that doesn't (or no longer) applies is dropped with its reason, so it never blocks paying
-            if (q.discountMessage) {
-              setCodeMessage(q.discountMessage);
-              setAppliedCode("");
-            } else if (q.discount) setCodeMessage("");
-          }
-        })
-        .catch((e: Error) => {
-          if (active) {
-            setQuote(null);
-            setQuoteError(e.message);
-          }
-        })
-        .finally(() => {
-          if (active) setQuoting(false);
-        });
-    }, 250);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [quoteInput, cart.lines.length]);
+    const timer = window.setTimeout(() => setPausedKey(quoteKey), 250);
+    return () => window.clearTimeout(timer);
+  }, [quoteKey]);
+  const client = useQueryClient();
+  const askedKey = client.getQueryData(["cart", "quote", quoteKey]) !== undefined ? quoteKey : pausedKey;
+  const hasLines = cart.lines.length > 0;
+  const priced = useQuery({
+    queryKey: ["cart", "quote", askedKey],
+    enabled: hasLines && !done,
+    queryFn: () => api<Quote & { success: true }>("/cart/quote", { method: "POST", body: askedKey }),
+    staleTime: 0,
+    placeholderData: keepPreviousData, // the last totals stay on screen while new ones are worked out
+    // coming back from a payment window must not hold up the payment that is under way
+    refetchOnWindowFocus: false,
+  });
+  const quote: Quote | null = hasLines ? (priced.data ?? null) : null;
+  const quoteError = hasLines && !quote ? (errorMessage(priced.error) ?? "") : "";
+  const quoting = hasLines && !done && (askedKey !== quoteKey || priced.isFetching);
+  // what a fresh quote says about the choices sent with it
+  const answer = priced.isPlaceholderData ? undefined : priced.data;
+  useEffect(() => {
+    if (!answer) return;
+    // the option picked isn't offered for this address (or none was picked yet): use the one the quote priced
+    const pricedOption = answer.shippingOption?.id ?? null;
+    if (pricedOption) setOption((cur) => (cur === pricedOption ? cur : pricedOption));
+    // a code that doesn't (or no longer) applies is dropped with its reason, so it never blocks paying
+    if (answer.discountMessage) {
+      setCodeMessage(answer.discountMessage);
+      setAppliedCode("");
+    } else if (answer.discount) setCodeMessage("");
+  }, [answer]);
 
   const shipErrors = addressErrors(ship);
   const billErrors = billingSame ? {} : addressErrors(bill);
@@ -311,7 +337,7 @@ export default function Checkout() {
     province: a.province,
     postalCode: a.postalCode.trim().toUpperCase(),
     country: a.country,
-    phone: a.phone.trim() || undefined,
+    phone: phoneWithCountry(a.phone),
   });
 
   const createIntent = useCallback(async () => {
@@ -335,8 +361,32 @@ export default function Checkout() {
   }, [canPay, quoteInput, email, ship, bill, billingSame]);
 
   const finish = (orderId: number, status: string) => {
+    if (auth.email && saveForNext) {
+      const a = toServerAddress(ship);
+      // best effort: the order is placed either way
+      void api("/account/address", {
+        method: "PUT",
+        body: JSON.stringify({
+          firstName: a.firstName,
+          lastName: a.lastName,
+          phone: a.phone ?? null,
+          address: {
+            address1: a.address1,
+            address2: a.address2,
+            city: a.city,
+            province: a.province,
+            postalCode: a.postalCode,
+            country: a.country,
+          },
+        }),
+      }).catch(() => undefined);
+    }
     for (const l of cart.lines) cart.setQty(l.variationId, 0);
     setDone({ orderId, status });
+    // the order took stock: its quotes are history, and the shop's lists and product pages ask again when next shown
+    client.removeQueries({ queryKey: ["cart", "quote"] });
+    void client.invalidateQueries({ queryKey: ["products"] });
+    void client.invalidateQueries({ queryKey: ["product"] });
     window.history.replaceState(null, "", `/checkout/success?order=${orderId}`);
     window.scrollTo({ top: 0 });
   };
@@ -452,7 +502,7 @@ export default function Checkout() {
           </div>
         </header>
         <div className="co-empty">
-          <img src={MASCOT} alt="" />
+          <img src={MASCOTS.clover} alt="" />
           <h1 className="sh-display">Your cart is empty</h1>
           <p>Add something from the shop and come back here to check out.</p>
           <a href="/" className="sh-btn">
@@ -499,7 +549,7 @@ export default function Checkout() {
               <div className="co-fields">
                 <Field
                   label="Email"
-                  className="co-c4"
+                  className="co-c3"
                   error={(touched || blurred.has("email")) && !emailOk ? "Enter a valid email" : undefined}
                 >
                   <input
@@ -512,14 +562,23 @@ export default function Checkout() {
                     placeholder="you@example.com"
                   />
                 </Field>
-                <Field label="Phone (optional)" className="co-c2">
-                  <input
-                    className="sh-input"
-                    type="tel"
-                    autoComplete="tel"
-                    value={ship.phone}
-                    onChange={(e) => setShip({ ...ship, phone: e.target.value })}
-                  />
+                <Field label="Phone (optional)" className="co-c3">
+                  {/* Canada and the US share +1, so it's shown, not chosen; the box holds the local number */}
+                  <div className="co-phone">
+                    <span className="co-phone__code" title="Canada and the US">
+                      +1
+                    </span>
+                    <input
+                      className="sh-input"
+                      type="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      placeholder="416-555-0123"
+                      aria-label="Phone number after +1"
+                      value={ship.phone}
+                      onChange={(e) => setShip({ ...ship, phone: localPhone(e.target.value) })}
+                    />
+                  </div>
                 </Field>
               </div>
               <p className="co-note">
@@ -546,6 +605,12 @@ export default function Checkout() {
                 prefix="shipping"
                 phone={false}
               />
+              {auth.email && (
+                <label className="co-check">
+                  <input type="checkbox" checked={saveForNext} onChange={(e) => setSaveForNext(e.target.checked)} />
+                  <span>Save this address and phone for next time</span>
+                </label>
+              )}
               <h3>Delivery</h3>
               {options.length ? (
                 <div className="co-methods" role="radiogroup" aria-label="Delivery">
@@ -721,7 +786,7 @@ export default function Checkout() {
                   return (
                     <div key={l.variationId} className="co-line">
                       <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 68, height: 68 }}>
-                        {l.imageUrl && <img {...photo(l.imageUrl, 136)} alt="" />}
+                        {l.imageUrl && <img {...framedPhoto(l.imageUrl, 136, !!l.imageCutout, l.imageFrame)} alt="" />}
                       </div>
                       <div className="co-line__main">
                         <span className="co-line__name">{l.name}</span>
@@ -807,6 +872,21 @@ export default function Checkout() {
                 />
                 <Row label="Tax" value={quote ? price(quote.taxCents) : "—"} />
                 <Row label="Total" value={totalLabel} strong />
+                {isOn("rewards") && !!quote?.rewardPoints && (
+                  <p className="co-note">
+                    ★{" "}
+                    {auth.session ? (
+                      <>
+                        You'll earn <b>{quote.rewardPoints.toLocaleString("en-CA")} points</b>, usable once your order has shipped and its
+                        return window has passed.
+                      </>
+                    ) : (
+                      <>
+                        Signed-in customers earn <b>{quote.rewardPoints.toLocaleString("en-CA")} points</b> on this order.
+                      </>
+                    )}
+                  </p>
+                )}
                 {quoting && <p className="co-note">Updating totals…</p>}
               </div>
               <ul className="co-trust">
@@ -938,8 +1018,14 @@ function AddressForm({
   phone?: boolean;
 }) {
   const set = (k: keyof Address) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const next = { ...value, [k]: e.target.value } as Address;
-    if (k === "country") next.province = e.target.value === "CA" ? "AB" : "WA";
+    // phone and postal code take their usual shape as they're typed (formatInput.ts)
+    const typed = e.target.value;
+    const shaped = k === "phone" ? formatPhone(typed) : k === "postalCode" ? formatPostal(typed, value.country) : typed;
+    const next = { ...value, [k]: shaped } as Address;
+    if (k === "country") {
+      next.province = typed === "CA" ? "AB" : "WA";
+      next.postalCode = formatPostal(value.postalCode, typed as Address["country"]);
+    }
     onChange(next);
   };
   const ac = (s: string) => `${prefix} ${s}`;
@@ -1002,11 +1088,22 @@ function AddressForm({
           onChange={set("postalCode")}
           onBlur={left("postalCode")}
           autoComplete={ac("postal-code")}
+          autoCapitalize="characters"
+          inputMode={value.country === "US" ? "numeric" : "text"}
+          placeholder={value.country === "CA" ? "A1A 1A1" : "12345"}
         />
       </Field>
       {phone && (
         <Field label="Phone (optional)" className="co-c6">
-          <input className="sh-input" type="tel" value={value.phone} onChange={set("phone")} autoComplete={ac("tel")} />
+          <input
+            className="sh-input"
+            type="tel"
+            inputMode="tel"
+            placeholder="416-555-0123"
+            value={value.phone}
+            onChange={set("phone")}
+            autoComplete={ac("tel")}
+          />
         </Field>
       )}
     </div>
@@ -1024,7 +1121,7 @@ function Success({ orderId, preorder, email }: { orderId: number; preorder: bool
         </div>
       </header>
       <div className="co-empty co-success">
-        <img src={MASCOT} alt="" />
+        <img src={MASCOTS.thankYou} alt="Thank you!" />
         <span className="sh-eyebrow" style={{ color: "var(--teal)" }}>
           Order confirmed
         </span>

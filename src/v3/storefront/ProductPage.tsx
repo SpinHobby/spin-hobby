@@ -1,5 +1,8 @@
 import { track } from "../../lib/analytics";
-import { useEffect, useRef, useState } from "react";
+import { isOn } from "../../features";
+import { ProductPointsLine } from "../rewards/ProductPointsLine";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import type { CategoryTree } from "../categoryTree";
@@ -23,7 +26,7 @@ import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions, PriceTag } from "./ProductViews";
 import { askHref, noPrice } from "../../components/shop/priceOnRequest";
-import { isCutout, photo } from "../photo";
+import { photo, isCutout, productPhoto } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
 import { RecentlyViewed } from "./RecentlyViewed";
@@ -147,25 +150,21 @@ export function ProductPage({
   onHome: () => void;
   onToast: (message: string) => void;
 }) {
-  // Show what the card already knew straight away, then fill in description, JAN code and fresh stock.
-  const [p, setP] = useState<Product | null>(sameId(initial, id) ? initial : null);
-  const [missing, setMissing] = useState(false);
-  const [related, setRelated] = useState<Product[] | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    setMissing(false);
-    setP((cur) => (sameId(cur, id) ? cur : sameId(initial, id) ? initial : null));
-    const load = (key: string) => api<{ item: Product }>(`/square/catalog/${encodeURIComponent(key)}`);
-    // links carry the id in lower case (the API finds it in any case); an older API needs Square's upper case
-    load(id)
-      .catch((e) => (id !== id.toUpperCase() ? load(id.toUpperCase()) : Promise.reject(e)))
-      .then((res) => live && setP((cur) => ({ ...(cur ?? {}), ...res.item })))
-      .catch(() => live && setMissing(true));
-    return () => {
-      live = false;
-    };
-  }, [id, initial]);
+  // Show what the card already knew straight away, then fill in description, JAN code and fresh stock. A product opened
+  // before shows its saved answer at once and is still asked for again (staleTime 0): stock and price must be current.
+  const loaded = useQuery({
+    queryKey: ["product", id.toLowerCase()],
+    queryFn: async () => {
+      const load = (key: string) => api<{ item: Product }>(`/square/catalog/${encodeURIComponent(key)}`);
+      // links carry the id in lower case (the API finds it in any case); an older API needs Square's upper case
+      const res = await load(id).catch((e) => (id !== id.toUpperCase() ? load(id.toUpperCase()) : Promise.reject(e)));
+      return res.item;
+    },
+    staleTime: 0,
+  });
+  const fromCard = sameId(initial, id) ? initial : null;
+  const p = useMemo<Product | null>(() => (loaded.data ? { ...(fromCard ?? {}), ...loaded.data } : fromCard), [fromCard, loaded.data]);
+  const missing = loaded.isError && !loaded.data;
 
   // one anonymous "product viewed" per product opened (src/lib/analytics.ts)
   const viewedId = p?.id;
@@ -180,20 +179,20 @@ export function ProductPage({
   const categoryId = p?.categoryId ?? null;
   const series = p?.series ?? null;
   const hasProduct = !!p;
-  useEffect(() => {
-    if (!hasProduct) return;
-    let live = true;
-    setRelated(null);
-    const search = (params: Record<string, string>) =>
-      api<ProductList>(`/products?${new URLSearchParams({ limit: "12", sort: "featured", ...params })}`)
-        .then((r) => r.items)
-        .catch(() => [] as Product[]);
-    Promise.all([
-      categoryId ? search({ categoryId }) : Promise.resolve([]),
-      series ? search({ q: series }) : Promise.resolve([]),
-      search({}),
-    ]).then((lists) => {
-      if (!live) return;
+  const { data: related = null } = useQuery({
+    queryKey: ["products", "related", id.toLowerCase(), categoryId, series],
+    enabled: hasProduct,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const search = (params: Record<string, string>) =>
+        api<ProductList>(`/products?${new URLSearchParams({ limit: "12", sort: "featured", ...params })}`)
+          .then((r) => r.items)
+          .catch(() => [] as Product[]);
+      const lists = await Promise.all([
+        categoryId ? search({ categoryId }) : Promise.resolve([]),
+        series ? search({ q: series }) : Promise.resolve([]),
+        search({}),
+      ]);
       const seen = new Set([id]);
       const picked: Product[] = [];
       for (const item of lists.flat()) {
@@ -203,12 +202,9 @@ export function ProductPage({
       }
       // Keep the order (most related first) but push sold-out items to the end.
       const avail = picked.filter((x) => normalizeStatus(x.status) !== "out");
-      setRelated([...avail, ...picked.filter((x) => normalizeStatus(x.status) === "out")].slice(0, RELATED));
-    });
-    return () => {
-      live = false;
-    };
-  }, [id, hasProduct, categoryId, series]);
+      return [...avail, ...picked.filter((x) => normalizeStatus(x.status) === "out")].slice(0, RELATED);
+    },
+  });
 
   // The product's own link (lower-case id and the name slug) once the product is known, whatever address it was opened from.
   const navigate = useNavigate();
@@ -408,7 +404,7 @@ function Gallery({ p }: { p: Product }) {
               onClick={() => jump(n)}
               aria-label={`Photo ${n + 1}`}
             >
-              <img {...photo(src, 160, isCutout(p, src))} alt="" loading="lazy" />
+              <img {...productPhoto(p, src, 160)} alt="" loading="lazy" />
             </button>
           ))}
         </div>
@@ -427,7 +423,7 @@ function Gallery({ p }: { p: Product }) {
               aria-label={`Enlarge photo ${n + 1}`}
             >
               <img
-                {...photo(src, 1000, isCutout(p, src))}
+                {...productPhoto(p, src, 1000)}
                 alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`}
                 loading={n === 0 ? "eager" : "lazy"}
               />
@@ -655,6 +651,8 @@ function BuyBox({
           {statusLabel(p)}
         </div>
       </div>
+
+      {isOn("rewards") && <ProductPointsLine productId={p.id} />}
 
       {(s === "in" || s === "low") && !noPrice(p) && (
         // the same transit days checkout shows for the shop's Standard (5–7) and Express (2–3) shipping, plus handling

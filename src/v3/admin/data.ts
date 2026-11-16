@@ -29,6 +29,7 @@ export type Screen =
   | "Audit"
   | "Accounts"
   | "Discounts"
+  | "Rewards"
   | "Avatar";
 export const SCREENS: Screen[] = [
   "Dashboard",

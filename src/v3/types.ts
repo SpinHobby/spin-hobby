@@ -1,4 +1,5 @@
 import type { StorefrontLayout } from "./storefront/layout";
+import type { PhotoFrame } from "./photo";
 // Mirrors design_handoff_spinhobby_storefront/shared/api-types.ts and the
 // Supabase `store-api` edge function responses.
 
@@ -17,6 +18,8 @@ export interface Product {
   images: string[];
   /** Which of `images` are transparent cut-outs: shown on the shop background. */
   cutouts?: string[];
+  /** Photos an admin moved or zoomed inside their square, by address (the rest sit in the middle). */
+  frames?: Record<string, PhotoFrame>;
   priceCents: number;
   compareAtCents: number | null;
   currency: "CAD";
@@ -143,6 +146,11 @@ export interface AppUser {
   firstName?: string | null;
   /** May open Admin > Audit: every owner, and staff the owner allowed. */
   canAudit?: boolean;
+  /** Confirmed their email with a code (or signed in with Google/Discord). Needed to use points and buy limited items, not to shop. */
+  emailVerified?: boolean;
+  /** Saw or skipped the welcome step after signing up. A session saved before this existed has no value: treat it as welcomed. */
+  welcomed?: boolean;
+  phone?: string | null;
 }
 
 export type OrderStatus = "pending" | "paid" | "preorder_reserved" | "fulfilled" | "shipped" | "cancelled" | "refunded";

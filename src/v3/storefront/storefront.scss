@@ -335,6 +335,22 @@
 .sf-account {
   position: relative;
 }
+// the signed-in customer's rewards points (rewards/PointsChip.tsx): short, beside the account button
+.sf-points {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  > span:first-child {
+    color: var(--gold);
+  }
+}
+.sf-points__unit {
+  color: var(--muted);
+  font-weight: 500;
+}
 .sf-account__btn {
   padding: 5px 12px 5px 5px;
   border: 1px solid var(--border);
@@ -445,6 +461,12 @@
 @media (max-width: 640px) {
   .sf-account__btn {
     padding: 3px;
+  }
+  .sf-points {
+    padding: 5px 8px;
+  }
+  .sf-points__unit {
+    display: none;
   }
   .sf-account__hi {
     display: none;
@@ -1319,21 +1341,22 @@ h1.sf-hero__eyebrow {
   }
 }
 
-// Every product photo sits whole (never cropped) with the same margin on the same studio tile. multiply melts a photo's own
-// white background into the tile, so photos shot on different whites look like one set; cut-outs keep the shop background.
+// Product photos fill their square, edge to edge (no tile or margin around them).
 .sf-img {
   position: relative;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   overflow: hidden;
-  background-color: var(--photo-bg);
+  background-color: var(--surface2);
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    padding: 7%;
-    mix-blend-mode: multiply;
+    object-fit: cover;
+    // the admin's frame for this photo (photo.ts frameStyle): the point kept in view and the zoom
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
     display: block;
   }
   &__ph {
@@ -2194,7 +2217,7 @@ h1.sf-hero__eyebrow {
   flex: none;
   max-height: min(640px, 75vh);
   overflow-y: auto;
-  padding: 2px;
+  padding: 4px; // room for the chosen photo's ring
   button {
     flex: none;
     width: 72px;
@@ -2202,26 +2225,31 @@ h1.sf-hero__eyebrow {
     padding: 0;
     border-radius: 12px;
     overflow: hidden;
-    border: 2px solid transparent;
+    // the photo fills the button; the chosen one gets a ring outside it, not a border that insets the photo
+    border: 0;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
     background: var(--surface2);
     opacity: 0.65;
     transition:
       opacity 0.15s,
-      border-color 0.15s;
+      outline-color 0.15s;
   }
   button:hover {
     opacity: 1;
   }
   button.is-active {
-    border-color: var(--primary);
+    outline-color: var(--primary);
     opacity: 1;
   }
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    padding: 6%;
-    background: var(--photo-bg);
+    object-fit: cover;
+    // the admin's frame for this photo (photo.ts frameStyle): the point kept in view and the zoom
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
     display: block;
   }
 }
@@ -2234,8 +2262,7 @@ h1.sf-hero__eyebrow {
   aspect-ratio: 1;
   border-radius: 20px;
   overflow: hidden;
-  background: var(--photo-bg);
-  border: 1px solid var(--border);
+  background: var(--surface2);
   display: grid;
   place-items: center;
   position: relative;
@@ -2251,13 +2278,14 @@ h1.sf-hero__eyebrow {
   &.is-active {
     display: block;
   }
-  // the whole product on the studio tile, as on the cards (.sf-img)
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    padding: 5%;
-    mix-blend-mode: multiply;
+    object-fit: cover;
+    // the admin's frame for this photo (photo.ts frameStyle): the point kept in view and the zoom
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
     display: block;
   }
 }
@@ -2953,7 +2981,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .sf-card:hover .sf-img img,
   .sf-pre:hover .sf-img img {
-    transform: scale(1.04);
+    transform: scale(calc(var(--fz, 1) * 1.04));
   }
   .sf-img.has-alt:hover .sf-img__alt,
   .sf-card:hover .sf-img.has-alt .sf-img__alt,
@@ -2970,7 +2998,7 @@ $sf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   position: absolute;
   inset: 0;
   opacity: 0;
-  background: var(--photo-bg);
+  background: var(--surface2);
 }
 .sf-card__chip {
   position: absolute;
@@ -4207,4 +4235,46 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     display: block;
     font-size: 12px;
   }
+}
+
+// the product page's rewards line and purchase requirement (rewards/ProductPointsLine.tsx)
+.sf-pp-points {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text2);
+  > span[aria-hidden] {
+    color: var(--gold);
+  }
+  b {
+    color: var(--text);
+  }
+  a {
+    color: var(--primary);
+    margin-left: 4px;
+  }
+  &--none {
+    color: var(--muted);
+  }
+}
+.sf-pp-points__bonus {
+  color: var(--text);
+  font-weight: 600;
+}
+.sf-pp-req {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  b {
+    color: var(--text);
+  }
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+  }
+}
+.sf-pp-req__ok {
+  color: var(--text);
+  font-weight: 600;
 }

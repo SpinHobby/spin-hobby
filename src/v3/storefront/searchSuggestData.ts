@@ -1,3 +1,4 @@
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import type { Product } from "../types";
@@ -16,24 +17,28 @@ const DEBOUNCE_MS = 140;
 
 /** Suggestions for the text in the search box (nothing for one letter). Keeps the last answer while the next one loads. */
 export function useSearchSuggest(text: string, enabled: boolean) {
-  const [state, setState] = useState<{ for: string; data: SearchSuggestions }>({ for: "", data: EMPTY });
   const q = text.trim();
+  // the pause after the last key; text typed before (a letter deleted again) has its answer already and needs no pause
+  const [paused, setPaused] = useState(q);
   useEffect(() => {
-    if (!enabled || q.length < MIN_CHARS) return;
-    let on = true;
-    const timer = window.setTimeout(() => {
-      api<SearchSuggestions>(`/products/suggest?q=${encodeURIComponent(q)}`)
-        .then((data) => on && setState({ for: q, data }))
-        .catch(() => on && setState({ for: q, data: EMPTY }));
-    }, DEBOUNCE_MS);
-    return () => {
-      on = false;
-      window.clearTimeout(timer);
-    };
-  }, [q, enabled]);
-  const ready = q.length >= MIN_CHARS && !!state.for;
-  return { data: ready ? state.data : EMPTY, loading: ready && state.for !== q };
+    const timer = window.setTimeout(() => setPaused(q), DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+  const client = useQueryClient();
+  const seen = client.getQueryData(suggestKey(q)) !== undefined;
+  const asked = seen ? q : paused;
+  const wanted = enabled && asked.length >= MIN_CHARS;
+  const answer = useQuery({
+    queryKey: suggestKey(asked),
+    enabled: wanted,
+    staleTime: 60_000,
+    queryFn: () => api<SearchSuggestions>(`/products/suggest?q=${encodeURIComponent(asked)}`).catch(() => EMPTY),
+    placeholderData: keepPreviousData,
+  });
+  const ready = q.length >= MIN_CHARS && !!answer.data;
+  return { data: ready && answer.data ? answer.data : EMPTY, loading: ready && (asked !== q || answer.isPlaceholderData) };
 }
+const suggestKey = (q: string) => ["products", "suggest", q.toLowerCase()] as const;
 
 // ---------------------------------------------------------------- recent searches (this device only)
 const RECENT_KEY = "spinhobby-recent-searches";

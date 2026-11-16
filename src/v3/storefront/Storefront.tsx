@@ -1,4 +1,6 @@
 import { FormEvent, Fragment, type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isOn } from "../../features";
+import { PointsChip } from "../rewards/PointsChip";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./storefront.scss";
@@ -33,6 +35,7 @@ import {
   type ShopSort,
 } from "./data";
 import { AccountMenu, CartDrawer, NotifyDialog, WelcomeCard } from "./Overlays";
+import { Welcome } from "../welcome/Welcome";
 import { ProductPage } from "./ProductPage";
 import { consumeSignupFlag } from "../../lib/api";
 import { CategoryNav } from "./CategoryNav";
@@ -125,6 +128,10 @@ export default function Storefront() {
     prevSignedInId.current = signedInId;
   }, [signedInId]);
   const closeWelcome = useCallback(() => setWelcome(null), []);
+  // A new account gets the welcome step (confirm the email, a few optional details) until it's saved or skipped, even after a
+  // reload. A session saved before this existed has no `welcomed` and is left alone.
+  const [welcomeDone, setWelcomeDone] = useState(false);
+  const needsWelcome = Boolean(auth.user && auth.user.welcomed === false && !welcomeDone);
 
   // Product pages live at /product/<id> and share the header, cart and footer with the shop.
   // Back returns to the same scroll position in the shop.
@@ -404,8 +411,14 @@ export default function Storefront() {
   const pageRef = useEnterAnimation<HTMLDivElement>(productId ?? "shop");
   const mainRef = useEnterAnimation<HTMLElement>(location.pathname, 0); // a fade only: the titles bring their own rise
   // Changing tab, category, search or wishlist: the old products fade out, then the new ones rise in one after another.
-  const swap = useContentSwap(`${location.pathname}|${wishOnly}|${filters.query}`, results.items);
-  const listMotion = `ui-stagger ${swap.phase !== "shown" ? "ui-leaving" : results.loading ? "is-refreshing" : ""}`;
+  // A product page is not another list: the list's name stays as it was, so Back from a product finds the list as it was left.
+  const listKey = useRef("");
+  if (!productId) listKey.current = `${location.pathname}|${wishOnly}|${filters.query}`;
+  const swap = useContentSwap(listKey.current, results.items);
+  // The old list is only hidden while its replacement is really on the way. A list kept from before (Back, Forward) is
+  // there at once, and hiding it then would leave an empty space until the swap gave up waiting.
+  const swapping = swap.phase !== "shown" && results.loading;
+  const listMotion = `ui-stagger ${swapping ? "ui-leaving" : results.loading ? "is-refreshing" : ""}`;
   // the sidebar scrolls without a bar; its edges fade while there is more
   const sidebarRef = useScrollFade<HTMLElement>();
 
@@ -554,7 +567,7 @@ export default function Storefront() {
           </div>
         </div>
 
-        {(results.loading && !results.items.length) || swap.phase === "slow" ? (
+        {(results.loading && !results.items.length) || (swapping && swap.phase === "slow") ? (
           <div className={`sf-grid ${view === "compact" ? "sf-grid--compact" : ""}`} aria-busy="true" aria-label="Loading products">
             {Array.from({ length: 10 }, (_, i) => (
               <div key={i} className="sf-card sf-card--skeleton">
@@ -700,10 +713,9 @@ export default function Storefront() {
       className="sh sf"
       data-view={view}
       data-ready={config ? "" : undefined}
+      // the owner's sidebar choice (Admin > Homepage > Page layout) applies to every shop page, the homepage included: without
+      // the category bar the homepage looked lopsided (user, 2026-11-14)
       {...layoutAttrs(layout)}
-      // the homepage uses the whole width (categories are in the menu, and behind Filters by the grid); the owner's sidebar
-      // choice applies to category, series and search pages
-      data-sidebar={isHome ? "hidden" : layout.sidebar}
     >
       <a className="sf-skip" href="#shop">
         Skip to products
@@ -803,6 +815,7 @@ export default function Storefront() {
             <button type="button" className="sh-icon-btn" onClick={toggleTheme} title="Toggle theme" aria-label="Toggle dark mode">
               {theme === "dark" ? "☀" : "☾"}
             </button>
+            {isOn("rewards") && <PointsChip email={auth.email} />}
             <AccountMenu email={auth.email} user={auth.user} onSignOut={auth.signOut} />
             <button
               type="button"
@@ -1053,7 +1066,17 @@ export default function Storefront() {
           }}
         />
       )}
-      {welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />}
+      {needsWelcome && auth.user ? (
+        <Welcome
+          user={auth.user}
+          onClose={() => {
+            setWelcomeDone(true);
+            setWelcome(null);
+          }}
+        />
+      ) : (
+        welcome && auth.user && <WelcomeCard user={auth.user} isNew={welcome.isNew} onClose={closeWelcome} />
+      )}
       {toast && !cartOpen && (
         <div key={toast} className="sh-toast" role="status" aria-live="polite">
           {toast}

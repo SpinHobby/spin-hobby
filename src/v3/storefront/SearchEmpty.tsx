@@ -1,8 +1,8 @@
 import type { Product } from "../types";
 import { SUPPORT_EMAIL } from "../links";
+import { MASCOTS } from "../mascots";
 import { ProductCard, type CardActions } from "./ProductViews";
 
-const MASCOT = "/assets/transparent%20mascot%20chibi%20rotated.png";
 const PICKS = 5;
 
 /**
@@ -29,7 +29,7 @@ export function SearchEmpty({
   return (
     <div className="sf-noresults">
       <div className="sf-empty">
-        <img src={MASCOT} alt="" className="sf-empty__mascot" />
+        <img src={MASCOTS.clover} alt="" className="sf-empty__mascot" />
         <strong>No results for “{query}”</strong>
         {didYouMean && (
           <span className="sf-noresults__fix">
