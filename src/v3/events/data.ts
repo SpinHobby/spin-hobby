@@ -128,4 +128,11 @@ export const EVENTS: EventInfo[] = [
     end: "2026-10-18",
     link: "https://www.platfight.com/",
   },
+  {
+    name: "Rakku-Con Holiday",
+    venue: "Genesis Centre (Community Gym)",
+    city: "Calgary, AB",
+    start: "2026-12-12",
+    link: "https://www.instagram.com/rakkucon/",
+  },
 ];
