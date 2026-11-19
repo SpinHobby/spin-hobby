@@ -3,8 +3,8 @@
  * an account page). Each takes a `Product` and the shop's `CardActions` (add to cart, wishlist, open...). See README.md and
  * http://localhost:3000/ui-kit (Shop tab) for each one live.
  *
- * - Each card's main button adds to the cart; with the page's `onBuyNow`, a "Buy now" button under it goes straight to checkout
- *   with just that item (the cart is left as it is).
+ * - Each card's one button adds to the cart. Grid cards stop there (one clear action per product reads calmer than a wall of
+ *   buttons; "Buy now" is on the product page). List cards also show "Buy now" when the page gives `onBuyNow`.
  * - ProductCard: the main card. `layout="vertical"` (default: the photo on top, for grids) or `layout="horizontal"` (the photo on
  *   the left, for lists like the wishlist), where `meta`, `actions` and `onRemove` add a page's own line and buttons.
  * - PreorderCard: the slim card in the homepage's "New pre-orders" row.
@@ -28,7 +28,7 @@ import {
 import type { MouseEvent, ReactNode } from "react";
 import type { Product } from "../../v3/types";
 import { productPath } from "../../v3/storefront/data";
-import { isCutout, photo } from "../../v3/photo";
+import { productPhoto } from "../../v3/photo";
 import { closingLabel } from "../../v3/storefront/nudges";
 import { askHref, noPrice } from "./priceOnRequest";
 import "../../v3/storefront/storefront.scss";
@@ -89,7 +89,7 @@ export function ProductImage({
   return (
     <div className={`sf-img ${src ? "" : "sh-ph"} ${alt ? "has-alt" : ""} ${className}`}>
       {src ? (
-        <img {...photo(src, 480, isCutout(p, src))} alt={p.name} loading="lazy" />
+        <img {...productPhoto(p, src, 480)} alt={p.name} loading="lazy" />
       ) : (
         label && (
           <span className="sf-img__ph" aria-hidden>
@@ -97,7 +97,7 @@ export function ProductImage({
           </span>
         )
       )}
-      {alt && <img className="sf-img__alt" {...photo(alt, 480, isCutout(p, alt))} alt="" loading="lazy" aria-hidden />}
+      {alt && <img className="sf-img__alt" {...productPhoto(p, alt, 480)} alt="" loading="lazy" aria-hidden />}
     </div>
   );
 }
@@ -115,7 +115,7 @@ function Thumb({ p, size }: { p: Product; size: number }) {
   const src = p.images[0];
   return (
     <div className={`sh-thumb ${src ? "" : "sh-ph sh-ph--sm"}`} style={{ width: size, height: size }}>
-      {src && <img {...photo(src, size * 2, isCutout(p, src))} alt="" loading="lazy" />}
+      {src && <img {...productPhoto(p, src, size * 2)} alt="" loading="lazy" />}
     </div>
   );
 }
@@ -212,10 +212,9 @@ function VerticalCard({ p, a }: { p: Product; a: CardActions }) {
         </span>
       </div>
       <div className="sf-card__foot">
-        <button type="button" className={`sf-buy ${btn.cls}`} onClick={btn.onClick}>
+        <button type="button" className={`sf-buy sf-buy--card ${btn.cls}`} onClick={btn.onClick}>
           {btn.label}
         </button>
-        <BuyNow p={p} a={a} />
       </div>
     </article>
   );

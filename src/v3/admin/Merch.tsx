@@ -12,6 +12,8 @@ import { SeriesSelect } from "./SeriesSelect";
 import { PolishOptions, type PolishChoice } from "./PolishOptions";
 import { polishPhoto, type StickerBox } from "./polish";
 import { useSeriesList } from "./seriesList";
+import { PhotoFrameEditor } from "./PhotoFrameEditor";
+import { usePhotoFrames } from "./photoFrames";
 import type { Ctx } from "./Screens";
 
 const PREVIEW: CardActions = {
@@ -39,6 +41,7 @@ export function PhotoUploader({
   max = 6,
   single = false,
   selection,
+  framing,
 }: {
   urls: string[];
   onChange: (urls: string[]) => void;
@@ -47,6 +50,11 @@ export function PhotoUploader({
   single?: boolean;
   /** When given, every photo gets a tick box so several can be picked for a batch step. */
   selection?: { selected: Set<string>; onToggle: (url: string) => void };
+  /**
+   * A saved product's photos can be positioned in their square on the shop (⤧). `saved`: the photos the product has now; one just added
+   * can be positioned once the product is saved.
+   */
+  framing?: { productId: string; saved: string[] };
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState("");
@@ -55,6 +63,8 @@ export function PhotoUploader({
   const [dragging, setDragging] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const limit = single ? 1 : max;
+  const frames = usePhotoFrames(framing?.productId);
+  const canFrame = (url: string) => !!framing?.saved.includes(url);
 
   /** Uploads the edited photo and puts it in place of the one that was opened. */
   const saveEdit = async (index: number, result: GleamResult) => {
@@ -137,7 +147,24 @@ export function PhotoUploader({
                 </label>
               )}
               {!single && i === 0 && <span className="ad-photos__cover">Cover</span>}
+              {frames.frames[url] && canFrame(url) && (
+                <span className="ad-photos__clear ad-photos__clear--right" title="Moved or zoomed inside its square on the shop">
+                  Positioned
+                </span>
+              )}
               <div className="ad-photos__actions">
+                {canFrame(url) && (
+                  <button
+                    type="button"
+                    onClick={() => frames.setFraming(frames.framing === url ? null : url)}
+                    disabled={!!busy}
+                    title="Position: choose the part of the photo that shows in its square on the shop"
+                    aria-label="Position photo"
+                    aria-pressed={frames.framing === url}
+                  >
+                    ⤧
+                  </button>
+                )}
                 <button type="button" onClick={() => setEditing(i)} disabled={!!busy} title="Edit photo" aria-label="Edit photo">
                   ✎
                 </button>
@@ -153,6 +180,17 @@ export function PhotoUploader({
             </div>
           ))}
         </div>
+      )}
+      {frames.framing && canFrame(frames.framing) && (
+        <PhotoFrameEditor
+          key={frames.framing}
+          url={frames.framing}
+          initial={frames.frames[frames.framing]}
+          busy={frames.saving}
+          error={frames.error}
+          onSave={(frame) => void frames.save(frames.framing!, frame)}
+          onCancel={() => frames.setFraming(null)}
+        />
       )}
       {!full && (
         <button

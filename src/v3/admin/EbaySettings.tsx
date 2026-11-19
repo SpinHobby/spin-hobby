@@ -17,6 +17,8 @@ interface Sale {
 export interface EbayStatus {
   configured: boolean;
   environment: "sandbox" | "production";
+  /** a local copy: eBay cannot send the owner back, so they paste the address of eBay's "thank you" page */
+  pasteBack?: boolean;
   marketplace: string;
   connected: boolean;
   username: string | null;
@@ -75,6 +77,8 @@ const SALE_LABEL: Record<string, string> = {
 export function EbaySettings({ ctx }: { ctx: Ctx }) {
   const [status, setStatus] = useState<EbayStatus | null>(null);
   const [choices, setChoices] = useState<Choices | null>(null);
+  // why the policies and locations could not be read (stays on the card, not a passing message)
+  const [setupProblem, setSetupProblem] = useState("");
   const [setup, setSetup] = useState({ fulfillmentPolicyId: "", paymentPolicyId: "", returnPolicyId: "", merchantLocationKey: "" });
   const [newLocation, setNewLocation] = useState<null | {
     name: string;
@@ -85,6 +89,8 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
     country: string;
   }>(null);
   const [busy, setBusy] = useState("");
+  // a local copy: the address of eBay's "thank you" page, pasted back (null = no sign-in started)
+  const [thanksAddress, setThanksAddress] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -123,8 +129,11 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
   useEffect(() => {
     if (!status?.connected || !ctx.isOwner || status.wrongEnvironment) return;
     api<Choices>("/admin/ebay/setup")
-      .then(setChoices)
-      .catch((e) => ctx.flash(errMsg(e)));
+      .then((c) => {
+        setChoices(c);
+        setSetupProblem("");
+      })
+      .catch((e) => setSetupProblem(errMsg(e)));
   }, [status?.connected, status?.wrongEnvironment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = async (label: string, work: () => Promise<void>) => {
@@ -137,10 +146,32 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
       setBusy("");
     }
   };
-  const connect = () =>
-    run("Opening eBay…", async () => {
-      const { url } = await api<{ url: string }>("/admin/ebay/connect", { method: "POST" });
-      window.location.assign(url);
+  const connect = () => {
+    // the tab opens on the click itself (a browser blocks one opened later), then goes to eBay once the server answers
+    const tab = status?.pasteBack ? window.open("about:blank", "_blank") : null;
+    if (tab) tab.opener = null;
+    return run("Opening eBay…", async () => {
+      try {
+        const { url } = await api<{ url: string }>("/admin/ebay/connect", { method: "POST" });
+        if (!status?.pasteBack) return window.location.assign(url);
+        if (tab) tab.location.href = url;
+        else window.open(url, "_blank", "noopener");
+        setThanksAddress("");
+      } catch (e) {
+        tab?.close();
+        throw e;
+      }
+    });
+  };
+  const finishConnect = () =>
+    run("Connecting…", async () => {
+      const r = await api<{ ebay: EbayStatus }>("/admin/ebay/connect/finish", {
+        method: "POST",
+        body: JSON.stringify({ address: thanksAddress }),
+      });
+      setStatus(r.ebay);
+      setThanksAddress(null);
+      ctx.flash("eBay connected");
     });
   const saveSetup = () =>
     run("Saving…", async () => {
@@ -208,7 +239,9 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
     <section className="ad-card ad-pad ad-ebay" style={{ marginBottom: 16 }} aria-label="eBay">
       <div className="ad-between">
         <div>
-          <div className="ad-h3">eBay {s.environment === "sandbox" && <span className="sh-chip">sandbox (test)</span>}</div>
+          <div className="ad-h3 ad-ebay__title">
+            eBay {s.environment === "sandbox" && <span className="sh-chip ad-ebay__env">sandbox (test)</span>}
+          </div>
           <div className="ad-muted" style={{ fontSize: 13 }}>
             List products on eBay ({s.marketplace.replace("EBAY_", "eBay ")}). Square keeps the one stock count: an eBay sale takes the unit
             off Square, and Square's count goes to eBay, so an item never sells twice.
@@ -241,6 +274,25 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
               {busy || "Connect eBay"}
             </button>
           )}
+        </div>
+      )}
+      {s.configured && !s.connected && ctx.isOwner && s.pasteBack && thanksAddress !== null && (
+        <div className="ad-ebay__connect">
+          <p className="ad-sm" style={{ margin: 0 }}>
+            eBay opened in a new tab. Sign in with your Sandbox test user and agree, then copy the address of the page eBay lands on and
+            paste it here. (This computer is a local copy: eBay can't send you back to it.)
+          </p>
+          <input
+            className="sh-input"
+            style={{ flex: "1 1 320px" }}
+            placeholder="https://signin.sandbox.ebay.com/…&code=…"
+            value={thanksAddress}
+            onChange={(e) => setThanksAddress(e.target.value)}
+            aria-label="Address of eBay's page after signing in"
+          />
+          <button type="button" className="sh-btn" onClick={finishConnect} disabled={!!busy || !thanksAddress.trim()}>
+            {busy || "Finish connecting"}
+          </button>
         </div>
       )}
 
@@ -279,6 +331,11 @@ export function EbaySettings({ ctx }: { ctx: Ctx }) {
           {!s.ready && (
             <div className="ad-banner">
               Finish the setup below before listing: eBay needs your shipping, payment and return policies, and where items ship from.
+            </div>
+          )}
+          {ctx.isOwner && setupProblem && !choices && (
+            <div className="ad-banner ad-banner--error" role="alert">
+              The setup could not be loaded. {setupProblem}
             </div>
           )}
           {ctx.isOwner && choices && (

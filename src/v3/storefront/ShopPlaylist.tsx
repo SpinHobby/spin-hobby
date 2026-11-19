@@ -278,8 +278,14 @@ export function ShopPlaylistNav() {
   const m = useMusic();
   if (!m.open)
     return (
-      <button type="button" className="sf-music-btn" onClick={controls.open}>
-        <span aria-hidden>🎧</span> Shop playlist
+      <button
+        type="button"
+        className="sf-music-btn sf-music-btn--start"
+        onClick={controls.open}
+        aria-label="Play the shop playlist"
+        title="Shop playlist"
+      >
+        <span aria-hidden>🎧</span>
       </button>
     );
   return (

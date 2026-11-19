@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { normalizeStatus, price, type Currency } from "../format";
-import { isCutout, photo } from "../photo";
+import { productPhoto } from "../photo";
 import type { Product } from "../types";
 import { productPath } from "./data";
 import { useAddOns, useBoughtTogether } from "./suggestionData";
@@ -43,7 +43,7 @@ export function BoughtTogether({ p, currency, onAddAll }: { p: Product; currency
               </span>
             )}
             <Link to={productPath(x)} className={`sh-thumb ${x.images[0] ? "" : "sh-ph sh-ph--sm"}`} aria-label={x.name}>
-              {x.images[0] && <img {...photo(x.images[0], 160, isCutout(x, x.images[0]))} alt="" />}
+              {x.images[0] && <img {...productPhoto(x, x.images[0], 160)} alt="" />}
             </Link>
           </div>
         ))}
@@ -82,7 +82,7 @@ export function CheckoutAddOns({ itemIds, currency, onAdd }: { itemIds: string[]
         <div key={p.id} className="sf-pick">
           <span className="sf-pick__open">
             <span className={`sh-thumb ${p.images[0] ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 40, height: 40 }}>
-              {p.images[0] && <img {...photo(p.images[0], 80, isCutout(p, p.images[0]))} alt="" />}
+              {p.images[0] && <img {...productPhoto(p, p.images[0], 80)} alt="" />}
             </span>
             <span className="sf-pick__name">{p.name}</span>
           </span>
@@ -186,6 +186,59 @@ export function FollowBox({ p, email }: { p: Product; email: string | null }) {
       </div>
       {error && <span className="sf-error">{error}</span>}
       <span className="sf-muted sf-follow__small">Only pre-order news for what you tick. Every email has a link to stop.</span>
+    </form>
+  );
+}
+
+/** "Email me new pre-orders, once a week": every new pre-order in one weekly email (spin-hobby-server: follows kind "all"). */
+export function PreorderDigestBox({ email }: { email: string | null }) {
+  const [value, setValue] = useState(email ?? "");
+  const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (email) setValue((cur) => cur || email);
+  }, [email]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setState("busy");
+    setError("");
+    try {
+      await api("/follows", { method: "POST", body: JSON.stringify({ email: value.trim(), kind: "all" }) });
+      setState("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save that.");
+      setState("idle");
+    }
+  };
+
+  if (state === "done")
+    return (
+      <div className="sf-follow sf-digest is-done" role="status">
+        ✓ We'll email {value.trim()} when new pre-orders open, before they close.
+      </div>
+    );
+  return (
+    <form className="sf-follow sf-digest" onSubmit={submit} aria-labelledby="digest-title">
+      <div id="digest-title" className="sf-follow__title">
+        New pre-orders in your inbox
+      </div>
+      <div className="sf-follow__row">
+        <input
+          className="sh-input"
+          type="email"
+          required
+          placeholder="you@example.com"
+          aria-label="Your email"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+        />
+        <button className="sh-btn" disabled={state === "busy"}>
+          {state === "busy" ? "Saving…" : "Email me"}
+        </button>
+      </div>
+      {error && <span className="sf-error">{error}</span>}
+      <span className="sf-muted sf-follow__small">Only when there's something new. Every email has a link to stop.</span>
     </form>
   );
 }

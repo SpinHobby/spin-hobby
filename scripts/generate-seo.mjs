@@ -10,7 +10,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 const DIST = join(process.cwd(), "dist");
-const API_URL = (process.env.VITE_API_URL || "https://spin-hobby-server.onrender.com").replace(/\/$/, "");
+// Keep in step with DEFAULT_API in src/lib/api.ts.
+const API_URL = (process.env.VITE_API_URL || "https://api.spinhobby.com").replace(/\/$/, "");
+// Netlify's build of the live site: CONTEXT is "production" for a site's main branch (previews have other values), and the
+// staging site, whose server sleeps, says it is staging.
+const IS_LIVE_BUILD = process.env.CONTEXT === "production" && process.env.VITE_APP_ENV !== "staging";
 const IS_STAGING = process.env.VITE_APP_ENV === "staging";
 // Keep in sync with src/v3/seo.ts.
 const SITE_URL = process.env.VITE_SITE_URL || (IS_STAGING ? "https://spin-hobby-staging.netlify.app" : "https://spinhobby.com");
@@ -122,7 +126,11 @@ function breadcrumbJsonLd(crumbs) {
   };
 }
 
-// Keep in sync with productJsonLd() in src/v3/storefront/ProductPage.tsx.
+// The shop's shipping settings (from /checkout/config in main), for the shipping part of each product's structured data.
+const SHIP = { freeShippingCents: 7500, standardCents: 899, handlingMin: 2, handlingMax: 3 };
+const STANDARD_TRANSIT = { min: 5, max: 7 };
+
+// Keep in sync with productJsonLd(), shippingJsonLd() and RETURN_POLICY in src/v3/storefront/ProductPage.tsx.
 function productJsonLd(p) {
   const s = normalizeStatus(p.status);
   const gtin = p.janCode && /^\d{13}$/.test(p.janCode) ? p.janCode : null;
@@ -145,9 +153,31 @@ function productJsonLd(p) {
       itemCondition: "https://schema.org/NewCondition",
       url: `${SITE_URL}${productPath(p)}`,
       seller: { "@type": "Organization", name: "Spin Hobby" },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: p.priceCents >= SHIP.freeShippingCents ? "0.00" : (SHIP.standardCents / 100).toFixed(2),
+          currency: "CAD",
+        },
+        shippingDestination: ["CA", "US"].map((addressCountry) => ({ "@type": "DefinedRegion", addressCountry })),
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: days(SHIP.handlingMin, SHIP.handlingMax),
+          transitTime: days(STANDARD_TRANSIT.min, STANDARD_TRANSIT.max),
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: ["CA", "US"],
+        returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+        merchantReturnLink: `${SITE_URL}/support#returns`,
+      },
     },
   };
 }
+
+const days = (minValue, maxValue) => ({ "@type": "QuantitativeValue", minValue, maxValue, unitCode: "DAY" });
 
 const productDescription = (p) =>
   p.description
@@ -209,6 +239,12 @@ async function main() {
   try {
     products = await fetchAllProducts();
   } catch (error) {
+    // The live site must not go out built against an API address that doesn't answer: every page would fail for every shopper,
+    // and the sitemap would lose every product. Failing here stops the build, and Netlify keeps showing the last good one.
+    if (IS_LIVE_BUILD)
+      throw new Error(`The API at ${API_URL} did not answer (${error.message}). Not publishing the live site against it.`, {
+        cause: error,
+      });
     console.warn(`[generate-seo] Could not fetch products (${error.message}); skipping product, category and series pages.`);
   }
   try {
@@ -217,7 +253,14 @@ async function main() {
     /* no category pages */
   }
   try {
-    freeShippingCents = (await getJson("/checkout/config")).freeShippingThresholdCents ?? freeShippingCents;
+    const config = await getJson("/checkout/config");
+    freeShippingCents = config.freeShippingThresholdCents ?? freeShippingCents;
+    Object.assign(SHIP, {
+      freeShippingCents,
+      standardCents: config.shippingStandardCents ?? SHIP.standardCents,
+      handlingMin: config.handlingDaysMin ?? SHIP.handlingMin,
+      handlingMax: config.handlingDaysMax ?? SHIP.handlingMax,
+    });
   } catch {
     /* default */
   }

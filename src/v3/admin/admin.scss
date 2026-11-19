@@ -1674,6 +1674,71 @@
   font-weight: 700;
 }
 
+// Position a photo in its square (PhotoFrameEditor): drag it, zoom it, as the shop shows it (photos fill their card).
+.ad-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface2);
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  &__box {
+    position: relative;
+    width: min(280px, 100%);
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--surface);
+    cursor: grab;
+    touch-action: none;
+    &:active {
+      cursor: grabbing;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: var(--fx, 50%) var(--fy, 50%);
+      transform-origin: var(--fx, 50%) var(--fy, 50%);
+      transform: scale(var(--fz, 1));
+      display: block;
+      user-select: none;
+      pointer-events: none;
+    }
+  }
+  &__side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 160px;
+  }
+  &__zoom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    input {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+  }
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 // Photo and text options: each step with its price; the paid ones are never ticked by default.
 .ad-polish-box {
   display: flex;
@@ -2649,6 +2714,11 @@
   gap: 6px 14px;
   font-size: 13px;
 }
+// beside "Transparent": "Positioned" (moved or zoomed in its square on the shop)
+.ad-photos__clear--right {
+  left: auto;
+  right: 6px;
+}
 .ad-photos__clear {
   position: absolute;
   bottom: 6px;
@@ -2720,6 +2790,18 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.ad-ebay__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+/* A small label, not the button-sized chip, so it stays inside the heading line */
+.ad-ebay__env {
+  padding: 2px 9px;
+  font-size: 11.5px;
+  line-height: 1.4;
 }
 .ad-ebay__connect,
 .ad-ebay__row {
@@ -3205,4 +3287,386 @@
   .sh-input {
     width: 72px;
   }
+}
+
+// ------------------------------------------------------------ Page layout (Homepage; PageLayout.tsx)
+.ad-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding: 14px 18px 18px;
+  &__col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  &__block {
+    padding: 8px 0;
+    .ad-line__main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    &.is-hidden .ad-line__main {
+      opacity: 0.5;
+    }
+  }
+  &__show {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .ad-kv > .ad-layout__select {
+    width: auto;
+    text-align: left;
+  }
+}
+@media (max-width: 900px) {
+  .ad-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+// a wireframe of the homepage; boxes only, no real content
+.ad-sketch {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface2);
+  font-size: 10px;
+  padding-bottom: 8px;
+  &__bar {
+    height: 6px;
+    background: var(--primary);
+  }
+  &__header {
+    height: 14px;
+    margin: 6px 8px;
+    border-radius: 4px;
+    background: var(--border);
+  }
+  &__body {
+    display: flex;
+    gap: 6px;
+    margin: 0 auto;
+    padding: 0 8px;
+    max-width: 82%;
+    &.is-right {
+      flex-direction: row-reverse;
+    }
+  }
+  &--wide &__body {
+    max-width: 92%;
+  }
+  &--full &__body {
+    max-width: none;
+  }
+  &__side {
+    flex: 0 0 18%;
+    min-height: 120px;
+    border-radius: 4px;
+    background: var(--border);
+  }
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  &__block {
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    &--hero {
+      padding: 14px 6px;
+      background: var(--gold);
+      color: var(--on-primary);
+    }
+  }
+  &__grid {
+    display: grid;
+    gap: 3px;
+    span {
+      border-radius: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    span.is-row {
+      height: 12px;
+    }
+  }
+}
+
+// Admin > Reviews (Reviews.tsx)
+.ad-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ad-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  &__stars {
+    color: var(--gold);
+    letter-spacing: 1px;
+    span {
+      color: var(--border);
+    }
+  }
+  &__body {
+    margin: 0;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  &__reply {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+// Admin > Search: synonym groups as chips, the new-group form, and inline editing (SearchScreen.tsx)
+.ad-search {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  &__new {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) 1fr auto;
+    gap: 12px;
+    align-items: end;
+    textarea {
+      width: 100%;
+    }
+  }
+  &__terms {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  &__filter {
+    max-width: 200px;
+  }
+  &__groups {
+    margin-top: 12px;
+  }
+  &__group {
+    align-items: center;
+    gap: 10px;
+  }
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  &__chip {
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 13px;
+  }
+  &__edit {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    textarea {
+      width: 100%;
+    }
+  }
+  &__error {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--red);
+  }
+  &__actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+@media (max-width: 720px) {
+  .ad-search__new,
+  .ad-search__edit {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Admin > Homepage > Theme: one tile per theme, each a tiny shop in its own colours (ThemePicker.tsx, themes.scss)
+.ad-shopthemes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.ad-shoptheme {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  &__pick {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    padding: 8px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    transition:
+      border-color 0.15s,
+      transform 0.15s;
+    &:hover:not(:disabled) {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+    &:disabled {
+      cursor: default;
+    }
+  }
+  &.is-current &__pick {
+    border-color: var(--gold);
+  }
+  &__name {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &__badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--on-gold);
+  }
+  &__preview {
+    align-self: flex-start;
+    margin-left: 4px;
+    color: var(--muted);
+  }
+}
+
+// Admin > product > Rewards points (ProductPoints.tsx)
+.ad-points {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  legend {
+    padding: 0 6px;
+  }
+}
+.ad-points__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+// Admin > Dashboard > Email (EmailUsage.tsx): sent vs Resend's limits.
+.ad-email-meter {
+  margin-bottom: 12px;
+  &__text {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  &__bar {
+    height: 8px;
+    border-radius: 99px;
+    background: var(--surface2);
+    overflow: hidden;
+    span {
+      display: block;
+      height: 100%;
+      background: var(--teal);
+    }
+  }
+  &.is-warn &__bar span {
+    background: var(--gold);
+  }
+  &.is-full &__bar span {
+    background: var(--red);
+  }
+}
+.ad-email-alert {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  color: var(--text);
+}
+
+// The tick box that leads a photo dialog (Polish into a clean product photo): on its own tinted card so it is the first thing seen
+.ad-check.ad-check--lead {
+  // the box in its own column, the bold name and the explanation under each other beside it (a flex row squeezed them side by side)
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  column-gap: 8px;
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  color: var(--text);
+  font-weight: 500;
+  line-height: 1.4;
+  input {
+    grid-row: 1 / span 2;
+    margin-top: 2px;
+  }
+  b,
+  small {
+    grid-column: 2;
+  }
+  small {
+    margin-top: 2px;
+  }
+}
+
+// the clean product photo's choices (CleanPolishOptions.tsx), set in under the tick box that turns it on
+.ad-polish-clean {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px 26px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line, rgba(127, 127, 127, 0.3));
+  .ad-label {
+    margin-top: 6px;
+  }
+  p {
+    margin: 0;
+  }
+}
+.ad-check.ad-check--sub {
+  margin-left: 26px;
 }

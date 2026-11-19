@@ -7,6 +7,7 @@ import SiteLayout from "./v3/SiteLayout";
 import { isRecoveryLink } from "./lib/api";
 import { isOn } from "./features";
 import { ShopMusicHost } from "./v3/storefront/ShopPlaylist";
+import { ShopTheme } from "./v3/storefront/ShopTheme";
 
 // the shop assistant's chat button: only fetched where it is on (src/features.ts)
 const ShopAssistant = lazy(() => import("./v3/assistant/ShopAssistant"));
@@ -19,6 +20,9 @@ const Legal = lazy(() => import("./v3/legal/Legal"));
 const Support = lazy(() => import("./v3/support/Support"));
 const OrderStatus = lazy(() => import("./v3/support/OrderStatus"));
 const Events = lazy(() => import("./v3/events/Events"));
+const About = lazy(() => import("./v3/about/About"));
+const Rewards = lazy(() => import("./v3/rewards/Rewards"));
+const Glossary = lazy(() => import("./v3/glossary/Glossary"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
 // the shared building blocks shown live (local and staging only)
 const UiKit = lazy(() => import("./components/showcase/ComponentsPage"));
@@ -68,6 +72,9 @@ export default function App() {
           <Route path="/support" element={<Support />} />
           <Route path="/order-status" element={<OrderStatus />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/about" element={<About />} />
+          {isOn("rewards") && <Route path="/rewards" element={<Rewards />} />}
+          <Route path="/glossary" element={<Glossary />} />
         </Route>
         <Route
           path="/reset-password"
@@ -83,6 +90,8 @@ export default function App() {
       </Routes>
       {/* the shop playlist, outside the routes so it keeps playing from page to page */}
       <ShopMusicHost />
+      {/* the owner's storefront theme on every shopper page (Admin > Homepage > Theme) */}
+      <ShopTheme />
     </BrowserRouter>
   );
 }

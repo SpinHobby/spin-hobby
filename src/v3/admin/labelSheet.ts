@@ -39,7 +39,7 @@ function grid(size: LabelSize) {
 
 const MASCOT_URL = "/assets/transparent%20mascot%20chibi%20rotated.png";
 // Head and shoulders of the chibi mascot (the full drawing has stray strokes near the hem).
-const MASCOT_CROP = { x: 100, y: 0, w: 1350, h: 1350 };
+const MASCOT_CROP = { x: 50, y: 0, w: 675, h: 675 }; // in the picture's own pixels (776 × 918)
 
 let mascot: Promise<HTMLImageElement> | null = null;
 function loadMascot() {
@@ -189,7 +189,6 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, max: n
   }
   if (lines.length < max && line) {
     lines.push(line);
-    line = "";
     i = words.length;
   }
   const leftOver = i < words.length;

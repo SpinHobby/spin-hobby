@@ -1,0 +1,60 @@
+// Colours come from the theme tokens (var(--…)) only, so light and dark mode both work.
+.gl-wrap {
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    margin: 0 0 8px;
+    color: var(--text);
+  }
+}
+
+.gl-back {
+  display: inline-block;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+
+  &:hover {
+    color: var(--blue);
+  }
+}
+
+.gl-lead,
+.gl-note {
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.gl-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.gl-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 18px;
+
+  dt {
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  dd {
+    margin: 4px 0 0;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--text2);
+  }
+}

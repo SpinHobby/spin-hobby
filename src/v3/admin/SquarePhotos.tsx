@@ -3,6 +3,8 @@ import type { GleamResult } from "@gleamshelf/react";
 import { api, apiBlob } from "../../lib/api";
 import type { Product } from "../types";
 import { EditorBoundary } from "./EditorBoundary";
+import { PhotoFrameEditor } from "./PhotoFrameEditor";
+import { usePhotoFrames } from "./photoFrames";
 import { prepareImage, preparedFromBlob } from "./image";
 import { useBackgrounds } from "./photoBackgrounds";
 import { PolishOptions, type PolishChoice } from "./PolishOptions";
@@ -46,6 +48,8 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   const [cutouts, setCutouts] = useState<Cutout[]>([]);
   // the photos picked for eBay, in order (eBay is not connected yet: they are kept for when it is)
   const [ebay, setEbay] = useState<string[]>([]);
+  // where each photo sits in its square on the shop (moved or zoomed ones), and the photo being positioned (by address)
+  const { frames, framing, setFraming, saving: savingFrame, error: frameError, save: saveFramed } = usePhotoFrames(p.id);
   const backgrounds = useBackgrounds();
 
   const apply = useCallback(
@@ -294,7 +298,22 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
               >
                 eBay{ebay.includes(photo.url) ? ` ${ebay.indexOf(photo.url) + 1}` : ""}
               </button>
+              {frames[photo.url] && (
+                <span className="ad-photos__clear ad-photos__clear--right" title="Moved or zoomed inside its square on the shop">
+                  Positioned
+                </span>
+              )}
               <div className="ad-photos__actions">
+                <button
+                  type="button"
+                  onClick={() => setFraming(framing === photo.url ? null : photo.url)}
+                  disabled={!!busy}
+                  title="Position: choose the part of the photo that shows in its square on the shop"
+                  aria-label="Position photo"
+                  aria-pressed={framing === photo.url}
+                >
+                  ⤧
+                </button>
                 <button
                   type="button"
                   onClick={() => openEditor(photo)}
@@ -349,6 +368,27 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
           ))}
         </div>
       )}
+      {(() => {
+        const photo = framing ? shown.find((x) => x.url === framing) : null;
+        if (!photo) return null;
+        const clear = cutoutOf(photo.id)?.transparent;
+        return (
+          <PhotoFrameEditor
+            key={photo.id}
+            url={photo.url}
+            initial={frames[photo.url]}
+            background={
+              clear ? `${backgrounds.shop ? `url("${backgrounds.shop.imageUrl}") center / cover no-repeat, ` : ""}#fff` : undefined
+            }
+            busy={savingFrame}
+            error={frameError}
+            onSave={(frame) =>
+              void saveFramed(photo.url, frame).then((ok) => ok && ctx.flash("Photo position saved. The shop shows it on its next load."))
+            }
+            onCancel={() => setFraming(null)}
+          />
+        );
+      })()}
       {(ebay.length > 0 || shown.length > 0) && (
         <div className="ad-muted ad-sm">
           <b>eBay</b> · not connected yet.{" "}

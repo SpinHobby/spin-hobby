@@ -2,10 +2,10 @@
 .sh-footer {
   margin-top: auto;
   background: var(--block);
-  color: #d6dae7;
+  color: var(--on-block-muted);
 
   a {
-    color: #fff;
+    color: var(--on-block);
     &:hover {
       color: var(--gold);
     }

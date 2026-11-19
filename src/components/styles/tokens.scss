@@ -1,4 +1,5 @@
-// Design tokens from design_handoff_spinhobby_storefront / _admin (v3).
+// Design tokens from design_handoff_spinhobby_storefront / _admin (v3). Storefront themes override them in themes.scss.
+@use "themes";
 .sh {
   --bg: #f4f5f8;
   --surface: #ffffff;
@@ -17,11 +18,21 @@
   --ph1: #eceef4;
   --ph2: #e4e7ef;
   --shadow-card: 0 12px 28px -16px rgba(15, 20, 45, 0.35);
+  // text on the dark blocks (top bar, hero, footer) and on the gold accent; themes change all three with the colours behind them
+  --on-block: #ffffff;
+  --on-block-muted: #d6dae7;
+  --on-gold: #1d2a53;
+  // a picture behind the whole page (themes; none in the classic look)
+  --bg-art: none;
+  --bg-art-size: auto;
   --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-display: "M PLUS Rounded 1c", "Plus Jakarta Sans", system-ui, sans-serif;
 
   min-height: 100vh;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--bg-art);
+  background-size: var(--bg-art-size);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
@@ -88,9 +99,11 @@ body {
 }
 
 // Shared primitives
+// Type: headings use the rounded display face at 700 (800 read as shouting next to the products); the shop's text sizes keep
+// to one scale: 11 (badges only), 12, 13, 14, 16, 18, 22, 28, 32, 40.
 .sh-display {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
 }
 .sh-eyebrow {
   font-size: 12px;
@@ -108,6 +121,7 @@ body {
     background: repeating-linear-gradient(135deg, var(--ph1) 0 5px, var(--ph2) 5px 10px);
   }
 }
+// small product photos (cart, rankings, checkout): fill their square, like the cards (.sf-img)
 .sh-thumb {
   flex: none;
   overflow: hidden;
@@ -116,6 +130,10 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    // the admin's frame for this photo (photo.ts frameStyle): the point kept in view and the zoom
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
     display: block;
   }
 }
@@ -413,6 +431,17 @@ body {
     padding: 10px 12px;
     overflow-wrap: anywhere;
   }
+  // Local dev only (SignIn.tsx): one-click sign-in as the local test accounts.
+  &__dev {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    > span {
+      font-weight: 700;
+      margin-right: 4px;
+    }
+  }
   &__row {
     display: flex;
     justify-content: space-between;
@@ -430,6 +459,32 @@ body {
     color: var(--red);
     font-size: 13px;
     font-weight: 600;
+  }
+  &__legal {
+    margin: 2px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+    text-align: center;
+    a {
+      color: inherit;
+      white-space: nowrap;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      &:hover {
+        color: var(--text);
+      }
+    }
+  }
+  &__inline {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
   }
   &__switch {
     font-size: 13px;
@@ -461,6 +516,7 @@ body {
 // and small targets are hard to hit. This applies to every form field in the app; sign-in also gets 44px targets.
 @media (max-width: 960px), (pointer: coarse) {
   .sh-input,
+  .sh input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   .sh select,
   .sh textarea {
     font-size: 16px;
@@ -490,5 +546,84 @@ body {
     &__form {
       gap: 10px;
     }
+  }
+}
+
+// The clean wordmark logo (ShopLogo.tsx): the mascot in a gold circle and the name in the heading font. It takes the colour of
+// where it sits (dark text in the header, light on the footer's dark block).
+.sh-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: inherit;
+  white-space: nowrap;
+  &__mark {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--gold);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+  .sh-wordmark__mark img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    transform: translateY(3px);
+  }
+  &__word {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+}
+// phones: the wordmark shares one row with account, wishlist and cart (Storefront header), so it gets smaller
+@media (max-width: 640px) {
+  .sh-wordmark {
+    gap: 7px;
+    &__mark {
+      width: 28px;
+      height: 28px;
+    }
+    .sh-wordmark__mark img {
+      width: 27px;
+      height: 27px;
+    }
+    &__word {
+      font-size: 16px;
+    }
+  }
+}
+
+// New-password strength under the sign-up password: three bars that fill (red, gold, teal) and a word.
+.sh-pw-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -2px;
+  font-size: 12px;
+  color: var(--muted);
+  &__bar {
+    display: flex;
+    gap: 3px;
+    i {
+      width: 22px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+    }
+  }
+  &--1 i:nth-child(-n + 1) {
+    background: var(--red);
+  }
+  &--2 i:nth-child(-n + 2) {
+    background: var(--gold);
+  }
+  &--3 i {
+    background: var(--teal);
   }
 }

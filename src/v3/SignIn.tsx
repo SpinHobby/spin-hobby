@@ -13,6 +13,13 @@ import {
 const LABEL: Record<OAuthProvider, string> = { google: "Continue with Google", discord: "Continue with Discord" };
 
 /** Sign-in options that adapt to whichever providers are enabled in Supabase Auth. */
+/** The local dev accounts (server scripts/dev-local.mjs), signed in with one click where the local dev login is on. */
+const DEV_ACCOUNTS: [string, string][] = [
+  ["owner", "owner@spinhobby.test"],
+  ["staff", "staff@spinhobby.test"],
+];
+const DEV_PASSWORD = "spinhobby";
+
 export function SignInPanel({
   returnPath,
   compact = false,
@@ -24,13 +31,13 @@ export function SignInPanel({
 }) {
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [forgot, setForgot] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [exists, setExists] = useState(false);
 
   useEffect(() => {
     authProviders().then(setProviders);
@@ -55,16 +62,21 @@ export function SignInPanel({
     }
   };
 
-  // Email + password only: no emails are sent (Supabase's built-in mailer is heavily rate-limited).
+  // Sign-up signs straight in; the welcome step then asks for the code the server emailed (see welcome/Welcome.tsx).
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
+    setExists(false);
     try {
-      if (signingUp) await signUpWithPassword(email, password, firstName);
+      if (signingUp) await signUpWithPassword(email, password);
       else await signInWithPassword(email, password); // useAuth picks up the new session
     } catch (err) {
-      setError(friendly(err));
+      // The email already has an account: offer to sign in with it, keeping what was typed.
+      if ((err as { payload?: { code?: string } }).payload?.code === "email_exists") {
+        setExists(true);
+        setError("An account with this email already exists.");
+      } else setError(friendly(err));
     } finally {
       setBusy(false);
     }
@@ -72,6 +84,7 @@ export function SignInPanel({
   const switchMode = () => {
     setMode((m) => (m === "signin" ? "signup" : "signin"));
     setError("");
+    setExists(false);
   };
 
   if (!providers) return <div className="sh-skeleton" style={{ height: 44 }} />;
@@ -140,18 +153,6 @@ export function SignInPanel({
             </div>
           )}
           <form className="sh-signin__form" onSubmit={submit}>
-            {signingUp && (
-              <input
-                className="sh-input"
-                type="text"
-                autoComplete="given-name"
-                placeholder="First name (optional)"
-                maxLength={80}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                aria-label="First name"
-              />
-            )}
             <input
               className="sh-input"
               type={usernameOk ? "text" : "email"}
@@ -180,6 +181,7 @@ export function SignInPanel({
               onChange={(e) => setPassword(e.target.value)}
               aria-label="Password"
             />
+            {signingUp && password && <PasswordHint password={password} />}
             <button className={`sh-btn ${oauthOn.length ? "sh-btn--ghost" : ""}`} disabled={busy}>
               {signingUp ? (busy ? "Creating account…" : "Create account") : busy ? "Signing in…" : "Sign in"}
             </button>
@@ -207,17 +209,83 @@ export function SignInPanel({
           )}
         </>
       )}
+      {/* Where accounts can be made (Google and Discord make one on first use too), the terms are named at that moment: the
+          Terms say creating an account means agreeing, and a footer link alone counts for little. A line, not a box to tick. */}
+      {allowSignup && (oauthOn.length > 0 || canSignup) && (
+        <p className="sh-signin__legal">
+          By continuing, you agree to our{" "}
+          <a href="/legal/terms" target="_blank" rel="noopener">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="/legal/privacy" target="_blank" rel="noopener">
+            Privacy Policy
+          </a>
+          .
+        </p>
+      )}
       {!providers.password && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
+      {/* Only when the API runs with the local dev login (npm run dev:local): never on staging or the live site. The accounts
+          and the shared password are the local test ones from the server's scripts/dev-local.mjs. */}
       {providers.dev && (
-        <div className="sh-signin__sent">
-          Local dev: <b>owner@spinhobby.test</b> / <b>spinhobby</b>
+        <div className="sh-signin__sent sh-signin__dev">
+          <span>Local only</span>
+          {DEV_ACCOUNTS.map(([label, devEmail]) => (
+            <button
+              key={devEmail}
+              type="button"
+              className="sh-btn sh-btn--ghost"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setError("");
+                signInWithPassword(devEmail, DEV_PASSWORD)
+                  .catch((err: Error) => setError(err.message))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              Sign in as {label}
+            </button>
+          ))}
         </div>
       )}
       {error && (
         <div className="sh-signin__error" role="alert">
           {error}
+          {exists && signingUp && (
+            <>
+              {" "}
+              <button type="button" className="sh-signin__inline" onClick={switchMode}>
+                Sign in instead
+              </button>
+            </>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** How strong a new password looks: length and variety, not rules the customer must meet (the server only asks for 8+). */
+function passwordStrength(password: string): { level: 0 | 1 | 2 | 3; label: string } {
+  if (password.length < 8) return { level: 0, label: `${8 - password.length} more character${password.length === 7 ? "" : "s"}` };
+  const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z\d]/].filter((r) => r.test(password)).length;
+  const common = /^(password|12345678|qwerty|iloveyou|letmein|11111111|spinhobby)/i.test(password);
+  if (common || (password.length < 10 && kinds < 2)) return { level: 1, label: "Easy to guess" };
+  if (password.length >= 14 || (password.length >= 10 && kinds >= 3)) return { level: 3, label: "Strong" };
+  return { level: 2, label: "Good" };
+}
+
+function PasswordHint({ password }: { password: string }) {
+  const { level, label } = passwordStrength(password);
+  return (
+    <div className={`sh-pw-meter sh-pw-meter--${level}`} aria-live="polite">
+      <span className="sh-pw-meter__bar" aria-hidden>
+        <i />
+        <i />
+        <i />
+      </span>
+      <span>{label}</span>
     </div>
   );
 }
