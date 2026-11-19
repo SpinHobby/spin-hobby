@@ -3651,3 +3651,22 @@
     margin-top: 2px;
   }
 }
+
+// the clean product photo's choices (CleanPolishOptions.tsx), set in under the tick box that turns it on
+.ad-polish-clean {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px 26px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line, rgba(127, 127, 127, 0.3));
+  .ad-label {
+    margin-top: 6px;
+  }
+  p {
+    margin: 0;
+  }
+}
+.ad-check.ad-check--sub {
+  margin-left: 26px;
+}

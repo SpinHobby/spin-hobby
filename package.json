@@ -36,7 +36,9 @@
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:gleamshelf": "vite --mode gleamshelf",
+    "gleamshelf:update": "node scripts/update-gleamshelf.mjs"
   },
   "browserslist": {
     "production": [
