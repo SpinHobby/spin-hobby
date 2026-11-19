@@ -1,4 +1,4 @@
-import { Pagination, Button } from "@/components";
+import { Pagination, Button, Dialog, TextareaField, useToast } from "@/components";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CardAction, ProductCard, type CardActions } from "@/components/shop/ProductCards";
@@ -28,6 +28,13 @@ export function Wishlist() {
   const [view, setView] = useState<"grid" | "row">("row");
   const PAGE = 5;
 
+  // which product the note dialog is open for (null = closed), and the text typed so far
+  const [noteFor, setNoteFor] = useState<{ id: string | number; name: string } | null>(null);
+  const [noteText, setNoteText] = useState("");
+
+  const { toast, flash } = useToast();
+  const [saving, setSaving] = useState(false);
+
   // the saved ids -> the real products (the same way Storefront.tsx does it)
   const results = useProducts(FILTERS, wishlist.list);
   // keep only items still saved, so a removed item disappears right away
@@ -45,6 +52,26 @@ export function Wishlist() {
 
   const visible = items.slice((page - 1) * PAGE, page * PAGE);
   const totalCents = items.reduce((sum, p) => sum + p.priceCents, 0);
+
+  const openNote = (p: { id: string | number; name: string }) => {
+    setNoteText("");
+    setNoteFor({ id: p.id, name: p.name });
+  };
+  const closeNote = () => setNoteFor(null);
+  const saveNote = async () => {
+    if (!noteFor) return;
+    setSaving(true);
+    try {
+      // await saveWishlistNote(noteFor.id, noteText.trim()); // you write this next
+      closeNote();
+      flash("Note added");
+    } catch {
+      // keep the dialog open so the user can try again
+      flash("Unable to save note");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -102,7 +129,7 @@ export function Wishlist() {
                 meta="Added recently"
                 actions={
                   <>
-                    <CardAction onClick={() => {}}>Add a note</CardAction>
+                    <CardAction onClick={() => openNote(p)}>Add a note</CardAction>
                     <CardAction icon label={`Share ${p.name}`} onClick={() => {}}>
                       ↗
                     </CardAction>
@@ -115,6 +142,26 @@ export function Wishlist() {
         )}
       </div>
       <Pagination page={page} pageSize={PAGE} total={items.length} onPage={setPage} />
+      {noteFor && (
+        <Dialog
+          title={`Add a note to ${noteFor.name}`}
+          size="md"
+          onClose={closeNote}
+          footer={
+            <>
+              <Button variant="ghost" onClick={closeNote}>
+                Cancel
+              </Button>
+              <Button onClick={saveNote} loading={saving} disabled={!noteText.trim()}>
+                Add note
+              </Button>
+            </>
+          }
+        >
+          <TextareaField label="Note" rows={3} showCount maxLength={300} value={noteText} onChange={(e) => setNoteText(e.target.value)} />
+        </Dialog>
+      )}
+      {toast}
     </>
   );
 }

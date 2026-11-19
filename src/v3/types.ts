@@ -144,6 +144,7 @@ export interface AppUser {
   email: string;
   role: Role;
   firstName?: string | null;
+  lastName?: string | null;
   /** May open Admin > Audit: every owner, and staff the owner allowed. */
   canAudit?: boolean;
   /** Confirmed their email with a code (or signed in with Google/Discord). Needed to use points and buy limited items, not to shop. */
