@@ -263,6 +263,16 @@ export async function updatePassword(password: string) {
   await api("/auth/password", { method: "POST", body: JSON.stringify({ password }) });
 }
 
+/** Saves the signed-in shopper's own name; the reply is the updated user. */
+export async function updateProfileName(firstName: string, lastName: string) {
+  const { user } = await api<{ user: AppUser }>("/account/profile", {
+    method: "PUT",
+    body: JSON.stringify({ firstName, lastName }),
+  });
+  refreshSessionUser(user);
+  return user;
+}
+
 /** True when this page was opened from a password-reset email (its tokens are still in the URL). */
 export function isRecoveryLink() {
   return new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
