@@ -418,8 +418,9 @@ function DraftCard({
   const [categoryId, setCategoryId] = useState(draft.categoryId ?? "");
   const [seriesName, setSeriesName] = useState(draft.series ?? "");
   const [price, setPrice] = useState("");
+  // one in stock and on the website straight away: the shop adds what it has in hand (tick "Keep off the website" to check it first)
   const [stock, setStock] = useState("1");
-  const [hidden, setHidden] = useState(true);
+  const [hidden, setHidden] = useState(false);
   const official = draft.details.official ?? null;
   // every photo the draft offers (an older draft: its own photo and the official one), and where each goes; the official one is never used without a click
   const offered: OfferedPhoto[] = draft.photos?.length
