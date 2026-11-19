@@ -146,13 +146,24 @@ The worker turns uploaded photos into drafts and proposes descriptions, starting
 The admin does not use the gleamshelf repo directly. It installs a packed copy kept in this repo,
 `vendor/gleamshelf-react-<version>.tgz` (see `"@gleamshelf/react"` in `package.json`), so shop work never needs gleamshelf cloned.
 
-When editor changes should reach the admin:
+**Trying editor changes in the admin while you make them.** With gleamshelf cloned next to this repo (and `npm ci` run there), start
+the website with
 
-1. In `gleamshelf`, raise the version in `packages/react/package.json` (for example `0.4.0` to `0.5.0`).
-2. Pack it straight into this repo: `node scripts/pack-react.mjs ../spin-hobby/vendor`.
-3. Here: delete the old `.tgz` from `vendor/`, point `"@gleamshelf/react"` in `package.json` at the new file, run `npm install` (it updates
-   `package-lock.json`), then `npm run build` to check.
-4. Commit the new `.tgz`, `package.json` and `package-lock.json` together.
+```bash
+npm run dev:gleamshelf
+```
+
+instead of `npm run dev`. The admin then runs the editor straight from `../gleamshelf/packages/react/src` (another checkout:
+`GLEAMSHELF_DIR=<folder>`), so a change saved in gleamshelf shows in the admin at once, with no packing. Builds (`npm run build`, Netlify)
+always use the packed copy, so this never changes the shop.
+
+**When editor changes should reach the admin** (the gleamshelf pull request is merged):
+
+1. In `gleamshelf`, raise the version in `packages/react/package.json` (for example `0.7.1` to `0.8.0`).
+2. Here: `npm run gleamshelf:update` (another checkout: `npm run gleamshelf:update -- <folder>`). It packs the editor into `vendor/`,
+   points `"@gleamshelf/react"` in `package.json` at the new file, deletes the old `.tgz` and runs `npm install`. It stops if the version
+   was not raised.
+3. `npm run build` to check, then commit the new `.tgz`, `package.json` and `package-lock.json` together.
 
 Always raise the version when packing again: npm keeps the first copy of a version it installed, so a second pack under the same version
 never reaches `node_modules`. Photo lab's engines are a `.wasm` file inside the package that it finds next to its own code, which is why
@@ -165,6 +176,8 @@ never reaches `node_modules`. Photo lab's engines are a `.wasm` file inside the 
 | spin-hobby-server | `npm run dev:local` | The API with sample data (use this most of the time) |
 | spin-hobby | `npm run dev` | The website, reloading as you edit |
 | spin-hobby | `npm run lint && npm run format:check && npx tsc --noEmit` | Before pushing |
+| spin-hobby | `npm run dev:gleamshelf` | The website, with the admin's editor run from `../gleamshelf` |
+| spin-hobby | `npm run gleamshelf:update` | Pack a new editor from `../gleamshelf` into the admin |
 | gleamshelf | `npm run dev` | The editor on its own |
 | gleamshelf | `npm run typecheck && npm test` | Before pushing |
 | gleamshelf | `npm run local:start` | The AI tools for the editor (after the models are downloaded) |

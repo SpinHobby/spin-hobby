@@ -3,6 +3,8 @@ import { api } from "../../lib/api";
 import { useEscape } from "../hooks";
 import { BackgroundPreview, BackgroundsLibrary } from "./Backgrounds";
 import { useBackgrounds, type Background } from "./photoBackgrounds";
+import { CleanPolishOptions } from "./CleanPolishOptions";
+import { useCleanPolish } from "./cleanPolish";
 import { JobProgress } from "./JobProgress";
 import { PhotoViewer } from "./PhotoViewer";
 import type { Ctx } from "./Screens";
@@ -83,8 +85,9 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
   const [stickers, setStickers] = useState(true);
   const [enlarge, setEnlarge] = useState(true);
   const [look, setLook] = useState(true);
-  // on by default: the figure alone, with no box print, drawn by the photo computer (Clean product photo)
+  // on by default: drawn by the photo computer (Clean product photo); a printed box keeps its art, a window box becomes the figure alone
   const [clean, setClean] = useState(true);
+  const [polish, setPolish] = useCleanPolish();
   const [scope, setScope] = useState<"main" | "all">("main");
   const [mode, setMode] = useState<"product" | "character">("product");
   const [busy, setBusy] = useState(false);
@@ -97,7 +100,7 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
       setDone(
         await api("/admin/photo-batches", {
           method: "POST",
-          body: JSON.stringify({ productIds, scope, options: { mode, stickers, enlarge, look, clean } }),
+          body: JSON.stringify({ productIds, scope, options: { mode, stickers, enlarge, look, clean, polish } }),
         }),
       );
     } catch (e) {
@@ -167,7 +170,7 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
                 </b>{" "}
                 selected. Their photos are cleaned up on the photo computer:{" "}
                 {clean
-                  ? "each becomes a clean product photo of the figure alone."
+                  ? "each becomes a clean product photo (a printed box keeps its art around the character; a window box becomes the figure alone)."
                   : "the background is removed, and the product is saved transparent so it shows on your shop background."}
               </p>
               <p className="ad-muted ad-sm">
@@ -188,11 +191,11 @@ export function ImprovePhotosDialog({ productIds, ctx, onClose }: { productIds: 
                 <input type="checkbox" checked={clean} onChange={(e) => setClean(e.target.checked)} />{" "}
                 <b>Polish into a clean product photo</b>{" "}
                 <small className="ad-muted">
-                  (the figure alone, with no box print, logos or price stickers, on a studio backdrop; drawn by AI, so check each against
-                  the real figure. Best for closed boxes with art on the front, not window boxes. If the photo computer cannot make one, the
-                  usual clean-up below is done)
+                  (no price stickers or box edges; drawn by AI, so check each against the real figure. If the photo computer cannot make
+                  one, the usual clean-up below is done)
                 </small>
               </label>
+              {clean && <CleanPolishOptions polish={polish} onChange={setPolish} name="queue" />}
 
               {/* the clean photo has no cut-out and does its own clean-up: these are for the usual photo (clean photo turned off) */}
               {!clean && (
