@@ -181,9 +181,11 @@ function VerticalCard({ p, a }: { p: Product; a: CardActions }) {
         <ProductLink p={p} a={a} className="sf-card__open" label={p.name}>
           <ProductImage p={p} hover />
         </ProductLink>
-        <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
-          {meta.badge}
-        </span>
+        {meta.badge && (
+          <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
+            {meta.badge}
+          </span>
+        )}
         {off > 0 && <span className="sf-card__off">-{off}%</span>}
         <Highlight p={p} />
         <button
@@ -237,9 +239,11 @@ function HorizontalCard({ p, a, meta, actions, onRemove }: ProductCardProps) {
         <ProductLink p={p} a={a} className="sf-card__open" label={p.name}>
           <ProductImage p={p} hover />
         </ProductLink>
-        <span className="sh-badge sf-card__badge" style={{ background: status.color }}>
-          {status.badge}
-        </span>
+        {status.badge && (
+          <span className="sh-badge sf-card__badge" style={{ background: status.color }}>
+            {status.badge}
+          </span>
+        )}
         {off > 0 && <span className="sf-card__off">-{off}%</span>}
       </div>
       <div className="sf-hcard__body">
@@ -346,7 +350,8 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
           </ProductLink>
         </div>
         <div className="sf-row__status" style={{ color: meta.color }}>
-          {meta.badge} · {statusLabel(p)}
+          {meta.badge ? `${meta.badge} · ` : ""}
+          {statusLabel(p)}
         </div>
       </div>
       <div className="sf-row__price">

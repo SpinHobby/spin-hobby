@@ -115,10 +115,13 @@ export function normalizeStatus(status: Product["status"]): ProductStatus {
   return "out"; // "closed" pre-orders and anything unknown can't be bought
 }
 
+/**
+ * Each status's colour, and the badge on its photo. Being in stock is the usual case, so it has no badge (2026-11-20): only the exceptions
+ * (pre-order, sold out) are marked. Most items are one of a kind, so low stock reads like any in-stock item too.
+ */
 export const STATUS_META: Record<ProductStatus, { badge: string; color: string }> = {
-  in: { badge: "IN STOCK", color: "var(--teal)" },
-  // most items are one of a kind, so "only 1 left" in red would be on nearly every product: low stock reads like any in-stock item
-  low: { badge: "IN STOCK", color: "var(--teal)" },
+  in: { badge: "", color: "var(--teal)" },
+  low: { badge: "", color: "var(--teal)" },
   pre: { badge: "PRE-ORDER", color: "var(--blue)" },
   out: { badge: "SOLD OUT", color: "var(--muted)" },
 };

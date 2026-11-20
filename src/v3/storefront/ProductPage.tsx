@@ -410,6 +410,8 @@ function Slide({ p, src, n, active, onOpen }: { p: Product; src: string; n: numb
     >
       <img
         {...base}
+        // this photo's position follows the shopper's drag (React state), so the shared on-the-page hook must not reset it
+        ref={undefined}
         style={{ ...base.style, ...(frameStyle(frame, fit) as CSSProperties) }}
         alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`}
         loading={n === 0 ? "eager" : "lazy"}
@@ -453,9 +455,11 @@ function Gallery({ p }: { p: Product }) {
           <span className="sf-img__ph" aria-hidden>
             [ product image ]
           </span>
-          <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
-            {meta.badge}
-          </span>
+          {meta.badge && (
+            <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
+              {meta.badge}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -496,9 +500,11 @@ function Gallery({ p }: { p: Product }) {
             />
           ))}
         </div>
-        <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
-          {meta.badge}
-        </span>
+        {meta.badge && (
+          <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
+            {meta.badge}
+          </span>
+        )}
         {off > 0 && <span className="sf-card__off">-{off}%</span>}
         {images.length > 1 && (
           <>
