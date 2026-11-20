@@ -8,10 +8,12 @@ export const DPI = 300;
 export const SHEET = { width: 6.75, height: 9.25 }; // inches
 const GAP = 0.1; // inches between labels (and nothing at the sheet edge: Cricut adds its own margins)
 
-export type LabelSize = "small" | "large";
+export type LabelSize = "small" | "large" | "tag";
 export const SIZES: Record<LabelSize, { width: number; height: number; name: string }> = {
   small: { width: 2.1, height: 1.2, name: "Small, 2.1 × 1.2 in" },
   large: { width: 3, height: 1.6, name: "Large, 3 × 1.6 in" },
+  // a price tag for the Brother QL-810 (300 dpi, black): DK-22205 62 mm continuous tape cut every 29 mm, or DK-1209 pre-cut labels
+  tag: { width: 62 / 25.4, height: 29 / 25.4, name: "Price tag, Brother QL-810 (62 × 29 mm)" },
 };
 
 export interface StickerLabel {
@@ -21,10 +23,15 @@ export interface StickerLabel {
   code: string | null;
   /** What the bars encode; null for no barcode. */
   barcode: string | null;
+  /** Price tags: the price as printed ("$50", "$49.99"). */
+  price?: string | null;
+  /** Price tags: a social handle under the barcode ("@spinhobby"), when the admin typed one. */
+  handle?: string | null;
 }
 
 /** Labels that fit on one sheet in this size. */
 export function perSheet(size: LabelSize) {
+  if (size === "tag") return 1;
   const { cols, rows } = grid(size);
   return cols * rows;
 }
@@ -66,7 +73,8 @@ export async function renderSheets(labels: StickerLabel[], size: LabelSize): Pro
     document.fonts?.load(`700 30px ${UI_FONT}`).catch(() => undefined),
     document.fonts?.load(`500 20px ${UI_FONT}`).catch(() => undefined),
   ]);
-  const { cols, rows } = grid(size);
+  const tag = size === "tag";
+  const { cols, rows } = tag ? { cols: 1, rows: 1 } : grid(size);
   const each = cols * rows;
   const w = Math.round(SIZES[size].width * DPI);
   const h = Math.round(SIZES[size].height * DPI);
@@ -74,14 +82,15 @@ export async function renderSheets(labels: StickerLabel[], size: LabelSize): Pro
   const sheets: HTMLCanvasElement[] = [];
   for (let start = 0; start < labels.length; start += each) {
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(SHEET.width * DPI);
-    canvas.height = Math.round(SHEET.height * DPI);
+    canvas.width = tag ? w : Math.round(SHEET.width * DPI);
+    canvas.height = tag ? h : Math.round(SHEET.height * DPI);
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("This browser can't draw the labels");
     labels.slice(start, start + each).forEach((label, i) => {
       const x = (i % cols) * (w + gap);
       const y = Math.floor(i / cols) * (h + gap);
-      drawLabel(ctx, label, x, y, w, h, art);
+      if (tag) drawPriceTag(ctx, label, x, y, w, h, art);
+      else drawLabel(ctx, label, x, y, w, h, art);
     });
     sheets.push(canvas);
   }
@@ -154,6 +163,90 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: StickerLabel, x: number
   ctx.restore();
 }
 
+/** Where a price tag's two columns are, in pixels from its left edge: the price on the left, what to scan on the right. */
+function tagColumns(w: number, h: number) {
+  const pad = Math.round(h * 0.05);
+  const leftW = Math.round(w * 0.43);
+  return { pad, left: { x: pad, w: leftW - pad }, right: { x: leftW + pad, w: w - leftW - 2 * pad } };
+}
+
+/**
+ * A price tag for the Brother QL-810 (black on white, 62 × 29 mm): the price as big as it fits, the mascot and spinhobby.com under it;
+ * the product's name, the barcode of its SKU (the cashier's Square app scans it to ring the item up) and the code itself, and a social
+ * handle when one is given. About a third of the old sticker, which carried two QR codes for Instagram and Facebook.
+ */
+function drawPriceTag(
+  ctx: CanvasRenderingContext2D,
+  label: StickerLabel,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  art: HTMLImageElement,
+) {
+  const { pad, left, right } = tagColumns(w, h);
+  ctx.save();
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = "#000000";
+  ctx.textBaseline = "top";
+
+  // the price: as large as fits the left column and the top 58% of the tag
+  const price = label.price ?? "";
+  let size = Math.round(h * 0.58);
+  ctx.font = `800 ${size}px ${UI_FONT}`;
+  while (size > 20 && ctx.measureText(price).width > left.w) {
+    size -= 4;
+    ctx.font = `800 ${size}px ${UI_FONT}`;
+  }
+  ctx.fillText(price, x + left.x, y + pad - Math.round(size * 0.08), left.w);
+
+  // the mascot and the website along the bottom of the left column
+  const artSize = Math.round(h * 0.34);
+  const artY = y + h - pad - artSize;
+  ctx.drawImage(art, MASCOT_CROP.x, MASCOT_CROP.y, MASCOT_CROP.w, MASCOT_CROP.h, x + left.x, artY, artSize, artSize);
+  const siteX = x + left.x + artSize + Math.round(pad * 0.6);
+  ctx.font = `800 ${Math.round(h * 0.085)}px ${UI_FONT}`;
+  ctx.fillText("spinhobby.com", siteX, artY + artSize * 0.5 - h * 0.045, x + left.x + left.w - siteX);
+
+  // a thin line between the columns
+  ctx.fillRect(x + right.x - Math.round(pad * 0.6), y + pad, Math.max(1, Math.round(h / 300)), h - 2 * pad);
+
+  // right column: the name, the barcode and its code, the handle
+  const nameSize = Math.round(h * 0.075);
+  ctx.font = `700 ${nameSize}px ${UI_FONT}`;
+  const names = wrap(ctx, label.name, right.w, 2);
+  let ty = y + pad;
+  for (const line of names) {
+    ctx.fillText(line, x + right.x, ty, right.w);
+    ty += Math.round(nameSize * 1.15);
+  }
+  const codeSize = Math.round(h * 0.07);
+  const handleSize = label.handle ? Math.round(h * 0.065) : 0;
+  const barTop = ty + Math.round(pad * 0.4);
+  const barBottom = y + h - pad - codeSize - (handleSize ? handleSize + Math.round(pad * 0.4) : 0) - Math.round(pad * 0.3);
+  const widths = label.barcode ? code128Widths(label.barcode) : null;
+  const unit = widths ? barUnit(widths, right.w) : 0;
+  if (widths && unit && barBottom - barTop > h * 0.15) {
+    const modules = widths.reduce((a, b) => a + b, 0);
+    let bx = x + right.x + Math.round((right.w - modules * unit) / 2);
+    widths.forEach((n, i) => {
+      if (i % 2 === 0) ctx.fillRect(bx, barTop, n * unit, barBottom - barTop);
+      bx += n * unit;
+    });
+  }
+  ctx.textAlign = "center";
+  if (label.code) {
+    ctx.font = `700 ${codeSize}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+    ctx.fillText(label.code, x + right.x + right.w / 2, barBottom + Math.round(pad * 0.3), right.w);
+  }
+  if (label.handle) {
+    ctx.font = `600 ${handleSize}px ${UI_FONT}`;
+    ctx.fillText(label.handle, x + right.x + right.w / 2, y + h - pad - handleSize, right.w);
+  }
+  ctx.restore();
+}
+
 /** Thinnest bar width in pixels so the barcode (with 10 modules of quiet space each side) fits; 0 when the bars would be too thin to scan. */
 function barUnit(widths: number[], room: number) {
   const unit = Math.min(4, Math.floor(room / (widths.reduce((a, b) => a + b, 0) + 20)));
@@ -168,7 +261,8 @@ export function barcodeFits(code: string, size: LabelSize) {
   const widths = code128Widths(code);
   const w = Math.round(SIZES[size].width * DPI);
   const pad = Math.round(18 * ((SIZES[size].height * DPI) / 360));
-  return !!widths && barUnit(widths, w - 2 * pad) > 0;
+  const room = size === "tag" ? tagColumns(w, Math.round(SIZES.tag.height * DPI)).right.w : w - 2 * pad;
+  return !!widths && barUnit(widths, room) > 0;
 }
 
 /** Splits text into at most `max` lines that fit `width`; the last line ends in "…" when text is left over. */

@@ -14,7 +14,15 @@ interface Label {
   upc: string | null;
   inSquare: boolean;
   stock: number | null;
+  /** The selling price in cents (price tags). */
+  priceCents?: number | null;
 }
+
+/** A price as a tag prints it: "$50" for whole dollars, "$49.99" otherwise. */
+const tagPrice = (cents: number | null | undefined) =>
+  cents == null ? null : cents % 100 === 0 ? `${cents / 100}` : `${(cents / 100).toFixed(2)}`;
+
+const HANDLE_KEY = "spinhobby-tag-handle";
 
 /** The most stickers of one product when printing one per unit, so a typo in stock can't print a hundred sheets. */
 const MAX_COPIES = 50;
@@ -24,7 +32,12 @@ const MAX_COPIES = 50;
  * this size falls back to the product's barcode number in Square (its POS finds items by that too); otherwise the
  * SKU is printed as text only.
  */
-function sticker(l: Label, size: LabelSize): StickerLabel {
+function sticker(l: Label, size: LabelSize, handle = ""): StickerLabel {
+  if (size === "tag") return { ...stickerCode(l, size), price: tagPrice(l.priceCents), handle: handle.trim() || null };
+  return stickerCode(l, size);
+}
+
+function stickerCode(l: Label, size: LabelSize): StickerLabel {
   if (l.code && barcodeFits(l.code, size)) return { name: l.name, series: l.series, code: l.code, barcode: l.code };
   if (l.upc && barcodeFits(l.upc, size)) return { name: l.name, series: l.series, code: l.upc, barcode: l.upc };
   return { name: l.name, series: l.series, code: l.code, barcode: null };
@@ -40,6 +53,21 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
   const [busy, setBusy] = useState(false);
   const [size, setSize] = useState<LabelSize>("small");
   const [perUnit, setPerUnit] = useState(false);
+  // a social handle printed on price tags ("@spinhobby"), remembered on this computer
+  const [handle, setHandle] = useState(() => {
+    try {
+      return localStorage.getItem(HANDLE_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(HANDLE_KEY, handle);
+    } catch {
+      /* private window: not remembered */
+    }
+  }, [handle]);
   const [sheets, setSheets] = useState<string[]>([]);
   const [drawing, setDrawing] = useState(false);
   const [drawError, setDrawError] = useState("");
@@ -65,10 +93,10 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
     () =>
       (labels ?? []).flatMap((l) => {
         const copies = perUnit ? Math.min(Math.max(l.stock ?? 1, 1), MAX_COPIES) : 1;
-        const one = sticker(l, size);
+        const one = sticker(l, size, handle);
         return Array.from({ length: copies }, () => one);
       }),
-    [labels, perUnit, size],
+    [labels, perUnit, size, handle],
   );
 
   // Redraw the sheets whenever the labels, size or copies change.
@@ -201,9 +229,17 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
               {(Object.keys(SIZES) as LabelSize[]).map((k) => (
                 <label key={k} className="ad-check">
                   <input type="radio" name="label-size" checked={size === k} onChange={() => setSize(k)} /> {SIZES[k].name}{" "}
-                  <small className="ad-muted">({perSheet(k)} per sheet)</small>
+                  <small className="ad-muted">
+                    {k === "tag" ? "(one per label, printed straight to the label printer)" : `(${perSheet(k)} per sheet)`}
+                  </small>
                 </label>
               ))}
+              {size === "tag" && (
+                <label className="ad-field">
+                  <span className="ad-field__top">Social handle on the tag (optional)</span>
+                  <input className="sh-input" placeholder="@spinhobby" value={handle} onChange={(e) => setHandle(e.target.value)} />
+                </label>
+              )}
               <div className="ad-label">How many</div>
               <label className="ad-check">
                 <input type="radio" name="label-copies" checked={!perUnit} onChange={() => setPerUnit(false)} /> One per product
@@ -228,7 +264,17 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                 ))}
               </div>
               <div className="ad-imports__actions">
-                <button type="button" className="sh-btn" disabled={!sheets.length || drawing} onClick={downloadAll}>
+                {size === "tag" && (
+                  <button type="button" className="sh-btn" disabled={!sheets.length || drawing} onClick={() => printTags(sheets)}>
+                    Print {sheets.length} tag{sheets.length === 1 ? "" : "s"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={`sh-btn${size === "tag" ? " sh-btn--ghost" : ""}`}
+                  disabled={!sheets.length || drawing}
+                  onClick={downloadAll}
+                >
                   Download {sheets.length > 1 ? `all ${sheets.length} sheets` : "the sheet"}
                 </button>
                 <button type="button" className="sh-btn sh-btn--ghost" onClick={onClose}>
@@ -264,4 +310,35 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
       </aside>
     </>
   );
+}
+
+/**
+ * Prints price tags on the Brother QL-810: a page per tag, exactly 62 × 29 mm, so the printer's own driver cuts after each one. In the print
+ * dialog choose the QL-810, paper 62 mm × 29 mm (DK-22205 or DK-1209), margins none, scale 100%.
+ */
+function printTags(urls: string[]) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  const pages = urls.map((u) => `<img src="${u}" alt="">`).join("");
+  w.document.write(`<!doctype html><html><head><title>Spin Hobby price tags</title><style>
+    @page { size: 62mm 29mm; margin: 0; }
+    html, body { margin: 0; padding: 0; }
+    img { display: block; width: 62mm; height: 29mm; page-break-after: always; break-after: page; }
+    img:last-child { page-break-after: auto; break-after: auto; }
+  </style></head><body>${pages}</body></html>`);
+  w.document.close();
+  // print once every tag has loaded
+  const imgs = Array.from(w.document.images);
+  void Promise.all(
+    imgs.map((i) =>
+      i.complete
+        ? Promise.resolve()
+        : new Promise((r) => {
+            i.onload = i.onerror = r;
+          }),
+    ),
+  ).then(() => {
+    w.focus();
+    w.print();
+  });
 }
