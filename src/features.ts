@@ -29,6 +29,9 @@ const FEATURES = {
   /** Afterpay (pay in 4 instalments) at checkout, through Square. Off everywhere (owner, 2026-11-14): checkout offers card, Apple Pay and
    *  Google Pay for now. Square also has to approve the shop for Afterpay before the button can appear. */
   afterpay: { local: false, staging: false, production: false },
+  /** "Get new pre-orders first" on a product page (email when a new pre-order opens for the product's series or character): on staging for
+   *  testing, off on the live site for the first stable version (owner, 2026-11-19). The server keeps taking follows either way. */
+  preorderFollow: { local: true, staging: true, production: false },
 } satisfies Record<string, Record<Environment, boolean>>;
 
 /** Whether a feature is on where this copy of the site is running. */

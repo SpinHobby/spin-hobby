@@ -311,8 +311,8 @@ export function ProductPage({
 
       <Details p={p} currency={a.currency} />
 
-      {/* pre-order news for this series or maker: below the details, so the buy box stays about buying */}
-      <FollowSection p={p} />
+      {/* pre-order news for this series or maker: below the details, so the buy box stays about buying (off on the live site: features.ts) */}
+      {isOn("preorderFollow") && <FollowSection p={p} />}
 
       <Reviews itemId={p.id} list={reviews} />
 
