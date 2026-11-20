@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { inUse } from "./inUse";
 import {
   Banner,
   Button,
@@ -125,7 +126,7 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
   const active = (data?.counts.queued ?? 0) + (data?.counts.running ?? 0) > 0;
   useEffect(() => {
     if (!active) return;
-    const t = window.setInterval(() => void load(), 10_000);
+    const t = window.setInterval(() => inUse() && void load(), 30_000);
     return () => window.clearInterval(t);
   }, [active, load]);
   useEffect(() => {

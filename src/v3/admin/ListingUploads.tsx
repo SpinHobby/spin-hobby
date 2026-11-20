@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { inUse } from "./inUse";
 import { api } from "../../lib/api";
 import { openPicture } from "./heic";
 import { JobProgress } from "./JobProgress";
@@ -134,11 +135,12 @@ export function ListingUploads({ ctx, onChanged }: { ctx: Ctx; onChanged: () => 
   useEffect(() => {
     if (!active && !unreachable) return;
     // a photo waiting or being worked on: look every 5 seconds, so a start or a moving progress bar shows at once; while the server is not answering, every 20
+    // only from the window being used, every 15 s (it was 5 s in every open tab: the database's free egress went in two days)
     const t = setInterval(
       () => {
-        void load();
+        if (inUse()) void load();
       },
-      active ? 5_000 : 20_000,
+      active ? 15_000 : 30_000,
     );
     return () => clearInterval(t);
   }, [active, runningNow, unreachable, load]);

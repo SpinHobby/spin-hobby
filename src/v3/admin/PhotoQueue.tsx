@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { inUse } from "./inUse";
 import { api } from "../../lib/api";
 import { useEscape } from "../hooks";
 import { BackgroundPreview, BackgroundsLibrary } from "./Backgrounds";
@@ -282,7 +283,7 @@ export function PhotosScreen({ ctx }: { ctx: Ctx }) {
   const busy = batches.some((b) => b.counts.queued + b.counts.running > 0);
   useEffect(() => {
     if (!busy) return;
-    const t = window.setInterval(() => void load(), 20_000);
+    const t = window.setInterval(() => inUse() && void load(), 30_000);
     return () => window.clearInterval(t);
   }, [busy, load]);
 
@@ -445,7 +446,8 @@ function ReviewScreen({
   useEffect(() => {
     if (!working) return;
     // a photo being worked on: look every 5 seconds, so its progress bar moves; otherwise every 20
-    const t = window.setInterval(() => void load(), running ? 5_000 : 20_000);
+    // only from the window being used (inUse), and less often than before (5 s / 20 s ran the database over its free egress)
+    const t = window.setInterval(() => inUse() && void load(), running ? 15_000 : 30_000);
     return () => window.clearInterval(t);
   }, [working, running, load]);
 
