@@ -49,6 +49,8 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   const [cutouts, setCutouts] = useState<Cutout[]>([]);
   // the photos picked for eBay, in order (eBay is not connected yet: they are kept for when it is)
   const [ebay, setEbay] = useState<string[]>([]);
+  // the shown photos kept in Square but left off the website (Square ids)
+  const [offWebsite, setOffWebsite] = useState<string[]>([]);
   // where each photo sits in its square on the shop (moved or zoomed ones), and the photo being positioned (by address)
   const { frames, framing, setFraming, saving: savingFrame, error: frameError, save: saveFramed } = usePhotoFrames(p.id);
   const backgrounds = useBackgrounds();
@@ -62,12 +64,13 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   );
   useEffect(() => {
     let current = true;
-    api<PhotoLists & { cutouts?: Cutout[]; ebay?: string[] }>(base)
+    api<PhotoLists & { cutouts?: Cutout[]; ebay?: string[]; offWebsite?: string[] }>(base)
       .then((r) => {
         if (current) {
           setLists({ shown: r.shown, hidden: r.hidden });
           setCutouts(r.cutouts ?? []);
           setEbay(r.ebay ?? []);
+          setOffWebsite(r.offWebsite ?? []);
         }
       })
       .catch((e) => {
@@ -158,6 +161,25 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
     ctx.flash("The photo is transparent: it now shows on the shop background.");
   };
   const cutoutOf = (id: string) => cutouts.find((c) => c.imageId === id) ?? null;
+  /** Puts a photo on the website or takes it off; it stays on the product in Square (the till, eBay) either way. */
+  const toggleWebsite = async (id: string) => {
+    setBusy("Saving…");
+    setError("");
+    try {
+      setOffWebsite(
+        (
+          await api<{ offWebsite: string[] }>(`/admin/products/${encodeURIComponent(p.id)}/website-photo`, {
+            method: "PUT",
+            body: JSON.stringify({ id, onWebsite: offWebsite.includes(id) }),
+          })
+        ).offWebsite,
+      );
+    } catch (e) {
+      setError(errMsg(e));
+    } finally {
+      setBusy("");
+    }
+  };
   const toggleEbay = async (url: string) => {
     const next = ebay.includes(url) ? ebay.filter((u) => u !== url) : [...ebay, url];
     setBusy("Saving eBay photos…");
@@ -250,7 +272,7 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
       {shown.length > 0 && (
         <div className="ad-photos__grid">
           {shown.map((photo, i) => (
-            <div key={photo.id} className="ad-photos__item">
+            <div key={photo.id} className={`ad-photos__item ${offWebsite.includes(photo.id) ? "is-offsite" : ""}`}>
               {/* a transparent photo is shown as shoppers see it, on the shop background */}
               <img
                 src={photo.url}
@@ -299,6 +321,22 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
               >
                 eBay{ebay.includes(photo.url) ? ` ${ebay.indexOf(photo.url) + 1}` : ""}
               </button>
+              <label
+                className="ad-photos__site"
+                title={
+                  offWebsite.includes(photo.id)
+                    ? "Kept in Square (the till, eBay) but not shown on the website"
+                    : "Shown on the website. Untick to keep it in Square only."
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={!offWebsite.includes(photo.id)}
+                  disabled={!!busy}
+                  onChange={() => void toggleWebsite(photo.id)}
+                />{" "}
+                Website
+              </label>
               {frames[photo.url] && (
                 <span className="ad-photos__clear ad-photos__clear--right" title="Moved or zoomed inside its square on the shop">
                   Positioned
@@ -390,6 +428,15 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
           />
         );
       })()}
+      {shown.length > 0 && (
+        <div className="ad-muted ad-sm">
+          <b>Website</b> ·{" "}
+          {offWebsite.some((id) => shown.some((x) => x.id === id))
+            ? `${shown.filter((x) => !offWebsite.includes(x.id)).length} of ${shown.length} photos show on the website; the others stay in Square (the till, eBay).`
+            : "every photo shows. Untick “Website” on a photo to keep it in Square (the till, eBay) but off the website."}{" "}
+          The first ticked photo is the website’s main one.
+        </div>
+      )}
       {(ebay.length > 0 || shown.length > 0) && (
         <div className="ad-muted ad-sm">
           <b>eBay</b> · not connected yet.{" "}

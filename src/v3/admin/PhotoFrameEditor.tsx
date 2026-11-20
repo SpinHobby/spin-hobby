@@ -1,11 +1,11 @@
-import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { Button } from "../../components";
-import { frameStyle, type PhotoFrame } from "../photo";
+import { defaultFrame, dragFrame, frameStyle, lookAtUrl, usePhotoFit, type PhotoFrame } from "../photo";
 
-const CENTRED: PhotoFrame = { x: 50, y: 50, zoom: 1 };
 const MAX_ZOOM = 3;
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 const round = (n: number) => Math.round(n * 100) / 100;
+const same = (a: PhotoFrame, b: PhotoFrame) => a.x === b.x && a.y === b.y && a.zoom === b.zoom;
 
 /**
  * Moves and zooms one product photo inside its square, as the shop shows it: photos always fill their card, so this picks the part
@@ -30,20 +30,21 @@ export function PhotoFrameEditor({
   onSave: (frame: PhotoFrame) => void;
   onCancel: () => void;
 }) {
-  const [frame, setFrame] = useState<PhotoFrame>(initial ?? CENTRED);
+  // flat bars around the picture are cropped as on the shop; a cut-out has none (its see-through parts show the backdrop)
+  const fit = usePhotoFit(background ? null : url);
+  useEffect(() => {
+    if (!background) lookAtUrl(url);
+  }, [url, background]);
+  const start = defaultFrame(fit); // where the shop starts this photo when no position is saved (tall pictures: at the top)
+  const [edited, setEdited] = useState<PhotoFrame | null>(initial ?? null);
+  const frame = edited ?? start;
+  const setFrame = (next: PhotoFrame | ((f: PhotoFrame) => PhotoFrame)) =>
+    setEdited((f) => (typeof next === "function" ? next(f ?? start) : next));
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; start: PhotoFrame } | null>(null);
 
-  // Dragging the photo right shows more of its left side, so the point kept in view moves the other way. Zoomed in, the same drag
-  // covers less of the photo.
-  const moveBy = (dx: number, dy: number, start: PhotoFrame) => {
-    const size = box.current?.clientWidth || 1;
-    setFrame({
-      ...start,
-      x: round(clamp(start.x - (dx / size) * (100 / start.zoom), 0, 100)),
-      y: round(clamp(start.y - (dy / size) * (100 / start.zoom), 0, 100)),
-    });
-  };
+  // The picture follows the pointer (photo.ts dragFrame, the same as a shopper's drag on the product page).
+  const moveBy = (dx: number, dy: number, from: PhotoFrame) => setFrame(dragFrame(fit, from, dx, dy, box.current?.clientWidth || 1));
   const down = (e: PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, start: frame };
@@ -68,12 +69,14 @@ export function PhotoFrameEditor({
     e.preventDefault();
     setFrame((f) => ({ ...f, x: clamp(f.x + d[0], 0, 100), y: clamp(f.y + d[1], 0, 100) }));
   };
-  const centred = frame.x === 50 && frame.y === 50 && frame.zoom === 1;
+  const centred = same(frame, start);
+  const look = { ...(frameStyle(frame, fit) as CSSProperties), ...(background ? { background } : {}) };
 
   return (
     <div className="ad-frame" role="group" aria-label="Position the photo">
       <p className="ad-muted ad-sm" style={{ margin: 0 }}>
-        Photos fill their square on the shop. Drag the photo to choose the part that shows, and zoom in if it needs it.
+        Photos fill their square on the shop (white bars around a picture are cut off). Drag the photo to choose the part that shows first,
+        and zoom in if it needs it. Shoppers can drag it on the product page to see the rest.
       </p>
       <div className="ad-frame__row">
         <div
@@ -87,19 +90,14 @@ export function PhotoFrameEditor({
           onPointerCancel={up}
           onKeyDown={key}
         >
-          <img
-            src={url}
-            alt=""
-            draggable={false}
-            style={{ ...(frameStyle(frame) as CSSProperties), ...(background ? { background } : {}) }}
-          />
+          <img src={url} alt="" draggable={false} style={look} />
         </div>
         <div className="ad-frame__side">
           <span className="ad-label" style={{ margin: 0 }}>
             As a small thumbnail
           </span>
           <span className="sh-thumb" style={{ width: 64, height: 64 }}>
-            <img src={url} alt="" style={{ ...(frameStyle(frame) as CSSProperties), ...(background ? { background } : {}) }} />
+            <img src={url} alt="" style={look} />
           </span>
           <label className="ad-frame__zoom">
             <span className="ad-label" style={{ margin: 0 }}>
@@ -122,8 +120,8 @@ export function PhotoFrameEditor({
         </span>
       )}
       <div className="ad-frame__actions">
-        <button type="button" className="ad-link" onClick={() => setFrame(CENTRED)} disabled={busy || centred}>
-          Reset to the middle
+        <button type="button" className="ad-link" onClick={() => setEdited(start)} disabled={busy || centred}>
+          Reset
         </button>
         <span style={{ flex: 1 }} />
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>

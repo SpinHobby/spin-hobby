@@ -442,7 +442,7 @@ function DraftCard({
   if (!title.trim()) errors.title = "Required";
   if (!price || !Number.isFinite(cents) || cents <= 0) errors.price = "Enter a price";
   if (stockNum !== null && (!Number.isInteger(stockNum) || stockNum < 0)) errors.stock = "Whole number";
-  if (!currentPicks.some((p) => p.square)) errors.photos = "Pick at least one photo for the website";
+  if (!currentPicks.some((p) => p.square && p.website)) errors.photos = "Pick at least one photo for the website";
 
   const add = async () => {
     setTouched(true);

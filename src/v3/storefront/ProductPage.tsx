@@ -2,7 +2,7 @@ import { track } from "../../lib/analytics";
 import { isOn } from "../../features";
 import { ProductPointsLine } from "../rewards/ProductPointsLine";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import type { CategoryTree } from "../categoryTree";
@@ -26,7 +26,18 @@ import type { Product, ProductPage as ProductList } from "../types";
 import { productPath, purchaseCap } from "./data";
 import { ProductCard, type CardActions, PriceTag } from "./ProductViews";
 import { askHref, noPrice } from "../../components/shop/priceOnRequest";
-import { photo, isCutout, productPhoto } from "../photo";
+import {
+  photo,
+  isCutout,
+  productPhoto,
+  frameOf,
+  frameStyle,
+  defaultFrame,
+  dragFrame,
+  canDrag,
+  usePhotoFit,
+  type PhotoFrame,
+} from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
 import { breadcrumbJsonLd, categoryPath, seriesPath } from "./landing";
 import { RecentlyViewed } from "./RecentlyViewed";
@@ -352,6 +363,62 @@ function ancestorId(tree: CategoryTree, id: string, up: number) {
 }
 
 // ---------------------------------------------------------------- gallery
+/**
+ * One big product photo. A photo with more picture than its square shows (a tall figure: it starts at the face) can be dragged to see
+ * the rest, with a mouse or a finger; a plain click or tap still enlarges it. On phones a sideways swipe still moves between photos.
+ */
+function Slide({ p, src, n, active, onOpen }: { p: Product; src: string; n: number; active: boolean; onOpen: () => void }) {
+  const fit = usePhotoFit(isCutout(p, src) ? null : src);
+  const saved = frameOf(p, src);
+  const [moved, setMoved] = useState<PhotoFrame | null>(null);
+  const frame = moved ?? saved ?? defaultFrame(fit);
+  const drag = useRef<{ x: number; y: number; start: PhotoFrame; far: boolean } | null>(null);
+  const can = fit ? canDrag(fit, frame.zoom) : { x: false, y: false };
+  const pannable = can.x || can.y;
+  const base = productPhoto(p, src, 1000);
+  return (
+    <button
+      type="button"
+      className={`sf-pp__slide ${active ? "is-active" : ""} ${pannable ? "is-pannable" : ""}`}
+      // fingers: drag along the way the photo has more to show; the other way still scrolls the page or swipes photos
+      style={pannable ? { touchAction: can.y && !can.x ? "pan-x" : can.x && !can.y ? "pan-y" : "none" } : undefined}
+      onPointerDown={(e) => {
+        if (!pannable || (e.pointerType === "mouse" && e.button !== 0)) return;
+        drag.current = { x: e.clientX, y: e.clientY, start: frame, far: false };
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (!d) return;
+        const dx = e.clientX - d.x;
+        const dy = e.clientY - d.y;
+        if (!d.far && Math.hypot(dx, dy) < 5) return;
+        if (!d.far) e.currentTarget.setPointerCapture(e.pointerId);
+        d.far = true;
+        setMoved(dragFrame(fit, d.start, dx, dy, e.currentTarget.clientWidth || 1));
+      }}
+      onPointerUp={() => {
+        // a drag ends here; the click that follows it must not open the enlarged photo
+        if (drag.current?.far) setTimeout(() => (drag.current = null));
+        else drag.current = null;
+      }}
+      onPointerCancel={() => (drag.current = null)}
+      onClick={() => {
+        if (drag.current?.far) return;
+        onOpen();
+      }}
+      aria-label={`Enlarge photo ${n + 1}`}
+    >
+      <img
+        {...base}
+        style={{ ...base.style, ...(frameStyle(frame, fit) as CSSProperties) }}
+        alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`}
+        loading={n === 0 ? "eager" : "lazy"}
+        draggable={false}
+      />
+    </button>
+  );
+}
+
 function Gallery({ p }: { p: Product }) {
   const images = p.images;
   const [i, setI] = useState(0);
@@ -374,6 +441,10 @@ function Gallery({ p }: { p: Product }) {
   const s = normalizeStatus(p.status);
   const meta = STATUS_META[s];
   const off = discountPct(p);
+  // the hint says "drag" when the photo showing has more to see
+  const shownFit = usePhotoFit(images[i] && !isCutout(p, images[i]) ? images[i] : null);
+  const shownCan = shownFit ? canDrag(shownFit, frameOf(p, images[i])?.zoom ?? 1) : null;
+  const canPanAny = !!shownCan && (shownCan.x || shownCan.y);
 
   if (!images.length) {
     return (
@@ -412,22 +483,17 @@ function Gallery({ p }: { p: Product }) {
       <div className="sf-pp__stage">
         <div className="sf-pp__main" ref={stripRef} onScroll={onScroll}>
           {images.map((src, n) => (
-            <button
+            <Slide
               key={src + n}
-              type="button"
-              className={`sf-pp__slide ${n === i ? "is-active" : ""}`}
-              onClick={() => {
+              p={p}
+              src={src}
+              n={n}
+              active={n === i}
+              onOpen={() => {
                 setI(n);
                 setZoom(true);
               }}
-              aria-label={`Enlarge photo ${n + 1}`}
-            >
-              <img
-                {...productPhoto(p, src, 1000)}
-                alt={n === 0 ? p.name : `${p.name}, photo ${n + 1}`}
-                loading={n === 0 ? "eager" : "lazy"}
-              />
-            </button>
+            />
           ))}
         </div>
         <span className="sh-badge sf-card__badge" style={{ background: meta.color }}>
@@ -460,7 +526,7 @@ function Gallery({ p }: { p: Product }) {
           </>
         )}
         <span className="sf-pp__zoomhint" aria-hidden>
-          ⤢ Click to enlarge
+          {canPanAny ? "Drag to see more · click to enlarge" : "⤢ Click to enlarge"}
         </span>
       </div>
       {zoom && <Lightbox images={images} cutouts={p.cutouts} index={i} name={p.name} onIndex={go} onClose={() => setZoom(false)} />}

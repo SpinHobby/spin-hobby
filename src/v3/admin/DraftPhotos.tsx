@@ -63,8 +63,15 @@ export function DraftPhotos({
   const set = (key: PhotoKey, change: Partial<PhotoPick>) => onPicks(picks.map((p) => (p.key === key ? { ...p, ...change } : p)));
   const makeMain = (key: PhotoKey) => {
     const me = picks.find((p) => p.key === key)!;
-    onPicks([{ ...me, square: true }, ...picks.filter((p) => p.key !== key)]);
+    onPicks([{ ...me, square: true, website: true }, ...picks.filter((p) => p.key !== key)]);
   };
+  // the website shows its own first photo: the main one when it is on the website
+  const onlyMainOnWebsite = () => {
+    const first = picks.find((p) => p.square && p.website)?.key;
+    onPicks(picks.map((p) => (p.square ? { ...p, website: p.key === first } : p)));
+  };
+  const squareOnly = picks.filter((p) => p.square && !p.website).length;
+  const onWebsite = picks.filter((p) => p.square && p.website).length;
   const mainKey = picks.find((p) => p.square)?.key ?? null;
   // the photo shown big: its address, and which draft photo it is (to crop it; the background one is only shown)
   const [zoom, setZoom] = useState<{ url: string; key: PhotoKey } | null>(null);
@@ -183,8 +190,23 @@ export function DraftPhotos({
             </div>
             <div className="ad-draftphotos__where">
               <label className="ad-check">
-                <input type="checkbox" checked={p.square} disabled={busy} onChange={(e) => set(p.key, { square: e.target.checked })} />{" "}
-                Website &amp; Square
+                <input
+                  type="checkbox"
+                  checked={p.square}
+                  disabled={busy}
+                  // ticking Square puts it on the website too; untick Website to keep it in Square only
+                  onChange={(e) => set(p.key, { square: e.target.checked, website: e.target.checked })}
+                />{" "}
+                Square
+              </label>
+              <label className="ad-check" title="Untick to keep this photo in Square (the till, eBay later) but not show it on the website">
+                <input
+                  type="checkbox"
+                  checked={p.square && p.website}
+                  disabled={busy || !p.square}
+                  onChange={(e) => set(p.key, { website: e.target.checked })}
+                />{" "}
+                Website
               </label>
               <label className="ad-check">
                 <input type="checkbox" checked={p.ebay} disabled={busy} onChange={(e) => set(p.key, { ebay: e.target.checked })} /> eBay
@@ -219,7 +241,19 @@ export function DraftPhotos({
         </span>
       )}
       <p className="ad-muted ad-sm" style={{ margin: 0 }}>
-        Click a photo to see it bigger and crop it. Photos picked for eBay are kept with the product and used when it is listed there.
+        Click a photo to see it bigger and crop it. Photos ticked for Square are kept on the product in Square; untick Website to keep one
+        off the website (for eBay later, say). Photos picked for eBay are kept with the product and used when it is listed there.{" "}
+        {onWebsite > 1 && (
+          <button type="button" className="ad-link" disabled={busy} onClick={onlyMainOnWebsite}>
+            Website: main photo only
+          </button>
+        )}
+        {squareOnly > 0 && (
+          <>
+            {" "}
+            ({onWebsite} on the website, {squareOnly} in Square only)
+          </>
+        )}
       </p>
       {zoom && (
         <PhotoViewer

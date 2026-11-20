@@ -7,7 +7,10 @@ export interface OfferedPhoto {
 }
 export interface PhotoPick {
   key: PhotoKey;
+  /** Goes to Square (the till); on the website too unless `website` is false. */
   square: boolean;
+  /** A Square photo also shown on the website (false: kept in Square only, e.g. for eBay later). */
+  website: boolean;
   ebay: boolean;
 }
 
@@ -19,5 +22,5 @@ export function defaultPicks(offered: OfferedPhoto[]): PhotoPick[] {
   const has = (key: PhotoKey) => offered.some((p) => p.key === key);
   const main: PhotoKey = has("clean") ? "clean" : has("background") ? "background" : "studio";
   const ordered = [...offered].sort((a, b) => (a.key === main ? -1 : b.key === main ? 1 : 0));
-  return ordered.map((p) => ({ key: p.key, square: p.key === main, ebay: false }));
+  return ordered.map((p) => ({ key: p.key, square: p.key === main, website: p.key === main, ebay: false }));
 }
