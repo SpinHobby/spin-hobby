@@ -194,8 +194,8 @@ export function DraftPhotos({
                   type="checkbox"
                   checked={p.square}
                   disabled={busy}
-                  // ticking Square puts it on the website too; untick Website to keep it in Square only
-                  onChange={(e) => set(p.key, { square: e.target.checked, website: e.target.checked })}
+                  // Square alone does not put it on the website (tick Website for that); off Square, it cannot be on the website either
+                  onChange={(e) => set(p.key, e.target.checked ? { square: true } : { square: false, website: false })}
                 />{" "}
                 Square
               </label>
