@@ -48,6 +48,22 @@ const MASCOT_URL = "/assets/transparent%20mascot%20chibi%20rotated.png";
 // Head and shoulders of the chibi mascot (the full drawing has stray strokes near the hem).
 const MASCOT_CROP = { x: 50, y: 0, w: 675, h: 675 }; // in the picture's own pixels (776 × 918)
 
+/** The mascot as line art (a friend's drawing, the old sticker's): head and ears, black lines on transparent, for the label printer. */
+const LINE_MASCOT_URL = "/assets/mascot/line-head.png";
+let lineMascot: Promise<HTMLImageElement> | null = null;
+function loadLineMascot(): Promise<HTMLImageElement> {
+  lineMascot ??= new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      lineMascot = null;
+      reject(new Error("Couldn't load the mascot drawing"));
+    };
+    img.src = LINE_MASCOT_URL;
+  });
+  return lineMascot;
+}
+
 let mascot: Promise<HTMLImageElement> | null = null;
 function loadMascot() {
   mascot ??= new Promise((resolve, reject) => {
@@ -64,12 +80,14 @@ function loadMascot() {
 
 const UI_FONT = `"Plus Jakarta Sans", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif`;
 const NAVY = "#1d2a53";
+/** The label printer's red: pure red, which the Brother driver prints in its red on two-colour tape. */
+const TAG_RED = "#ff0000";
 const MUTED = "#6b6f80";
 
 /** Draws sheets of labels; returns one canvas per sheet. */
 export async function renderSheets(labels: StickerLabel[], size: LabelSize): Promise<HTMLCanvasElement[]> {
   const [art] = await Promise.all([
-    loadMascot(),
+    size === "tag" ? loadLineMascot() : loadMascot(),
     document.fonts?.load(`700 30px ${UI_FONT}`).catch(() => undefined),
     document.fonts?.load(`500 20px ${UI_FONT}`).catch(() => undefined),
   ]);
@@ -199,12 +217,15 @@ function drawPriceTag(
     size -= 4;
     ctx.font = `800 ${size}px ${UI_FONT}`;
   }
+  // in red: the QL-810 prints black and red on DK-22251 tape (pure red becomes its red; on black-only tape it prints black)
+  ctx.fillStyle = TAG_RED;
   ctx.fillText(price, x + left.x, y + pad - Math.round(size * 0.08), left.w);
+  ctx.fillStyle = "#000000";
 
   // the mascot and the website along the bottom of the left column
-  const artSize = Math.round(h * 0.34);
+  const artSize = Math.round(h * 0.4);
   const artY = y + h - pad - artSize;
-  ctx.drawImage(art, MASCOT_CROP.x, MASCOT_CROP.y, MASCOT_CROP.w, MASCOT_CROP.h, x + left.x, artY, artSize, artSize);
+  ctx.drawImage(art, x + left.x, artY, artSize, artSize);
   const siteX = x + left.x + artSize + Math.round(pad * 0.6);
   ctx.font = `800 ${Math.round(h * 0.085)}px ${UI_FONT}`;
   ctx.fillText("spinhobby.com", siteX, artY + artSize * 0.5 - h * 0.045, x + left.x + left.w - siteX);
