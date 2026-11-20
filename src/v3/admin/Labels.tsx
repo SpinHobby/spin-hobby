@@ -245,7 +245,7 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
               {size === "tag" && (
                 <label className="ad-check">
                   <input type="checkbox" checked={redPrice} onChange={(e) => setRedPrice(e.target.checked)} /> Price in red{" "}
-                  <small className="ad-muted">(for sale items; needs DK-22251 black and red tape and the driver set to 2-colour)</small>
+                  <small className="ad-muted">(for sale items; needs DK-2251 black and red tape and the driver set to 2-colour)</small>
                 </label>
               )}
               <div className="ad-label">How many</div>
@@ -322,7 +322,7 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
 
 /**
  * Prints price tags on the Brother QL-810: a page per tag, exactly 62 × 29 mm, so the printer's own driver cuts after each one. In the print
- * dialog choose the QL-810, paper 62 mm × 29 mm (DK-22205 or DK-1209), margins none, scale 100%.
+ * dialog choose the QL-810, paper 62 mm × 29 mm (DK-2205 or DK-1209), margins none, scale 100%.
  */
 function printTags(urls: string[]) {
   const w = window.open("", "_blank");

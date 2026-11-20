@@ -12,7 +12,7 @@ export type LabelSize = "small" | "large" | "tag";
 export const SIZES: Record<LabelSize, { width: number; height: number; name: string }> = {
   small: { width: 2.1, height: 1.2, name: "Small, 2.1 × 1.2 in" },
   large: { width: 3, height: 1.6, name: "Large, 3 × 1.6 in" },
-  // a price tag for the Brother QL-810 (300 dpi, black): DK-22205 62 mm continuous tape cut every 29 mm, or DK-1209 pre-cut labels
+  // a price tag for the Brother QL-810 (300 dpi, black): DK-2205 62 mm continuous tape cut every 29 mm, or DK-1209 pre-cut labels
   tag: { width: 62 / 25.4, height: 29 / 25.4, name: "Price tag, Brother QL-810 (62 × 29 mm)" },
 };
 
@@ -219,7 +219,7 @@ function drawPriceTag(
     size -= 4;
     ctx.font = `800 ${size}px ${UI_FONT}`;
   }
-  // black, or red for a sale (the QL-810 prints black and red on DK-22251 tape: pure red becomes its red)
+  // black, or red for a sale (the QL-810 prints black and red on DK-2251 tape: pure red becomes its red)
   ctx.fillStyle = label.redPrice ? TAG_RED : "#000000";
   ctx.fillText(price, x + left.x, y + pad - Math.round(size * 0.08), left.w);
   ctx.fillStyle = "#000000";
