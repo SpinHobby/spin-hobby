@@ -2751,6 +2751,19 @@
     border-color: #3665f3;
   }
 }
+// a photo kept in Square but not shown on the website (SquarePhotos): dimmed, with its Website box unticked
+.ad-photos__item.is-offsite img {
+  opacity: 0.45;
+}
+.ad-photos__site {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
 .ad-photos__ebayonly {
   display: inline-flex;
   align-items: center;
