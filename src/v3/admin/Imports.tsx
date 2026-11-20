@@ -556,12 +556,14 @@ function DraftCard({
       setBusy(false);
     }
   };
+  // Reject asks for a reason on the card: window.prompt is blocked in some browsers ("prompt() is not supported"), so Reject did nothing (2026-11-20)
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
   const reject = async () => {
-    const reason = window.prompt("Why reject it? (optional)", "") ?? null;
-    if (reason === null) return;
     setBusy(true);
     try {
       await api(`/admin/imports/${draft.id}/reject`, { method: "POST", body: JSON.stringify({ reason: reason.trim() || null }) });
+      setRejecting(false);
       onDone();
     } catch (e) {
       ctx.flash(errMsg(e));
@@ -714,9 +716,31 @@ function DraftCard({
           <button type="button" className="sh-btn ad-add-btn" onClick={add} disabled={busy}>
             {progress ? (progress.pct >= 100 ? "Added ✓" : `Adding… ${Math.round(progress.pct)}%`) : busy ? "Working…" : "Add to the shop"}
           </button>
-          <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={reject} disabled={busy}>
-            Reject
-          </button>
+          {rejecting ? (
+            <>
+              <input
+                className="sh-input"
+                placeholder="Why reject it? (optional)"
+                value={reason}
+                autoFocus
+                onChange={(e) => setReason(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void reject();
+                  if (e.key === "Escape") setRejecting(false);
+                }}
+              />
+              <button type="button" className="sh-btn ad-btn-sm" onClick={() => void reject()} disabled={busy}>
+                Confirm reject
+              </button>
+              <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setRejecting(false)} disabled={busy}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setRejecting(true)} disabled={busy}>
+              Reject
+            </button>
+          )}
         </div>
       </div>
     </section>
