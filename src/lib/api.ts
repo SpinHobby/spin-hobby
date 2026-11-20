@@ -9,7 +9,11 @@ import { watchedFetch } from "./serverStatus";
 const DEFAULT_API = import.meta.env.PROD ? "https://api.spinhobby.com" : "http://localhost:8080";
 export const API_URL: string = (import.meta.env.VITE_API_URL || DEFAULT_API).replace(/\/$/, "");
 
-export type ApiRequest = RequestInit & { body?: BodyInit | null };
+export type ApiRequest = RequestInit & {
+  body?: BodyInit | null;
+  /** A request that waits on purpose (Imports waiting for news, up to minutes): not watched, so it never shows the "taking longer" banner. */
+  unwatched?: boolean;
+};
 
 // ---------------------------------------------------------------- session
 
@@ -104,7 +108,10 @@ async function request<T>(path: string, init: ApiRequest, token: string | null):
   let response: Response;
   try {
     // watched: a sleeping or booting server shows the "waking up" banner, and reads wait for it (see serverStatus.ts)
-    response = await watchedFetch(API_URL, `${API_URL}${path}`, { ...init, headers });
+    const { unwatched, ...rest } = init;
+    response = unwatched
+      ? await fetch(`${API_URL}${path}`, { ...rest, headers })
+      : await watchedFetch(API_URL, `${API_URL}${path}`, { ...rest, headers });
   } catch {
     throw Object.assign(new Error("Can't reach the shop server. It may be starting up: wait a moment and try again."), { status: 0 });
   }

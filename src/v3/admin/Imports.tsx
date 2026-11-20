@@ -129,20 +129,40 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   useEffect(() => {
     void load();
   }, [load]);
-  // Drafts the app sends while this page is open show up by themselves: looked for once a minute, only in the window being used (in view and
-  // focused), and at once on coming back to it. Every 10 seconds in every open tab ran the shop's database over its free monthly egress in two
-  // days (2026-11-20). A card keeps what was typed into it (its key only changes when the app sends that photo again).
+  // Drafts the app sends while this page is open show up by themselves, without asking for the list again and again: the page waits at the
+  // server for news (GET /admin/imports/changes answers when a draft arrives, is added, rejected or edited, and reads nothing from the
+  // database while it waits) and reloads the list only then, and on coming back to the page. Asking for the whole list every 10 seconds in
+  // every open tab ran the shop's database over its free monthly egress in two days (2026-11-20). A hidden tab waits for nothing.
+  // A card keeps what was typed into it (its key only changes when the app sends that photo again).
   useEffect(() => {
-    const look = () => {
+    let stopped = false;
+    let since = "";
+    const pause = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+    void (async () => {
+      while (!stopped) {
+        if (document.visibilityState !== "visible") {
+          await pause(5_000);
+          continue;
+        }
+        try {
+          const r = await api<{ version: number }>(`/admin/imports/changes?since=${since}&seconds=200`, { unwatched: true });
+          if (stopped) return;
+          if (since && String(r.version) !== since) void load(true);
+          since = String(r.version);
+        } catch {
+          await pause(30_000); // an older server or no connection: try again in a while
+        }
+      }
+    })();
+    const back = () => {
       if (inUse()) void load(true);
     };
-    const timer = window.setInterval(look, 60_000);
-    document.addEventListener("visibilitychange", look);
-    window.addEventListener("focus", look);
+    document.addEventListener("visibilitychange", back);
+    window.addEventListener("focus", back);
     return () => {
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", look);
-      window.removeEventListener("focus", look);
+      stopped = true;
+      document.removeEventListener("visibilitychange", back);
+      window.removeEventListener("focus", back);
     };
   }, [load]);
 
