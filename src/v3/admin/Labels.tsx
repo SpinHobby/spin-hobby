@@ -32,8 +32,8 @@ const MAX_COPIES = 50;
  * this size falls back to the product's barcode number in Square (its POS finds items by that too); otherwise the
  * SKU is printed as text only.
  */
-function sticker(l: Label, size: LabelSize, handle = ""): StickerLabel {
-  if (size === "tag") return { ...stickerCode(l, size), price: tagPrice(l.priceCents), handle: handle.trim() || null };
+function sticker(l: Label, size: LabelSize, handle = "", redPrice = false): StickerLabel {
+  if (size === "tag") return { ...stickerCode(l, size), price: tagPrice(l.priceCents), handle: handle.trim() || null, redPrice };
   return stickerCode(l, size);
 }
 
@@ -68,6 +68,8 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
       /* private window: not remembered */
     }
   }, [handle]);
+  // red prices for sale items only (red reads as "discount"); black otherwise
+  const [redPrice, setRedPrice] = useState(false);
   const [sheets, setSheets] = useState<string[]>([]);
   const [drawing, setDrawing] = useState(false);
   const [drawError, setDrawError] = useState("");
@@ -93,10 +95,10 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
     () =>
       (labels ?? []).flatMap((l) => {
         const copies = perUnit ? Math.min(Math.max(l.stock ?? 1, 1), MAX_COPIES) : 1;
-        const one = sticker(l, size, handle);
+        const one = sticker(l, size, handle, redPrice);
         return Array.from({ length: copies }, () => one);
       }),
-    [labels, perUnit, size, handle],
+    [labels, perUnit, size, handle, redPrice],
   );
 
   // Redraw the sheets whenever the labels, size or copies change.
@@ -238,6 +240,12 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                 <label className="ad-field">
                   <span className="ad-field__top">Social handle on the tag (optional)</span>
                   <input className="sh-input" placeholder="@spinhobby" value={handle} onChange={(e) => setHandle(e.target.value)} />
+                </label>
+              )}
+              {size === "tag" && (
+                <label className="ad-check">
+                  <input type="checkbox" checked={redPrice} onChange={(e) => setRedPrice(e.target.checked)} /> Price in red{" "}
+                  <small className="ad-muted">(for sale items; needs DK-22251 black and red tape and the driver set to 2-colour)</small>
                 </label>
               )}
               <div className="ad-label">How many</div>

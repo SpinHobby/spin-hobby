@@ -27,6 +27,8 @@ export interface StickerLabel {
   price?: string | null;
   /** Price tags: a social handle under the barcode ("@spinhobby"), when the admin typed one. */
   handle?: string | null;
+  /** Price tags: the price in red (sale items, on black-and-red tape); black otherwise. */
+  redPrice?: boolean;
 }
 
 /** Labels that fit on one sheet in this size. */
@@ -217,18 +219,29 @@ function drawPriceTag(
     size -= 4;
     ctx.font = `800 ${size}px ${UI_FONT}`;
   }
-  // in red: the QL-810 prints black and red on DK-22251 tape (pure red becomes its red; on black-only tape it prints black)
-  ctx.fillStyle = TAG_RED;
+  // black, or red for a sale (the QL-810 prints black and red on DK-22251 tape: pure red becomes its red)
+  ctx.fillStyle = label.redPrice ? TAG_RED : "#000000";
   ctx.fillText(price, x + left.x, y + pad - Math.round(size * 0.08), left.w);
   ctx.fillStyle = "#000000";
 
-  // the mascot and the website along the bottom of the left column
-  const artSize = Math.round(h * 0.4);
-  const artY = y + h - pad - artSize;
-  ctx.drawImage(art, x + left.x, artY, artSize, artSize);
-  const siteX = x + left.x + artSize + Math.round(pad * 0.6);
-  ctx.font = `800 ${Math.round(h * 0.085)}px ${UI_FONT}`;
-  ctx.fillText("spinhobby.com", siteX, artY + artSize * 0.5 - h * 0.045, x + left.x + left.w - siteX);
+  // the mascot fills the left column under the price, up against it; the website lies over the drawing's lower part, white-edged so it
+  // reads over the lines
+  const priceBottom = y + pad + Math.round(size * 0.82);
+  const artSize = Math.min(left.w, y + h - priceBottom);
+  const artX = x + left.x + Math.round((left.w - artSize) / 2);
+  const artY = y + h - artSize;
+  ctx.drawImage(art, artX, artY, artSize, artSize);
+  const siteSize = Math.round(h * 0.1);
+  ctx.font = `800 ${siteSize}px ${UI_FONT}`;
+  ctx.textAlign = "center";
+  const siteY = y + h - pad - siteSize;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.round(siteSize * 0.45);
+  ctx.strokeStyle = "#ffffff";
+  ctx.strokeText("spinhobby.com", x + left.x + left.w / 2, siteY, left.w);
+  ctx.fillStyle = "#000000";
+  ctx.fillText("spinhobby.com", x + left.x + left.w / 2, siteY, left.w);
+  ctx.textAlign = "start";
 
   // a thin line between the columns
   ctx.fillRect(x + right.x - Math.round(pad * 0.6), y + pad, Math.max(1, Math.round(h / 300)), h - 2 * pad);
