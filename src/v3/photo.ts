@@ -173,7 +173,9 @@ export function measureBars(img: HTMLImageElement): PhotoFit {
     let i = from;
     while (i !== to && off(i) <= 0.02) i += dir;
     if (i === from || i === to) return from; // no bar, or nothing but bar
-    return off(i) >= 0.6 ? i : from;
+    // a straight edge, softened over a few pixels when the photo was shrunk (Elsa Granhiert's card, 2026-11-20)
+    for (let k = 0; k < 4 && i !== to; k++, i += dir) if (off(i) >= 0.6) return i;
+    return from;
   };
   // twice: bars on all four sides only show their straight edges once the other pair is cut off
   for (let pass = 0; pass < 2; pass++) {
@@ -205,7 +207,7 @@ function lookAtPhoto(url: string, el: HTMLImageElement, frame: PhotoFrame | unde
   const known = fits.get(url);
   if (known) {
     // the same photo again (a card and its thumbnail, say): it gets the crop worked out the first time
-    for (const [k, v] of Object.entries(frameStyle(frame, known))) el.style.setProperty(k, v);
+    applyVars(el, frameStyle(frame, known));
     return;
   }
   let fit: PhotoFit;
@@ -217,7 +219,20 @@ function lookAtPhoto(url: string, el: HTMLImageElement, frame: PhotoFrame | unde
     return;
   }
   rememberFit(url, fit);
-  for (const [k, v] of Object.entries(frameStyle(frame, fit))) el.style.setProperty(k, v);
+  applyVars(el, frameStyle(frame, fit));
+}
+
+/**
+ * Sets a photo's frame on a photo already on the page. Its zoom animation (cards zoom on hover) is paused for the change: with it, Chrome
+ * kept drawing the photo around its old centre (the Hanekawa card showed her middle, not her face, 2026-11-20).
+ */
+function applyVars(el: HTMLImageElement, vars: Record<string, string>) {
+  if (Object.entries(vars).every(([k, v]) => el.style.getPropertyValue(k) === v)) return;
+  const transition = el.style.transition;
+  el.style.transition = "none";
+  for (const [k, v] of Object.entries(vars)) el.style.setProperty(k, v);
+  void el.offsetWidth; // apply now, before the animation comes back
+  el.style.transition = transition;
 }
 
 /**
