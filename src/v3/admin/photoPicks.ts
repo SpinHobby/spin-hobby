@@ -15,12 +15,17 @@ export interface PhotoPick {
 }
 
 /**
- * The photos a draft starts with picked: the clean product photo when there is one (the admin asked for it), else the transparent cut-out for the
- * website (it follows the shop background), else the cleaned photo; nothing for eBay.
+ * The photos a draft starts with picked (2026-11-20): every photo goes to Square and eBay, and only the main one shows on the website. The main one is
+ * the clean product photo when there is one (the admin asked for it), else the transparent cut-out (it follows the shop background), else the
+ * cleaned photo. The maker's official photos start unticked: they are used only when someone ticks them.
  */
 export function defaultPicks(offered: OfferedPhoto[]): PhotoPick[] {
   const has = (key: PhotoKey) => offered.some((p) => p.key === key);
   const main: PhotoKey = has("clean") ? "clean" : has("background") ? "background" : "studio";
   const ordered = [...offered].sort((a, b) => (a.key === main ? -1 : b.key === main ? 1 : 0));
-  return ordered.map((p) => ({ key: p.key, square: p.key === main, website: p.key === main, ebay: false }));
+  // the maker's photos belong to the maker: never used without a click
+  return ordered.map((p) => {
+    const ours = !p.key.startsWith("official");
+    return { key: p.key, square: ours, website: p.key === main, ebay: ours };
+  });
 }
