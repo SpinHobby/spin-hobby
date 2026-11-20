@@ -713,7 +713,7 @@ function BuyBox({
           {off > 0 && <span className="sf-pp__off">Save {off}%</span>}
         </div>
         <div className="sf-pp__status" style={{ color: meta.color }}>
-          <span className={`sf-dot ${s === "low" ? "sf-dot--pulse" : ""}`} style={{ background: meta.color }} />
+          <span className="sf-dot" style={{ background: meta.color }} />
           {statusLabel(p)}
         </div>
       </div>
