@@ -13,6 +13,9 @@ import type { Ctx } from "./Screens";
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 type Status = "draft" | "added" | "rejected";
+
+/** About how long adding a draft to the shop takes, in seconds: the progress estimate is 63% at this, 86% at twice this (capped at 95%). */
+const ADD_SECONDS = 20;
 interface Draft {
   id: string;
   status: Status;
@@ -98,12 +101,21 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   const [upload, setUpload] = useState(false);
   const series = useSeriesList();
   const backgrounds = useBackgrounds();
+  // drafts being added to the shop right now stay on screen, where they were: the server marks a draft "added" as soon as it starts, so the
+  // 10-second look below dropped its card mid-add and brought it back a while later if the add failed (owner, 2026-11-20)
+  const working = useRef(new Set<string>());
 
   const load = useCallback(
     async (quiet = false) => {
       try {
         const r = await api<{ imports: Draft[]; counts: Record<Status, number> }>(`/admin/imports?status=${status}`);
-        setDrafts(r.imports);
+        setDrafts((before) => {
+          const list = [...r.imports];
+          before.forEach((d, i) => {
+            if (working.current.has(d.id) && !list.some((x) => x.id === d.id)) list.splice(Math.min(i, list.length), 0, d);
+          });
+          return list;
+        });
         setCounts(r.counts);
       } catch (e) {
         if (!quiet) ctx.flash(errMsg(e));
@@ -195,6 +207,7 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
                 void load();
                 series.reload();
               }}
+              onWorking={(on) => (on ? working.current.add(d.id) : working.current.delete(d.id))}
               onEdited={(next) => setDrafts((list) => list.map((x) => (x.id === next.id ? { ...x, ...next, matches: x.matches } : x)))}
             />
           ) : (
@@ -403,6 +416,7 @@ function DraftCard({
   shopBackground,
   ctx,
   onDone,
+  onWorking,
   onEdited,
 }: {
   draft: Draft;
@@ -410,6 +424,8 @@ function DraftCard({
   shopBackground: Background | null;
   ctx: Ctx;
   onDone: () => void;
+  /** The card is adding its draft to the shop (true) or has finished (false): the list keeps it on screen meanwhile. */
+  onWorking: (on: boolean) => void;
   onEdited: (draft: Draft) => void;
 }) {
   const [title, setTitle] = useState(draft.title);
@@ -444,10 +460,26 @@ function DraftCard({
   if (stockNum !== null && (!Number.isInteger(stockNum) || stockNum < 0)) errors.stock = "Whole number";
   if (!currentPicks.some((p) => p.square && p.website)) errors.photos = "Pick at least one photo for the website";
 
+  // adding takes 15-60 seconds (the photos are saved, the product is made in Square, its stock checked) in one request that says nothing until
+  // it ends: the card shows it is working, how far along it is likely to be, and if it fails, why, keeping the draft for the admin to decide
+  const [progress, setProgress] = useState<{ pct: number; step: string; secs: number } | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
   const add = async () => {
     setTouched(true);
     if (Object.keys(errors).length) return;
     setBusy(true);
+    setFailure(null);
+    onWorking(true);
+    const started = Date.now();
+    const tick = () => {
+      const secs = (Date.now() - started) / 1000;
+      // an estimate from how long adds take (most within 30 s): it slows as it goes and never reaches 100 before the shop answers
+      const pct = Math.min(95, 100 * (1 - Math.exp(-secs / ADD_SECONDS)));
+      const step = pct < 35 ? "Saving the photos" : pct < 75 ? "Making the product in Square" : "Checking the stock and the website";
+      setProgress({ pct, step, secs: Math.floor(secs) });
+    };
+    tick();
+    const timer = window.setInterval(tick, 250);
     try {
       await api(`/admin/imports/${draft.id}/add`, {
         method: "POST",
@@ -465,12 +497,19 @@ function DraftCard({
           photos: currentPicks.filter((p) => p.square || p.ebay),
         }),
       });
+      window.clearInterval(timer);
+      setProgress({ pct: 100, step: "Added to the shop", secs: Math.floor((Date.now() - started) / 1000) });
       ctx.flash(`${title.trim()} added${hidden ? " (hidden from the website)" : ""}`);
+      // a moment to see it done before the card goes
+      await new Promise((r) => window.setTimeout(r, 1200));
+      onWorking(false);
       ctx.reload();
       onDone();
     } catch (e) {
-      ctx.flash(errMsg(e));
-    } finally {
+      window.clearInterval(timer);
+      setProgress(null);
+      setFailure(errMsg(e));
+      onWorking(false);
       setBusy(false);
     }
   };
@@ -627,9 +666,31 @@ function DraftCard({
             <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> Keep off the website until I check it
           </label>
         </div>
+        {progress && (
+          <div className="ad-imports__progress" role="status" aria-live="polite">
+            <div className="ad-imports__progress-top">
+              <b>{progress.pct >= 100 ? "Added to the shop ✓" : `Adding to the shop… ${Math.round(progress.pct)}%`}</b>
+              <span className="ad-muted ad-sm">
+                {progress.step} · {progress.secs} s
+              </span>
+            </div>
+            <div className="ad-imports__bar" aria-hidden>
+              <span style={{ width: `${progress.pct}%` }} />
+            </div>
+          </div>
+        )}
+        {failure && (
+          <div className="ad-imports__failure" role="alert">
+            <b>Not added: {failure}</b>
+            <span className="ad-sm">The draft is still here. Fix what the message says and press Add to the shop again, or reject it.</span>
+            <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setFailure(null)}>
+              Dismiss
+            </button>
+          </div>
+        )}
         <div className="ad-imports__actions">
           <button type="button" className="sh-btn ad-add-btn" onClick={add} disabled={busy}>
-            {busy ? "Working…" : "Add to the shop"}
+            {progress ? (progress.pct >= 100 ? "Added ✓" : `Adding… ${Math.round(progress.pct)}%`) : busy ? "Working…" : "Add to the shop"}
           </button>
           <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={reject} disabled={busy}>
             Reject
