@@ -1835,6 +1835,45 @@
   padding-top: 10px;
   border-top: 1px dashed var(--border);
 }
+/* Add to the shop: how far along it is, and why it failed (the draft stays) */
+.ad-imports__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.ad-imports__progress-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ad-imports__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  overflow: hidden;
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--blue);
+    transition: width 0.25s linear;
+  }
+}
+.ad-imports__failure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}
 .ad-imports__actions {
   display: flex;
   gap: 10px;
