@@ -1,4 +1,4 @@
-import { defineConfig, type Alias } from "vite";
+import { defineConfig, type Alias, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { existsSync } from "fs";
 import { resolve } from "path";
@@ -26,14 +26,47 @@ function liveGleamshelf(mode: string, command: string): { alias: Alias[]; dir: s
   };
 }
 
+/**
+ * Local stand-in for Netlify's image service (/.netlify/images): passes Square's photo through unchanged (no resizing), from this
+ * site's own address. That lets the browser read the photo's pixels locally as on the live site, where photo.ts finds white bars
+ * around a picture. Only Square's photo host, as netlify.toml allows; dev server only.
+ */
+function localImageService(): Plugin {
+  const allowed = /^https:\/\/items-images-[a-z]+\.s3\.[a-z0-9-]+\.amazonaws\.com\//;
+  return {
+    name: "local-image-service",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use("/.netlify/images", async (req, res) => {
+        const url = new URL(req.url ?? "", "http://localhost").searchParams.get("url") ?? "";
+        if (!allowed.test(url)) {
+          res.statusCode = 400;
+          res.end("Only Square photos");
+          return;
+        }
+        try {
+          const r = await fetch(url);
+          res.statusCode = r.status;
+          res.setHeader("Content-Type", r.headers.get("content-type") ?? "image/jpeg");
+          res.setHeader("Cache-Control", "max-age=3600");
+          res.end(Buffer.from(await r.arrayBuffer()));
+        } catch {
+          res.statusCode = 502;
+          res.end();
+        }
+      });
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
   const live = liveGleamshelf(mode, command);
   return {
     // No Netlify dev plugin: the site has no functions, edge functions or database, and the plugin's only use was emulating
-    // the image service (/.netlify/images) locally. Without it a local page shows Square's original photo instead (src/v3/photo.ts
-    // falls back on error); the live site is unchanged. It pulled in 12 high-severity advisories, some with no fixed release.
-    plugins: [react()],
+    // the image service (/.netlify/images) locally, now done by localImageService above. It pulled in 12 high-severity advisories,
+    // some with no fixed release.
+    plugins: [react(), localImageService()],
     // the deployed commit (Netlify sets COMMIT_REF), sent with browser error reports so they say which release broke
     define: {
       "import.meta.env.VITE_RELEASE": JSON.stringify((process.env.COMMIT_REF ?? "").slice(0, 7)),

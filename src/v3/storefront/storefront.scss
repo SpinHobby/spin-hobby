@@ -2278,6 +2278,14 @@ h1.sf-hero__eyebrow {
   &.is-active {
     display: block;
   }
+  // more picture than the square shows (photo.ts canDrag): drag it (ProductPage Slide)
+  &.is-pannable {
+    cursor: grab;
+    user-select: none;
+    &:active {
+      cursor: grabbing;
+    }
+  }
   img {
     width: 100%;
     height: 100%;
