@@ -2402,9 +2402,12 @@ function SettingsPreview({ form, liveFx }: { form: ReturnType<typeof toForm>; li
       </div>
       <div className="ad-preview__lines">
         <span style={{ color: "var(--teal)" }}>In stock · ships in {days} days</span>
-        <span style={{ color: "var(--red)" }}>
-          Only {Number.isFinite(low) && low > 0 ? low : "a few"} left{" "}
-          <span className="ad-muted">(LOW STOCK at {Number.isFinite(low) ? low : "—"} or fewer)</span>
+        <span style={{ color: "var(--teal)" }}>
+          1 in stock · ships in {days} days{" "}
+          <span className="ad-muted">
+            (low stock, {Number.isFinite(low) ? low : "—"} or fewer, is marked in the admin only: most items are one of a kind, so shoppers
+            just see how many are in stock)
+          </span>
         </span>
         <span>
           $100.00 CAD shows as <b>≈ ${Number.isFinite(fx) ? (100 * fx).toFixed(2) : "—"} USD</b> when a shopper picks USD (charged in CAD)

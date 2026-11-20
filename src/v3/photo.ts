@@ -201,7 +201,13 @@ export function measureBars(img: HTMLImageElement): PhotoFit {
 
 /** Looks at a photo that just loaded (once per address); `el` gets the cropped frame straight away. */
 function lookAtPhoto(url: string, el: HTMLImageElement, frame: PhotoFrame | undefined) {
-  if (fits.has(url) || !el.naturalWidth) return;
+  if (!el.naturalWidth) return;
+  const known = fits.get(url);
+  if (known) {
+    // the same photo again (a card and its thumbnail, say): it gets the crop worked out the first time
+    for (const [k, v] of Object.entries(frameStyle(frame, known))) el.style.setProperty(k, v);
+    return;
+  }
   let fit: PhotoFit;
   try {
     fit = measureBars(el);
@@ -242,6 +248,12 @@ export function framedPhoto(url: string, width: number, cutout = false, frame?: 
     style: { ...base.style, ...frameStyle(frame, cutout ? undefined : fitOf(url)) } as CSSProperties,
     // a cut-out has no bars: its see-through parts show the shop background
     onLoad: cutout ? undefined : (e: SyntheticEvent<HTMLImageElement>) => lookAtPhoto(url, e.currentTarget, frame),
+    // a photo the browser already had can finish loading before the page listens for it: look at it as soon as it is on the page
+    ref: cutout
+      ? undefined
+      : (el: HTMLImageElement | null) => {
+          if (el?.complete) lookAtPhoto(url, el, frame);
+        },
   };
 }
 

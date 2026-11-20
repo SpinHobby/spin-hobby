@@ -115,9 +115,13 @@ export function normalizeStatus(status: Product["status"]): ProductStatus {
   return "out"; // "closed" pre-orders and anything unknown can't be bought
 }
 
+/**
+ * Each status's colour, and the badge on its photo. Being in stock is the usual case, so it has no badge (2026-11-20): only the exceptions
+ * (pre-order, sold out) are marked. Most items are one of a kind, so low stock reads like any in-stock item too.
+ */
 export const STATUS_META: Record<ProductStatus, { badge: string; color: string }> = {
-  in: { badge: "IN STOCK", color: "var(--teal)" },
-  low: { badge: "LOW STOCK", color: "var(--red)" },
+  in: { badge: "", color: "var(--teal)" },
+  low: { badge: "", color: "var(--teal)" },
   pre: { badge: "PRE-ORDER", color: "var(--blue)" },
   out: { badge: "SOLD OUT", color: "var(--muted)" },
 };
@@ -128,9 +132,8 @@ export function statusLabel(p: Product) {
   const n = p.stockCount;
   switch (s) {
     case "in":
-      return n ? `${n} in stock · ships in ${handlingLabel()}` : `In stock · ships in ${handlingLabel()}`;
     case "low":
-      return `Only ${n ?? "a few"} left`;
+      return n ? `${n} in stock · ships in ${handlingLabel()}` : `In stock · ships in ${handlingLabel()}`;
     case "pre":
       return `Release ${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}`;
     case "out":
@@ -142,9 +145,8 @@ export function statusShort(p: Product) {
   const s = normalizeStatus(p.status);
   switch (s) {
     case "in":
-      return "In stock";
     case "low":
-      return `Only ${p.stockCount ?? "a few"} left`;
+      return p.stockCount ? `${p.stockCount} in stock` : "In stock";
     case "pre":
       return `Pre-order · ${monthLabel(p.releaseMonth)}`;
     case "out":
