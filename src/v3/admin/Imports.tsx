@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { inUse } from "./inUse";
 import { api } from "../../lib/api";
 import { buildTree, indentLabel } from "../categoryTree";
 import type { ShopCategory } from "../types";
@@ -128,13 +129,14 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   useEffect(() => {
     void load();
   }, [load]);
-  // Drafts the app sends while this page is open show up by themselves: looked for every 10 seconds while the page is in view, and at once on
-  // coming back to it. A card keeps what was typed into it (its key only changes when the app sends that photo again).
+  // Drafts the app sends while this page is open show up by themselves: looked for once a minute, only in the window being used (in view and
+  // focused), and at once on coming back to it. Every 10 seconds in every open tab ran the shop's database over its free monthly egress in two
+  // days (2026-11-20). A card keeps what was typed into it (its key only changes when the app sends that photo again).
   useEffect(() => {
     const look = () => {
-      if (document.visibilityState === "visible") void load(true);
+      if (inUse()) void load(true);
     };
-    const timer = window.setInterval(look, 10_000);
+    const timer = window.setInterval(look, 60_000);
     document.addEventListener("visibilitychange", look);
     window.addEventListener("focus", look);
     return () => {
