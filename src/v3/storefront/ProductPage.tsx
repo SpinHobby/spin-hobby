@@ -2,7 +2,7 @@ import { track } from "../../lib/analytics";
 import { isOn } from "../../features";
 import { ProductPointsLine } from "../rewards/ProductPointsLine";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import type { CategoryTree } from "../categoryTree";
@@ -36,6 +36,8 @@ import {
   dragFrame,
   canDrag,
   usePhotoFit,
+  frameScale,
+  photoSources,
   type PhotoFrame,
 } from "../photo";
 import { addedMessage, closingLabel, shippingGap } from "./nudges";
@@ -376,8 +378,20 @@ function Slide({ p, src, n, active, onOpen }: { p: Product; src: string; n: numb
   const can = fit ? canDrag(fit, frame.zoom) : { x: false, y: false };
   const pannable = can.x || can.y;
   const base = productPhoto(p, src, 1000);
+  // how wide the square is on this screen: the photo is fetched big enough for it, its zoom and the screen's pixel density (spin-hobby#110)
+  const [shown, setShown] = useState<number | null>(null);
+  const measure = useRef<ResizeObserver | null>(null);
+  const watch = useCallback((el: HTMLButtonElement | null) => {
+    measure.current?.disconnect();
+    measure.current = null;
+    if (!el) return;
+    setShown(el.clientWidth || null);
+    measure.current = new ResizeObserver(() => setShown(el.clientWidth || null));
+    measure.current.observe(el);
+  }, []);
   return (
     <button
+      ref={watch}
       type="button"
       className={`sf-pp__slide ${active ? "is-active" : ""} ${pannable ? "is-pannable" : ""}`}
       // fingers: drag along the way the photo has more to show; the other way still scrolls the page or swipes photos
@@ -410,6 +424,7 @@ function Slide({ p, src, n, active, onOpen }: { p: Product; src: string; n: numb
     >
       <img
         {...base}
+        {...photoSources(src, shown ?? "min(100vw, 760px)", frameScale(fit, frame))}
         // this photo's position follows the shopper's drag (React state), so the shared on-the-page hook must not reset it
         ref={undefined}
         style={{ ...base.style, ...(frameStyle(frame, fit) as CSSProperties) }}
@@ -575,6 +590,8 @@ function Lightbox({
     <div className="sf-lightbox" role="dialog" aria-modal="true" aria-label={`${name} photos`} onClick={onClose}>
       <img
         {...photo(images[index], 1600, isCutout({ cutouts }, images[index]))}
+        // the enlarged photo fills up to the whole window: the copy that is sharp at that size on this screen
+        {...photoSources(images[index], "min(100vw, 100vh)")}
         alt={`${name}, photo ${index + 1} of ${images.length}`}
         onClick={(e) => e.stopPropagation()}
       />

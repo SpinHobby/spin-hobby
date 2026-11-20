@@ -276,6 +276,30 @@ export function framedPhoto(url: string, width: number, cutout = false, frame?: 
 export const isCutout = (p: { cutouts?: string[] }, url: string | null | undefined) => !!url && !!p.cutouts?.includes(url);
 
 /** The address of `url` shrunk to `width` pixels wide (or `url` itself when it is not a Square photo). */
+/** The widths a product photo is offered at, for the browser to choose from (the shop keeps photos up to 3072 px: spin-hobby-server). */
+export const PHOTO_WIDTHS = [480, 800, 1200, 1600, 2048, 2560, 3072];
+
+/** How many times wider than its square the photo's file is drawn, once its bars are cropped and its frame zoomed (1 for a square photo). */
+export function frameScale(fit: PhotoFit | undefined | null, frame: PhotoFrame | undefined | null): number {
+  if (!fit) return Math.max(1, frame?.zoom ?? 1);
+  const p = pictureSize(fit);
+  const side = Math.min(p.w, p.h) / Math.max(1, frame?.zoom ?? 1);
+  return Math.max(1, fit.aspect / side);
+}
+
+/**
+ * `srcSet` and `sizes` for a product photo drawn `shownWidth` CSS pixels wide (a CSS length like "min(100vw, 760px)" works too) and zoomed
+ * `scale` times: the browser fetches the copy that is sharp on this screen (its pixel density included), not one fixed size. The product
+ * page asked for 1000 px whatever it showed, so a zoomed crop on a 2x screen was stretched about twice (spin-hobby#110, 2026-11-20).
+ * Nothing for a photo the resizing service does not serve: its `src` is the photo itself.
+ */
+export function photoSources(url: string, shownWidth: number | string, scale = 1): { srcSet?: string; sizes?: string } {
+  if (!SQUARE_PHOTOS.test(url)) return {};
+  const shown =
+    typeof shownWidth === "number" ? `${Math.ceil(shownWidth * scale)}px` : `calc(${shownWidth} * ${Math.round(scale * 1000) / 1000})`;
+  return { srcSet: PHOTO_WIDTHS.map((w) => `${resized(url, w)} ${w}w`).join(", "), sizes: shown };
+}
+
 export function resized(url: string, width: number): string {
   if (!SQUARE_PHOTOS.test(url)) return url;
   return `/.netlify/images?url=${encodeURIComponent(url)}&w=${Math.round(width)}&fm=webp&q=78`;
