@@ -1,4 +1,5 @@
 import { DragEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
+import { loadPhotoEditor } from "./photoEditorChunk";
 import type { GleamResult } from "@gleamshelf/react";
 import { api } from "../../lib/api";
 import { money, statusLabel } from "../format";
@@ -27,7 +28,7 @@ const PREVIEW: CardActions = {
 };
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 // The photo editor is only downloaded when someone opens it.
-const PhotoEditor = lazy(() => import("./PhotoEditor"));
+const PhotoEditor = lazy(loadPhotoEditor);
 // So is the barcode scanner (it carries its own decoder).
 const BarcodeScanner = lazy(() => import("./BarcodeScanner"));
 

@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { loadPhotoEditor } from "./photoEditorChunk";
 import type { GleamResult } from "@gleamshelf/react";
 import { api, apiBlob } from "../../lib/api";
 import type { Product } from "../types";
@@ -11,7 +12,7 @@ import { PolishOptions, type PolishChoice } from "./PolishOptions";
 import { polishPhoto } from "./polish";
 import type { Ctx } from "./Screens";
 
-const PhotoEditor = lazy(() => import("./PhotoEditor"));
+const PhotoEditor = lazy(loadPhotoEditor);
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 interface Photo {
