@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import "../../components/styles/tokens.scss";
 import "../storefront/storefront.scss"; // previews render real storefront components
 // the shared panel styles load before the admin's own, which refine a few of them
@@ -32,6 +32,7 @@ import { PhotosScreen } from "./PhotoQueue";
 import { DescriptionsScreen } from "./Descriptions";
 import { BarcodesScreen } from "./Barcodes";
 import { isOn } from "../../features";
+import { preloadPhotoEditor } from "./photoEditorChunk";
 import { DashboardScreen, HomepageScreen, OrdersScreen, ProductsScreen, SettingsScreen, type Ctx } from "./Screens";
 
 // Admin > Avatar: only fetched when opened (it brings Gleamshelf's editor package)
@@ -59,6 +60,10 @@ export default function Admin() {
     ...(isOwner && isOn("rewards") ? (["Rewards"] as const) : []),
   ];
   const { data, setData, reload } = useAdminData(isStaff);
+  // the photo editor is loaded up front, so a release made while this page is open cannot stop it opening (photoEditorChunk.ts)
+  useEffect(() => {
+    if (isStaff) preloadPhotoEditor();
+  }, [isStaff]);
 
   const [screen, setScreenState] = useState<Screen>(() => {
     const hash = decodeURIComponent(window.location.hash.slice(1));
