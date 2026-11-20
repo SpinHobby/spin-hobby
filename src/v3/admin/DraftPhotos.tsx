@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState } from "react";
+import { loadPhotoEditor } from "./photoEditorChunk";
 import type { GleamResult } from "@gleamshelf/react";
 import { api, apiBlob } from "../../lib/api";
 import { BackgroundPreview } from "./Backgrounds";
@@ -8,7 +9,7 @@ import { PhotoViewer } from "./PhotoViewer";
 import type { Background } from "./photoBackgrounds";
 import type { OfferedPhoto, PhotoKey, PhotoPick } from "./photoPicks";
 
-const PhotoEditor = lazy(() => import("./PhotoEditor"));
+const PhotoEditor = lazy(loadPhotoEditor);
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
 const LABELS: Record<"clean" | "studio" | "background" | "cropped" | "original" | "official", { title: string; hint: string }> = {

@@ -22,7 +22,10 @@ export class EditorBoundary extends Component<{ children: ReactNode; onClose: ()
       >
         <div className="ad-card ad-pad" style={{ maxWidth: 420, display: "flex", flexDirection: "column", gap: 10 }}>
           <b>The photo editor could not open.</b>
-          <span className="ad-muted ad-sm">Reload the page and try again (the admin may have just been updated).</span>
+          <span className="ad-muted ad-sm">
+            The admin was probably updated since this page was opened. Reload the page to get the new version, then press Edit again (a
+            price or title typed but not yet added is lost, so note it first).
+          </span>
           <span style={{ display: "flex", gap: 10 }}>
             <button type="button" className="sh-btn ad-btn-sm" onClick={() => window.location.reload()}>
               Reload
