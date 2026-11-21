@@ -1694,6 +1694,10 @@ h1.sf-hero__eyebrow {
     font-size: 13px;
     color: var(--muted);
   }
+  &__past {
+    margin: 16px 0 10px;
+    font-weight: 700;
+  }
   &__list {
     display: flex;
     gap: 8px;
