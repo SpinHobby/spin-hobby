@@ -20,7 +20,7 @@ interface Label {
 
 /** A price as a tag prints it: "$50" for whole dollars, "$49.99" otherwise. */
 const tagPrice = (cents: number | null | undefined) =>
-  cents == null ? null : cents % 100 === 0 ? `${cents / 100}` : `${(cents / 100).toFixed(2)}`;
+  cents == null ? null : cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`;
 
 const HANDLE_KEY = "spinhobby-tag-handle";
 

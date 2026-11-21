@@ -191,9 +191,10 @@ function tagColumns(w: number, h: number) {
 }
 
 /**
- * A price tag for the Brother QL-810 (black on white, 62 × 29 mm): the price as big as it fits, the mascot and spinhobby.com under it;
- * the product's name, the barcode of its SKU (the cashier's Square app scans it to ring the item up) and the code itself, and a social
- * handle when one is given. About a third of the old sticker, which carried two QR codes for Instagram and Facebook.
+ * A price tag for the Brother QL-810 (62 × 29 mm): on the left the mascot's line drawing from the ears down to the chest, filling the column,
+ * the price over the empty corner beside her ears and spinhobby.com across her chest (both white-edged so they read over the lines); on the
+ * right the product's name, the barcode of its SKU (the cashier's Square app scans it), the code, and the social handle with Instagram and
+ * Facebook marks when one is given.
  */
 function drawPriceTag(
   ctx: CanvasRenderingContext2D,
@@ -208,36 +209,38 @@ function drawPriceTag(
   ctx.save();
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = "#000000";
   ctx.textBaseline = "top";
+  ctx.lineJoin = "round";
 
-  // the price: as large as fits the left column and the top 58% of the tag
+  // the mascot first, bottom-aligned and as big as the column allows: her chin sits about 72% down the drawing, so at this size the whole
+  // face stays above the website line across her chest
+  const artSize = Math.min(left.w, Math.round(h * 0.78));
+  const artX = x + left.x + Math.round((left.w - artSize) / 2);
+  const artY = y + h - artSize;
+  ctx.drawImage(art, artX, artY, artSize, artSize);
+
+  // the price over the top of the column, white-edged where it crosses her ears
   const price = label.price ?? "";
-  let size = Math.round(h * 0.58);
+  let size = Math.round(h * 0.4);
   ctx.font = `800 ${size}px ${UI_FONT}`;
   while (size > 20 && ctx.measureText(price).width > left.w) {
     size -= 4;
     ctx.font = `800 ${size}px ${UI_FONT}`;
   }
+  const priceY = y + pad - Math.round(size * 0.06);
+  ctx.lineWidth = Math.round(size * 0.14);
+  ctx.strokeStyle = "#ffffff";
+  ctx.strokeText(price, x + left.x, priceY, left.w);
   // black, or red for a sale (the QL-810 prints black and red on DK-2251 tape: pure red becomes its red)
   ctx.fillStyle = label.redPrice ? TAG_RED : "#000000";
-  ctx.fillText(price, x + left.x, y + pad - Math.round(size * 0.08), left.w);
-  ctx.fillStyle = "#000000";
+  ctx.fillText(price, x + left.x, priceY, left.w);
 
-  // the mascot fills the left column under the price, up against it; the website lies over the drawing's lower part, white-edged so it
-  // reads over the lines
-  const priceBottom = y + pad + Math.round(size * 0.82);
-  const artSize = Math.min(left.w, y + h - priceBottom);
-  const artX = x + left.x + Math.round((left.w - artSize) / 2);
-  const artY = y + h - artSize;
-  ctx.drawImage(art, artX, artY, artSize, artSize);
+  // the website across her chest
   const siteSize = Math.round(h * 0.1);
   ctx.font = `800 ${siteSize}px ${UI_FONT}`;
   ctx.textAlign = "center";
   const siteY = y + h - pad - siteSize;
-  ctx.lineJoin = "round";
   ctx.lineWidth = Math.round(siteSize * 0.45);
-  ctx.strokeStyle = "#ffffff";
   ctx.strokeText("spinhobby.com", x + left.x + left.w / 2, siteY, left.w);
   ctx.fillStyle = "#000000";
   ctx.fillText("spinhobby.com", x + left.x + left.w / 2, siteY, left.w);
@@ -256,9 +259,9 @@ function drawPriceTag(
     ty += Math.round(nameSize * 1.15);
   }
   const codeSize = Math.round(h * 0.07);
-  const handleSize = label.handle ? Math.round(h * 0.065) : 0;
+  const handleSize = label.handle ? Math.round(h * 0.07) : 0;
   const barTop = ty + Math.round(pad * 0.4);
-  const barBottom = y + h - pad - codeSize - (handleSize ? handleSize + Math.round(pad * 0.4) : 0) - Math.round(pad * 0.3);
+  const barBottom = y + h - pad - codeSize - (handleSize ? handleSize + Math.round(pad * 0.5) : 0) - Math.round(pad * 0.3);
   const widths = label.barcode ? code128Widths(label.barcode) : null;
   const unit = widths ? barUnit(widths, right.w) : 0;
   if (widths && unit && barBottom - barTop > h * 0.15) {
@@ -274,10 +277,57 @@ function drawPriceTag(
     ctx.font = `700 ${codeSize}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
     ctx.fillText(label.code, x + right.x + right.w / 2, barBottom + Math.round(pad * 0.3), right.w);
   }
+  ctx.textAlign = "start";
   if (label.handle) {
+    // the Instagram and Facebook marks, then the handle, centred as one line
     ctx.font = `600 ${handleSize}px ${UI_FONT}`;
-    ctx.fillText(label.handle, x + right.x + right.w / 2, y + h - pad - handleSize, right.w);
+    const icon = Math.round(handleSize * 1.1);
+    const gap = Math.round(handleSize * 0.35);
+    const textW = Math.min(ctx.measureText(label.handle).width, right.w - 2 * (icon + gap));
+    const lineW = icon + gap + icon + gap + textW;
+    let lx = x + right.x + Math.round((right.w - lineW) / 2);
+    const ly = y + h - pad - icon;
+    drawInstagramMark(ctx, lx, ly, icon);
+    lx += icon + gap;
+    drawFacebookMark(ctx, lx, ly, icon);
+    lx += icon + gap;
+    ctx.fillStyle = "#000000";
+    ctx.fillText(label.handle, lx, ly + Math.round((icon - handleSize) / 2), textW);
   }
+  ctx.restore();
+}
+
+/** Instagram's mark in black: a rounded square outline, a ring and a dot. */
+function drawInstagramMark(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
+  ctx.save();
+  ctx.strokeStyle = "#000000";
+  ctx.fillStyle = "#000000";
+  ctx.lineWidth = Math.max(1, s * 0.11);
+  const inset = ctx.lineWidth / 2;
+  ctx.beginPath();
+  ctx.roundRect(x + inset, y + inset, s - 2 * inset, s - 2 * inset, s * 0.28);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x + s / 2, y + s / 2, s * 0.22, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x + s * 0.74, y + s * 0.26, s * 0.065, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Facebook's mark in black: a filled circle with a white "f". */
+function drawFacebookMark(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
+  ctx.save();
+  ctx.fillStyle = "#000000";
+  ctx.beginPath();
+  ctx.arc(x + s / 2, y + s / 2, s / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `800 ${Math.round(s * 0.82)}px Arial, Helvetica, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("f", x + s * 0.55, y + s * 0.92);
   ctx.restore();
 }
 
