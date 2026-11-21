@@ -1,5 +1,5 @@
 /** The draft's photos; the maker's are `official`, `official2`, `official3`... (other angles and backgrounds of the same product). */
-export type PhotoKey = "clean" | "studio" | "background" | "original" | "cropped" | "official" | `official${number}`;
+export type PhotoKey = "clean" | "boxfront" | "studio" | "background" | "original" | "cropped" | "official" | `official${number}`;
 export interface OfferedPhoto {
   key: PhotoKey;
   url: string;
