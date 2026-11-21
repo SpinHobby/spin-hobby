@@ -245,15 +245,14 @@ export default function Storefront() {
     noindex: notFound || !!urlQuery, // search results are for shoppers, not search engines
   });
 
-  // Same split as the Events page. With nothing upcoming, show the latest events (newest first) so the strip isn't empty.
-  const { stripEvents, stripIsPast } = useMemo(() => {
-    const upcoming = EVENTS.filter((e) => !isPastEvent(e));
-    if (upcoming.length) return { stripEvents: upcoming.slice(0, 8), stripIsPast: false };
+  // Same split as the Events page: what's coming up, then every event already done this year (newest first), to show how many
+  // cons we go to (user, 2026-11-20)
+  const { upcomingEvents, pastEvents, pastYear } = useMemo(() => {
+    const year = String(new Date().getFullYear());
     return {
-      stripEvents: EVENTS.filter((e) => isPastEvent(e))
-        .reverse()
-        .slice(0, 6),
-      stripIsPast: true,
+      upcomingEvents: EVENTS.filter((e) => !isPastEvent(e)).slice(0, 8),
+      pastEvents: EVENTS.filter((e) => isPastEvent(e) && e.start.startsWith(year)).reverse(),
+      pastYear: year,
     };
   }, []);
   // Arriving from another page at /#events: the section only exists once the data has loaded, so the
@@ -690,20 +689,39 @@ export default function Storefront() {
             See all events →
           </Link>
         </div>
-        {stripIsPast && (
-          <p className="sf-events__note">No upcoming events right now. New dates are announced on Discord and Instagram. Recent events:</p>
-        )}
-        <div className="sf-events__list">
-          {stripEvents.map((e, i) => (
-            <span key={e.name + e.start} className={`sf-event ${stripIsPast ? "is-past" : ""}`}>
-              <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
-              {e.name}
-              <span className="sf-muted sf-event__date">
-                {eventDateShort(e.start, e.end)} · {e.city}
+        {upcomingEvents.length ? (
+          <div className="sf-events__list">
+            {upcomingEvents.map((e, i) => (
+              <span key={e.name + e.start} className="sf-event">
+                <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
+                {e.name}
+                <span className="sf-muted sf-event__date">
+                  {eventDateShort(e.start, e.end)} · {e.city}
+                </span>
               </span>
-            </span>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="sf-events__note">No upcoming events right now. New dates are announced on Discord and Instagram.</p>
+        )}
+        {pastEvents.length > 0 && (
+          <>
+            <p className="sf-events__note sf-events__past">
+              Where we've been in {pastYear}: {pastEvents.length} event{pastEvents.length === 1 ? "" : "s"}
+            </p>
+            <div className="sf-events__list">
+              {pastEvents.map((e, i) => (
+                <span key={e.name + e.start} className="sf-event is-past">
+                  <span className="sf-dot" style={{ background: EVENT_COLORS[i % EVENT_COLORS.length] }} />
+                  {e.name}
+                  <span className="sf-muted sf-event__date">
+                    {eventDateShort(e.start, e.end)} · {e.city}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
       </section>
     ),
   };
