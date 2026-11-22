@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { useEscape } from "../hooks";
-import { barcodeFits, perSheet, renderSheets, sheetPng, SIZES, type LabelSize, type StickerLabel } from "./labelSheet";
+import { barcodeFits, DPI, perSheet, renderSheets, sheetPng, SIZES, type LabelSize, type StickerLabel } from "./labelSheet";
+import { ptouchFiles, SHEETS_PER_FILE } from "./ptouch";
 import type { Ctx } from "./Screens";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
@@ -130,6 +131,32 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
     a.href = url;
     a.download = `spinhobby-labels-${new Date().toISOString().slice(0, 10)}-sheet-${i + 1}.png`;
     a.click();
+  };
+  // price tags as P-touch Editor files (16 tags each): open one, File > Print, "All Sheets"
+  const [ptouchBusy, setPtouchBusy] = useState(false);
+  const downloadPtouch = async () => {
+    setPtouchBusy(true);
+    try {
+      const files = await ptouchFiles(
+        sheets,
+        DPI,
+        printed.map((l) => `${l.price ?? ""} ${l.name}`.trim()),
+      );
+      const day = new Date().toISOString().slice(0, 10);
+      for (const [i, blob] of files.entries()) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `spinhobby-tags-${day}${files.length > 1 ? `-${i + 1}-of-${files.length}` : ""}.lbx`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        await new Promise((r) => setTimeout(r, 400)); // browsers drop downloads fired all at once
+      }
+    } catch (e) {
+      ctx.flash(errMsg(e));
+    } finally {
+      setPtouchBusy(false);
+    }
   };
   const downloadAll = async () => {
     for (const [i, url] of sheets.entries()) {
@@ -277,6 +304,18 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                     Print {sheets.length} tag{sheets.length === 1 ? "" : "s"}
                   </button>
                 )}
+                {size === "tag" && (
+                  <button
+                    type="button"
+                    className="sh-btn sh-btn--ghost"
+                    disabled={!sheets.length || drawing || ptouchBusy}
+                    onClick={downloadPtouch}
+                  >
+                    {ptouchBusy
+                      ? "Making the file…"
+                      : `For P-touch Editor${sheets.length > SHEETS_PER_FILE ? ` (${Math.ceil(sheets.length / SHEETS_PER_FILE)} files)` : ""}`}
+                  </button>
+                )}
                 <button
                   type="button"
                   className={`sh-btn${size === "tag" ? " sh-btn--ghost" : ""}`}
@@ -290,28 +329,51 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                 </button>
               </div>
 
-              <details className="ad-labels__howto" open>
-                <summary>Cutting them on the Cricut</summary>
-                <ol>
-                  <li>
-                    In Cricut Design Space: <b>New project → Upload → Upload image</b>, pick a sheet, choose <b>Complex</b>, press{" "}
-                    <b>Continue</b> (the background is already see-through), then choose <b>Print Then Cut image</b> and <b>Upload</b>.
-                  </li>
-                  <li>
-                    Add it to the canvas and set its width to exactly <b>6.75 in</b> (keep the padlock closed, so the height becomes 9.25
-                    in). This keeps the barcodes the right size.
-                  </li>
-                  <li>
-                    Press <b>Make it</b>, then <b>Send to printer</b>: load sticker paper, turn <b>Add bleed</b> on and{" "}
-                    <b>Use system dialog</b> on, and print at 100% (actual size, no “fit to page”).
-                  </li>
-                  <li>
-                    Put the printed sheet on the mat (top left), pick <b>Sticker Paper</b> as the material and let the Cricut cut around
-                    each sticker.
-                  </li>
-                </ol>
-                <p className="ad-muted ad-sm">Try one sticker at the till first: scan it in Square and check the right product comes up.</p>
-              </details>
+              {size === "tag" && (
+                <details className="ad-labels__howto" open>
+                  <summary>Printing them from P-touch Editor</summary>
+                  <ol>
+                    <li>
+                      Press <b>For P-touch Editor</b> and open the downloaded <b>.lbx</b> file: every tag is a sheet in it (
+                      {SHEETS_PER_FILE} at most per file; more tags download as several files).
+                    </li>
+                    <li>
+                      Load <b>62 mm continuous tape</b> (DK-2205) in the QL-810W. Each tag is cut at about 33 mm, the tag drawn a little
+                      smaller to stay clear of the edges the printer can’t reach.
+                    </li>
+                    <li>
+                      <b>File → Print</b>, choose <b>All Sheets</b> under “Sheet To Be Printed”, and press <b>Print</b>.
+                    </li>
+                  </ol>
+                  <p className="ad-muted ad-sm">P-touch Editor prints the tags in black (a red price prints black).</p>
+                </details>
+              )}
+              {size !== "tag" && (
+                <details className="ad-labels__howto" open>
+                  <summary>Cutting them on the Cricut</summary>
+                  <ol>
+                    <li>
+                      In Cricut Design Space: <b>New project → Upload → Upload image</b>, pick a sheet, choose <b>Complex</b>, press{" "}
+                      <b>Continue</b> (the background is already see-through), then choose <b>Print Then Cut image</b> and <b>Upload</b>.
+                    </li>
+                    <li>
+                      Add it to the canvas and set its width to exactly <b>6.75 in</b> (keep the padlock closed, so the height becomes 9.25
+                      in). This keeps the barcodes the right size.
+                    </li>
+                    <li>
+                      Press <b>Make it</b>, then <b>Send to printer</b>: load sticker paper, turn <b>Add bleed</b> on and{" "}
+                      <b>Use system dialog</b> on, and print at 100% (actual size, no “fit to page”).
+                    </li>
+                    <li>
+                      Put the printed sheet on the mat (top left), pick <b>Sticker Paper</b> as the material and let the Cricut cut around
+                      each sticker.
+                    </li>
+                  </ol>
+                  <p className="ad-muted ad-sm">
+                    Try one sticker at the till first: scan it in Square and check the right product comes up.
+                  </p>
+                </details>
+              )}
             </>
           )}
         </div>
