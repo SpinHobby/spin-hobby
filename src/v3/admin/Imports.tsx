@@ -7,6 +7,7 @@ import { DraftPhotos } from "./DraftPhotos";
 import { defaultPicks, type OfferedPhoto, type PhotoPick } from "./photoPicks";
 import { useBackgrounds, type Background } from "./photoBackgrounds";
 import { ListingUploads } from "./ListingUploads";
+import { preparePhoto } from "./preparePhoto";
 import { SeriesSelect } from "./SeriesSelect";
 import { findSeries, similarSeries, useSeriesList } from "./seriesList";
 import type { Ctx } from "./Screens";
@@ -432,6 +433,60 @@ function NewCategory({
   );
 }
 
+/** The start of Gleamshelf's note when a window box had no maker's photos (gleamshelf polish.ts NO_MAKER_PHOTOS). */
+const NO_MAKER_PHOTOS = "No maker’s photos were found";
+const MAX_BASE_PHOTOS = 4;
+
+/**
+ * A window box whose maker's photos were not found got its box front, cleaned, as the clean photo. A person can add base photos of the figure out
+ * of its box (from anywhere: a shop listing, a photo of their own) and the photo computer makes the draft again from them; the draft is replaced
+ * when it comes back.
+ */
+function TryAgainWithBasePhotos({ draftId, ctx }: { draftId: string; ctx: Ctx }) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const pick = async (list: FileList | null) => {
+    if (!list) return;
+    setBusy(true);
+    const ready: File[] = [];
+    for (const f of [...list].slice(0, MAX_BASE_PHOTOS)) {
+      const p = await preparePhoto(f);
+      if (p) ready.push(p);
+    }
+    if (ready.length < Math.min(list.length, MAX_BASE_PHOTOS)) ctx.flash("Some photos could not be read and were left out.");
+    setFiles(ready);
+    setBusy(false);
+  };
+  const send = async () => {
+    setBusy(true);
+    try {
+      const form = new FormData();
+      for (const f of files) form.append("photos", f, f.name);
+      await api(`/admin/listing-jobs/drafts/${draftId}`, { method: "POST", body: form });
+      setSent(true);
+      ctx.flash("Sent to the photo computer: this draft is replaced when it comes back.");
+    } catch (e) {
+      ctx.flash(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (sent) return <div className="ad-imports__retry ad-muted ad-sm">Being made again with your base photos…</div>;
+  return (
+    <div className="ad-imports__retry">
+      <b>No maker’s photos were found</b>, so the clean photo is the box front. Add up to {MAX_BASE_PHOTOS} photos of the figure out of its
+      box (the first is used, sharpened when small) and try again:
+      <div className="ad-imports__row">
+        <input type="file" accept="image/*,.heic,.heif" multiple disabled={busy} onChange={(e) => void pick(e.target.files)} />
+        <button type="button" className="sh-btn ad-btn-sm" disabled={busy || !files.length} onClick={() => void send()}>
+          Try again with {files.length || ""} base photo{files.length === 1 ? "" : "s"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DraftCard({
   draft,
   series,
@@ -668,6 +723,7 @@ function DraftCard({
           </div>
         )}
         <Evidence d={draft} />
+        {(draft.details.flags ?? []).some((f) => f.startsWith(NO_MAKER_PHOTOS)) && <TryAgainWithBasePhotos draftId={draft.id} ctx={ctx} />}
         {draft.details.market && <MarketPrice market={draft.details.market} onUse={setPrice} />}
         <div className="ad-imports__row ad-imports__buy">
           <label className={`ad-field ${shown("price") ? "has-error" : ""}`}>

@@ -1903,6 +1903,17 @@
   font-size: 12.5px;
   font-weight: 600;
 }
+.ad-imports__retry {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px dashed rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  font-size: 13px;
+  .ad-imports__row {
+    margin-top: 6px;
+    align-items: center;
+  }
+}
 .ad-imports__health {
   display: grid;
   grid-template-columns: auto 1fr;
