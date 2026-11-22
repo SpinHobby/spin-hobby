@@ -12,17 +12,10 @@ import type { OfferedPhoto, PhotoKey, PhotoPick } from "./photoPicks";
 const PhotoEditor = lazy(loadPhotoEditor);
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
-const LABELS: Record<
-  "clean" | "boxfront" | "studio" | "background" | "cropped" | "original" | "official",
-  { title: string; hint: string }
-> = {
+const LABELS: Record<"clean" | "studio" | "background" | "cropped" | "original" | "official", { title: string; hint: string }> = {
   clean: {
     title: "Clean product photo",
     hint: "the figure alone, no box print or stickers: drawn by AI from your photo, so check the face, colours and small parts against the real one",
-  },
-  boxfront: {
-    title: "Box front, cleaned",
-    hint: "the box the figure above was taken out of, stickers and window glare off: check the figure against it",
   },
   studio: { title: "Cleaned photo", hint: "made by the photo computer: background removed, stickers off, sharpened" },
   background: {
