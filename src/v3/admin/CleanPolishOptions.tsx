@@ -45,11 +45,14 @@ export function CleanPolishOptions({
       )}
 
       <div className="ad-label">Window box, bag or blister</div>
-      <p className="ad-muted ad-sm">Always the figure alone, out of its packaging, on the backdrop below.</p>
+      <p className="ad-muted ad-sm">
+        The maker&apos;s own photo of the figure, cut out onto the backdrop below (redrawn sharper when it is small). When the maker&apos;s
+        photos are not found, your own photo of the box, with more vivid colours: nothing is drawn from behind the plastic, and the draft
+        lets you add photos of the figure to try again.
+      </p>
       <label className="ad-check">
-        <input type="checkbox" checked={polish.makerPhotos} onChange={(e) => set({ makerPhotos: e.target.checked })} /> Draw the figure from
-        the maker&apos;s official photos{" "}
-        <small className="ad-muted">(the plastic hides its legs and blurs its face; without them the AI guesses what it cannot see)</small>
+        <input type="checkbox" checked={polish.makerPhotos} onChange={(e) => set({ makerPhotos: e.target.checked })} /> Look for the
+        maker&apos;s official photos <small className="ad-muted">(the plastic hides the figure&apos;s legs and blurs its face)</small>
       </label>
       {polish.makerPhotos && official === false && (
         <div className="ad-uploads__warn">
