@@ -1254,6 +1254,7 @@ function Footer({ currency, onCurrency, onNav }: { currency: Currency; onCurrenc
             </a>
           )}
           <Link to="/events">Events</Link>
+          <Link to="/sold">Sold pieces</Link>
         </div>
         <div className="sf-footer__col">
           <span className="sf-footer__h">Help</span>

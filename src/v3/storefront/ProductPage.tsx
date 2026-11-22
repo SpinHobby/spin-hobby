@@ -915,11 +915,13 @@ function Details({ p, currency }: { p: Product; currency: Currency }) {
     ["Series", p.series ?? ""],
     ["Character", p.character ?? ""],
     ["Category", p.category ?? ""],
+    ["Maker", p.manufacturer ?? ""],
     ["Release", p.releaseMonth ? monthLabel(p.releaseMonth) : ""],
     ["Order by", normalizeStatus(p.status) === "pre" && p.orderByDate ? dayLabel(p.orderByDate) : ""],
     ["JAN code", p.janCode ?? ""],
     ["Limit", p.maxPerCustomer ? `${p.maxPerCustomer} per customer` : ""],
-    ["Price", `${price(p.priceCents, currency)}${currency === "USD" ? ` (estimate; you're charged ${price(p.priceCents)})` : ""}`],
+    // the price is already beside the button; only the USD estimate needs spelling out here
+    ["Price", currency === "USD" ? `${price(p.priceCents, currency)} (estimate; you're charged ${price(p.priceCents)})` : ""],
   ];
   const shown = rows.filter(([, v]) => v);
   return (

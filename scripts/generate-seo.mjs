@@ -455,6 +455,12 @@ async function main() {
       description: "Find Spin Hobby at anime conventions and community events across Canada: dates, venues and links.",
     },
     {
+      path: "/sold",
+      title: "Sold Pieces: Hololive Goods, Plushies, Keychains and Figures | Spin Hobby",
+      description:
+        "Pieces that found a home: Hololive goods, plushies, keychains, acrylic stands, tapestries and figures sold at our convention tables and online.",
+    },
+    {
       path: "/support",
       title: "Help & Support | Spin Hobby",
       description: "Contact Spin Hobby and find answers on shipping, pre-orders, order status, returns and restock alerts.",

@@ -133,6 +133,8 @@ export function statusLabel(p: Product) {
   switch (s) {
     case "in":
     case "low":
+      // a single piece is the shop's usual case and its best reason to buy now, so it is said in words (no badge: see STATUS_META)
+      if (n === 1) return `Only 1 left · ships in ${handlingLabel()}`;
       return n ? `${n} in stock · ships in ${handlingLabel()}` : `In stock · ships in ${handlingLabel()}`;
     case "pre":
       return `Release ${monthLabel(p.releaseMonth)} · order by ${dayLabel(p.orderByDate)}`;
@@ -146,6 +148,7 @@ export function statusShort(p: Product) {
   switch (s) {
     case "in":
     case "low":
+      if (p.stockCount === 1) return "Only 1 left";
       return p.stockCount ? `${p.stockCount} in stock` : "In stock";
     case "pre":
       return `Pre-order · ${monthLabel(p.releaseMonth)}`;
