@@ -12,8 +12,8 @@ export type LabelSize = "small" | "large" | "tag";
 export const SIZES: Record<LabelSize, { width: number; height: number; name: string }> = {
   small: { width: 2.1, height: 1.2, name: "Small, 2.1 × 1.2 in" },
   large: { width: 3, height: 1.6, name: "Large, 3 × 1.6 in" },
-  // a price tag for the Brother QL-810 (300 dpi, black): DK-2205 62 mm continuous tape cut every 29 mm, or DK-1209 pre-cut labels
-  tag: { width: 62 / 25.4, height: 29 / 25.4, name: "Price tag, Brother QL-810 (62 × 29 mm)" },
+  // a price tag for the Brother QL-810 (300 dpi, black): DK-2205 62 mm continuous tape cut every 22 mm (the printer adds a few mm of feed)
+  tag: { width: 62 / 25.4, height: 22 / 25.4, name: "Price tag, Brother QL-810 (62 × 22 mm)" },
 };
 
 export interface StickerLabel {
@@ -185,13 +185,14 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: StickerLabel, x: number
 
 /** Where a price tag's two columns are, in pixels from its left edge: the price on the left, what to scan on the right. */
 function tagColumns(w: number, h: number) {
-  const pad = Math.round(h * 0.05);
-  const leftW = Math.round(w * 0.43);
-  return { pad, left: { x: pad, w: leftW - pad }, right: { x: leftW + pad, w: w - leftW - 2 * pad } };
+  const pad = Math.round(h * 0.055);
+  const leftW = Math.round(w * 0.3);
+  const gap = Math.round(pad * 0.7);
+  return { pad, left: { x: pad, w: leftW - pad }, right: { x: leftW + gap, w: w - leftW - gap - pad } };
 }
 
 /**
- * A price tag for the Brother QL-810 (62 × 29 mm): on the left the mascot's line drawing from the ears down to the chest, filling the column,
+ * A price tag for the Brother QL-810 (62 × 22 mm): on the left the mascot's line drawing from the ears down to the chest, filling the column,
  * the price over the empty corner beside her ears and spinhobby.com across her chest (both white-edged so they read over the lines); on the
  * right the product's name, the barcode of its SKU (the cashier's Square app scans it), the code, and the social handle with Instagram and
  * Facebook marks when one is given.
@@ -214,14 +215,14 @@ function drawPriceTag(
 
   // the mascot first, bottom-aligned and as big as the column allows: her chin sits about 72% down the drawing, so at this size the whole
   // face stays above the website line across her chest
-  const artSize = Math.min(left.w, Math.round(h * 0.78));
+  const artSize = Math.min(left.w, Math.round(h * 0.8));
   const artX = x + left.x + Math.round((left.w - artSize) / 2);
   const artY = y + h - artSize;
   ctx.drawImage(art, artX, artY, artSize, artSize);
 
   // the price over the top of the column, white-edged where it crosses her ears
   const price = label.price ?? "";
-  let size = Math.round(h * 0.4);
+  let size = Math.round(h * 0.42);
   ctx.font = `800 ${size}px ${UI_FONT}`;
   while (size > 20 && ctx.measureText(price).width > left.w) {
     size -= 4;
@@ -236,7 +237,7 @@ function drawPriceTag(
   ctx.fillText(price, x + left.x, priceY, left.w);
 
   // the website across her chest
-  const siteSize = Math.round(h * 0.1);
+  const siteSize = Math.round(h * 0.11);
   ctx.font = `800 ${siteSize}px ${UI_FONT}`;
   ctx.textAlign = "center";
   const siteY = y + h - pad - siteSize;
@@ -246,20 +247,20 @@ function drawPriceTag(
   ctx.fillText("spinhobby.com", x + left.x + left.w / 2, siteY, left.w);
   ctx.textAlign = "start";
 
-  // a thin line between the columns
-  ctx.fillRect(x + right.x - Math.round(pad * 0.6), y + pad, Math.max(1, Math.round(h / 300)), h - 2 * pad);
-
   // right column: the name, the barcode and its code, the handle
-  const nameSize = Math.round(h * 0.075);
+  const nameSize = Math.round(h * 0.1);
   ctx.font = `700 ${nameSize}px ${UI_FONT}`;
   const names = wrap(ctx, label.name, right.w, 2);
   let ty = y + pad;
+  // centred over the barcode
+  ctx.textAlign = "center";
   for (const line of names) {
-    ctx.fillText(line, x + right.x, ty, right.w);
+    ctx.fillText(line, x + right.x + right.w / 2, ty, right.w);
     ty += Math.round(nameSize * 1.15);
   }
-  const codeSize = Math.round(h * 0.07);
-  const handleSize = label.handle ? Math.round(h * 0.07) : 0;
+  ctx.textAlign = "start";
+  const codeSize = Math.round(h * 0.09);
+  const handleSize = label.handle ? Math.round(h * 0.09) : 0;
   const barTop = ty + Math.round(pad * 0.4);
   const barBottom = y + h - pad - codeSize - (handleSize ? handleSize + Math.round(pad * 0.5) : 0) - Math.round(pad * 0.3);
   const widths = label.barcode ? code128Widths(label.barcode) : null;
