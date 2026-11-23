@@ -914,6 +914,8 @@ function Details({ p, currency }: { p: Product; currency: Currency }) {
   const rows: [string, string][] = [
     ["Series", p.series ?? ""],
     ["Character", p.character ?? ""],
+    ["Maker", p.manufacturer ?? ""],
+    ["Product line", p.productLine ?? ""],
     ["Category", p.category ?? ""],
     ["Release", p.releaseMonth ? monthLabel(p.releaseMonth) : ""],
     ["Order by", normalizeStatus(p.status) === "pre" && p.orderByDate ? dayLabel(p.orderByDate) : ""],

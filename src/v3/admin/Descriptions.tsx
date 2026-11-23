@@ -37,6 +37,8 @@ interface Proposal {
   description: string;
   series: string | null;
   manufacturer: string | null;
+  /** The product line (Gleamshelf apps from November 2026). */
+  line?: string | null;
   category: string | null;
   highlights: string[];
   unsupported: string[];
@@ -65,6 +67,7 @@ interface Job {
     description: string | null;
     series: string | null;
     manufacturer: string | null;
+    line?: string | null;
     category: string | null;
   };
   createdAt: string;
@@ -90,6 +93,7 @@ interface Edit {
   description: string;
   series: string;
   maker: string;
+  line: string;
   categoryId: string;
   /** The parts that will be applied. */
   use: Record<Part, boolean>;
@@ -124,6 +128,7 @@ const editOf = (j: Job, tree: CategoryTree): Edit => {
     description: p?.description ?? "",
     series: p?.series ?? j.current.series ?? "",
     maker: p?.manufacturer ?? j.current.manufacturer ?? "",
+    line: p?.line ?? j.current.line ?? "",
     categoryId: category?.id ?? j.current.categoryId ?? "",
     use: {
       title: asked.has("title") && !!p?.title,
@@ -142,6 +147,7 @@ function applyBody(j: Job, e: Edit) {
   if (e.use.details) {
     if (e.series.trim() !== (j.current.series ?? "")) body.series = e.series.trim() || null;
     if (e.maker.trim() !== (j.current.manufacturer ?? "")) body.manufacturer = e.maker.trim() || null;
+    if (e.line.trim() !== (j.current.line ?? "")) body.product_line = e.line.trim() || null;
   }
   if (e.use.category && e.categoryId !== (j.current.categoryId ?? "")) body.category_id = e.categoryId || null;
   return body;
@@ -596,7 +602,11 @@ function ProposalCard({
             disabled={!edit.use.description}
             onChange={(e) => onEdit({ description: e.target.value })}
           />
-          <CheckboxField label="Use the series and maker" checked={edit.use.details} onChange={(e) => use("details", e.target.checked)} />
+          <CheckboxField
+            label="Use the series, maker and product line"
+            checked={edit.use.details}
+            onChange={(e) => use("details", e.target.checked)}
+          />
           <FormRow>
             <TextField
               label="Series"
@@ -612,6 +622,14 @@ function ProposalCard({
               value={edit.maker}
               disabled={!edit.use.details}
               onChange={(e) => onEdit({ maker: e.target.value })}
+            />
+            <TextField
+              label="Product line"
+              hint={j.current.line && j.current.line !== edit.line ? `now: ${j.current.line}` : undefined}
+              placeholder="e.g. Relax Time"
+              value={edit.line}
+              disabled={!edit.use.details}
+              onChange={(e) => onEdit({ line: e.target.value })}
             />
           </FormRow>
           <CheckboxField label="Use the category" checked={edit.use.category} onChange={(e) => use("category", e.target.checked)} />
