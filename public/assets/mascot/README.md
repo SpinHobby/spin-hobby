@@ -26,6 +26,4 @@ line-head.png: black lines on transparent (alpha = 255 minus the drawing's grey,
 label printer prints black or white only, so the thin lines would break: every line was made 2.5 times as wide, keeping the
 drawing's own thick and thin lines, and nothing was redrawn. How: at twice the crop's size, for each half-width r from 1 to 6 px
 the parts where a (2r+1) square fits (an opening) were widened by round(1.5 × (r + 0.5)) px, and the largest result kept; strokes
-wider than that (the black of the eyes and mouth) only grow by the r = 6 amount. The eyes and mouth use the same method at 1.2
-times instead (2.5 clogged them): ellipses centred at 655,735 / 987,685 / 865,905 in the crop, radii 105×95 / 112×95 / 80×62,
-blurred 8 px, take the 1.2 version. Then scaled down to 700 px.
+wider than that (the black of the eyes and mouth) only grow by the r = 6 amount. Then scaled down to 700 px.
