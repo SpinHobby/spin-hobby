@@ -47,6 +47,7 @@ import { PageLayoutCard } from "./PageLayout";
 import { ThemePicker } from "./ThemePicker";
 import { SeriesSelect } from "./SeriesSelect";
 import { ImprovePhotosDialog } from "./PhotoQueue";
+import { RedoDialog } from "./Redo";
 import { LabelsDialog } from "./Labels";
 import { useSeriesList } from "./seriesList";
 import { MoveToSquareDialog, SourceBadge, VisibilityToggle } from "./ProductSource";
@@ -423,6 +424,7 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
   const [bulkTarget, setBulkTarget] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
   const [improving, setImproving] = useState(false);
+  const [redoing, setRedoing] = useState(false);
   const [labelling, setLabelling] = useState(false);
   const [selectingAll, setSelectingAll] = useState(false);
   const [moving, setMoving] = useState<Product | null>(null);
@@ -689,10 +691,10 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           <button
             type="button"
             className="sh-btn sh-btn--ghost ad-btn-sm"
-            onClick={() => setImproving(true)}
-            title="Clean up the photos of these products on the photo computer"
+            onClick={() => setRedoing(true)}
+            title="Gleamshelf, on the shop's computer, does these products again: photos, title, description, series and maker, category"
           >
-            Improve photos
+            Redo with Gleamshelf
           </button>
           <button
             type="button"
@@ -707,6 +709,17 @@ export function ProductsScreen({ ctx }: { ctx: Ctx }) {
           </button>
           {!tree.flat.length && <span className="ad-muted ad-sm">Create categories first in the Categories screen.</span>}
         </div>
+      )}
+      {redoing && (
+        <RedoDialog
+          productIds={[...selected]}
+          ctx={ctx}
+          onClose={() => setRedoing(false)}
+          onPhotos={() => {
+            setRedoing(false);
+            setImproving(true);
+          }}
+        />
       )}
       {improving && <ImprovePhotosDialog productIds={[...selected]} ctx={ctx} onClose={() => setImproving(false)} />}
       {labelling && <LabelsDialog productIds={rowOrder(rows, selected)} ctx={ctx} onClose={() => setLabelling(false)} />}

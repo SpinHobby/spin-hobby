@@ -79,14 +79,6 @@ interface Market {
   listings: MarketListing[];
 }
 const cad = (n: number) => `$${n.toFixed(2)}`;
-interface Connection {
-  id: string;
-  label: string;
-  createdAt: string;
-  lastUsedAt: string | null;
-  revoked: boolean;
-}
-
 const LABEL: Record<Status, string> = { draft: "To review", added: "Added", rejected: "Rejected" };
 
 /**
@@ -98,7 +90,6 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [counts, setCounts] = useState<Record<Status, number>>({ draft: 0, added: 0, rejected: 0 });
   const [loaded, setLoaded] = useState(false);
-  const [connect, setConnect] = useState(false);
   const [upload, setUpload] = useState(false);
   const series = useSeriesList();
   const backgrounds = useBackgrounds();
@@ -177,11 +168,9 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
         <button type="button" className="sh-btn ad-btn-sm" onClick={() => setUpload((v) => !v)}>
           {upload ? "Hide" : "Make drafts from photos"}
         </button>
-        {ctx.isOwner && (
-          <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setConnect((v) => !v)}>
-            {connect ? "Hide" : "Connect the app"}
-          </button>
-        )}
+        <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => ctx.go("Gleamshelf")}>
+          Gleamshelf connection
+        </button>
       </div>
       {upload && (
         <ListingUploads
@@ -191,7 +180,6 @@ export function ImportsScreen({ ctx }: { ctx: Ctx }) {
           }}
         />
       )}
-      {connect && ctx.isOwner && <ConnectPanel ctx={ctx} />}
 
       <div className="ad-chips" role="group" aria-label="Drafts">
         {(Object.keys(LABEL) as Status[]).map((s) => (
@@ -740,93 +728,6 @@ function DoneCard({ draft }: { draft: Draft }) {
             </>
           )}
         </div>
-      </div>
-    </section>
-  );
-}
-
-function ConnectPanel({ ctx }: { ctx: Ctx }) {
-  const [code, setCode] = useState<{ code: string; expiresAt: string; server: string } | null>(null);
-  const [apps, setApps] = useState<Connection[]>([]);
-  const refresh = useCallback(
-    () =>
-      api<{ connections: Connection[] }>("/admin/imports/connections")
-        .then((r) => setApps(r.connections.filter((c) => !c.revoked)))
-        .catch(() => undefined),
-    [],
-  );
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-  // while a code is shown, the app using it is looked for every 3 seconds: once it has connected, the code (now used up) gives way to the app's name
-  const known = useRef<Set<string> | null>(null);
-  useEffect(() => {
-    if (!code) return;
-    known.current = new Set(apps.map((a) => a.id));
-    const timer = window.setInterval(async () => {
-      const r = await api<{ connections: Connection[] }>("/admin/imports/connections").catch(() => null);
-      if (!r) return;
-      const live = r.connections.filter((c) => !c.revoked);
-      setApps(live);
-      const fresh = live.find((c) => !known.current?.has(c.id));
-      if (fresh) {
-        setCode(null);
-        ctx.flash(`Connected: ${fresh.label}. Drafts it sends appear below.`);
-      }
-      if (Date.parse(code.expiresAt) < Date.now()) setCode(null);
-    }, 3000);
-    return () => window.clearInterval(timer);
-  }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
-  const show = async () => {
-    try {
-      setCode(await api<{ code: string; expiresAt: string; server: string }>("/admin/imports/pairing", { method: "POST" }));
-    } catch (e) {
-      ctx.flash(errMsg(e));
-    }
-  };
-  const disconnect = async (id: string) => {
-    if (!window.confirm("Disconnect this app? It will stop being able to send drafts.")) return;
-    try {
-      await api(`/admin/imports/connections/${id}`, { method: "DELETE" });
-      void refresh();
-    } catch (e) {
-      ctx.flash(errMsg(e));
-    }
-  };
-  return (
-    <section className="ad-card ad-imports__connect">
-      <div>
-        <div className="ad-label">Connect a Gleamshelf app</div>
-        <p className="ad-muted ad-sm">
-          In the Gleamshelf app, choose <b>Connect to a shop</b> and enter the address and the code shown below. The code works once, for 10
-          minutes.
-        </p>
-        <button type="button" className="sh-btn ad-btn-sm" onClick={show}>
-          Show a new code
-        </button>
-        {code && (
-          <div className="ad-imports__code" aria-live="polite">
-            {code.code}
-            <small>
-              address {code.server} · expires {new Date(code.expiresAt).toLocaleTimeString()}
-            </small>
-          </div>
-        )}
-      </div>
-      <div>
-        <div className="ad-label">Connected apps</div>
-        {apps.length === 0 && <div className="ad-muted ad-sm">None yet.</div>}
-        {apps.map((a) => (
-          <div key={a.id} className="ad-imports__app">
-            <span>
-              <b>{a.label}</b>{" "}
-              <span className="ad-muted ad-sm">{a.lastUsedAt ? `last used ${new Date(a.lastUsedAt).toLocaleString()}` : "never used"}</span>
-            </span>
-            <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => disconnect(a.id)}>
-              Disconnect
-            </button>
-          </div>
-        ))}
       </div>
     </section>
   );

@@ -30,6 +30,7 @@ import { CategoriesScreen } from "./Categories";
 import { ImportsScreen } from "./Imports";
 import { PhotosScreen } from "./PhotoQueue";
 import { DescriptionsScreen } from "./Descriptions";
+import { GleamshelfScreen } from "./Gleamshelf";
 import { BarcodesScreen } from "./Barcodes";
 import { isOn } from "../../features";
 import { preloadPhotoEditor } from "./photoEditorChunk";
@@ -183,6 +184,7 @@ export default function Admin() {
       {screen === "Imports" && <ImportsScreen ctx={ctx} />}
       {screen === "Photos" && <PhotosScreen ctx={ctx} />}
       {screen === "Descriptions" && <DescriptionsScreen ctx={ctx} />}
+      {screen === "Gleamshelf" && <GleamshelfScreen ctx={ctx} />}
       {screen === "Barcodes" && <BarcodesScreen ctx={ctx} />}
       {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
       {screen === "Orders" && <OrdersScreen ctx={ctx} />}

@@ -307,8 +307,9 @@ export function PhotosScreen({ ctx }: { ctx: Ctx }) {
     <>
       <div className="ad-toolbar">
         <div className="ad-muted ad-sm" style={{ flex: "1 1 320px" }}>
-          Better photos for many products at once. In <b>Products</b>, tick the products and press <b>Improve photos</b>. The photo computer
-          works through them one by one (leave it running overnight), and you check the results here before anything changes.
+          Better photos for many products at once. In <b>Products</b>, tick the products, press <b>Redo with Gleamshelf</b> and tick{" "}
+          <b>Photos</b>. The photo computer works through them one by one (leave it running overnight), and you check the results here
+          before anything changes.
         </div>
         <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setLibrary((v) => !v)}>
           {library ? "Hide shop background" : `Shop background: ${backgrounds.shop?.name ?? "white"}`}
@@ -364,7 +365,7 @@ export function PhotosScreen({ ctx }: { ctx: Ctx }) {
       )}
       {loaded && batches.length === 0 && (
         <section className="ad-card">
-          <div className="ad-empty">Nothing sent yet. In Products, tick some products and press Improve photos.</div>
+          <div className="ad-empty">Nothing sent yet. In Products, tick some products, press Redo with Gleamshelf and tick Photos.</div>
         </section>
       )}
       <div className="ad-imports">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { inUse } from "./inUse";
 import {
   Banner,
@@ -11,6 +11,7 @@ import {
   LinkButton,
   ProgressBar,
   SegmentedControl,
+  SelectField,
   Stats,
   StatusBadge,
   Tabs,
@@ -20,15 +21,19 @@ import {
   type Column,
 } from "../../components";
 import { api } from "../../lib/api";
+import { buildTree, indentLabel, type CategoryTree } from "../categoryTree";
 import { JobProgress } from "./JobProgress";
 import type { Ctx } from "./Screens";
 
 /**
  * Descriptions for products the shop already sells. The photo computer (Gleamshelf, `npm run worker`) reads each product's photo, looks the product up and
- * proposes a description, series and maker; nothing changes on the shop until a person applies a proposal here. Applying writes the description to Square
- * (and the series and maker to the product); skipping leaves the product as it was.
+ * proposes a title, description, series, maker and category; nothing changes on the shop until a person applies a proposal here. Each part has its own
+ * tick (the parts asked for in Products > Redo with Gleamshelf start ticked); applying writes the ticked title and description to Square and the series,
+ * maker and category to the product. Skipping leaves the product as it was.
  */
 interface Proposal {
+  /** Older Gleamshelf apps propose no title. */
+  title?: string | null;
   description: string;
   series: string | null;
   manufacturer: string | null;
@@ -52,7 +57,16 @@ interface Job {
   startedAt: string | null;
   error: string | null;
   proposal: Proposal | null;
-  current: { description: string | null; series: string | null; manufacturer: string | null; category: string | null };
+  /** What the person asked to redo (Products > Redo with Gleamshelf); null: the description, from this screen. */
+  parts?: Part[] | null;
+  current: {
+    name?: string;
+    categoryId?: string | null;
+    description: string | null;
+    series: string | null;
+    manufacturer: string | null;
+    category: string | null;
+  };
   createdAt: string;
 }
 interface Worker {
@@ -69,10 +83,16 @@ interface Listing {
   missing: number;
   workers: Worker[];
 }
+/** The parts of a product a proposal can change; "details" is the series and the maker. */
+type Part = "title" | "description" | "details" | "category";
 interface Edit {
+  title: string;
   description: string;
   series: string;
   maker: string;
+  categoryId: string;
+  /** The parts that will be applied. */
+  use: Record<Part, boolean>;
 }
 type View = "review" | "queue" | "finished";
 
@@ -85,17 +105,45 @@ const host = (url: string) => {
     return url;
   }
 };
-const editOf = (j: Job): Edit => ({
-  description: j.proposal?.description ?? "",
-  series: j.proposal?.series ?? j.current.series ?? "",
-  maker: j.proposal?.manufacturer ?? j.current.manufacturer ?? "",
-});
+/** The shop category whose name matches the proposed one (ignoring case), or null. */
+const categoryNamed = (tree: CategoryTree, name: string | null | undefined) => {
+  const want = name?.trim().toLowerCase();
+  return want ? (tree.flat.find((c) => c.name.trim().toLowerCase() === want) ?? null) : null;
+};
 
-/** The body for applying: the description always; the series and maker only when they differ from what the product has now. */
+/**
+ * A proposal as first shown: the proposed title, words and category (the category only when it is one of the shop's), with the parts the person asked
+ * for ticked (from this screen: the description, series and maker). A part the proposal has nothing for starts unticked.
+ */
+const editOf = (j: Job, tree: CategoryTree): Edit => {
+  const p = j.proposal;
+  const asked = new Set<Part>(j.parts ?? ["description", "details"]);
+  const category = categoryNamed(tree, p?.category);
+  return {
+    title: p?.title ?? j.current.name ?? j.productName,
+    description: p?.description ?? "",
+    series: p?.series ?? j.current.series ?? "",
+    maker: p?.manufacturer ?? j.current.manufacturer ?? "",
+    categoryId: category?.id ?? j.current.categoryId ?? "",
+    use: {
+      title: asked.has("title") && !!p?.title,
+      description: asked.has("description") && !!p?.description,
+      details: asked.has("details"),
+      category: asked.has("category") && !!category,
+    },
+  };
+};
+
+/** The body for applying: only the ticked parts; the series and maker only when they differ from what the product has now. */
 function applyBody(j: Job, e: Edit) {
-  const body: Record<string, string | null> = { description: e.description.trim() };
-  if (e.series.trim() !== (j.current.series ?? "")) body.series = e.series.trim() || null;
-  if (e.maker.trim() !== (j.current.manufacturer ?? "")) body.manufacturer = e.maker.trim() || null;
+  const body: Record<string, string | null> = {};
+  if (e.use.title) body.title = e.title.trim();
+  if (e.use.description) body.description = e.description.trim();
+  if (e.use.details) {
+    if (e.series.trim() !== (j.current.series ?? "")) body.series = e.series.trim() || null;
+    if (e.maker.trim() !== (j.current.manufacturer ?? "")) body.manufacturer = e.maker.trim() || null;
+  }
+  if (e.use.category && e.categoryId !== (j.current.categoryId ?? "")) body.category_id = e.categoryId || null;
   return body;
 }
 
@@ -110,6 +158,7 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [working, setWorking] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
+  const tree = useMemo(() => buildTree(ctx.data.categories), [ctx.data.categories]);
 
   const load = useCallback(async () => {
     try {
@@ -140,8 +189,9 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
   const queue = data?.jobs.filter((j) => j.status !== "done") ?? [];
   const counts = data?.counts;
   const worker = data?.workers.find((w) => w.canDescribe) ?? data?.workers.find((w) => w.online) ?? data?.workers[0] ?? null;
-  const edit = (j: Job) => edits[j.id] ?? editOf(j);
-  const setEdit = (j: Job, change: Partial<Edit>) => setEdits((all) => ({ ...all, [j.id]: { ...(all[j.id] ?? editOf(j)), ...change } }));
+  const edit = (j: Job) => edits[j.id] ?? editOf(j, tree);
+  const setEdit = (j: Job, change: Partial<Edit>) =>
+    setEdits((all) => ({ ...all, [j.id]: { ...(all[j.id] ?? editOf(j, tree)), ...change } }));
   const busy = (id: string, on: boolean) =>
     setWorking((s) => {
       const n = new Set(s);
@@ -188,13 +238,22 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
   };
   const apply = async (j: Job) => {
     const e = edit(j);
-    if (e.description.trim().length < 20) {
-      ctx.flash("Write a description of at least a sentence.");
+    if (e.use.description && e.description.trim().length < 20) {
+      ctx.flash(`${j.productName}: write a description of at least a sentence.`);
+      return false;
+    }
+    if (e.use.title && e.title.trim().length < 3) {
+      ctx.flash(`${j.productName}: write a title.`);
+      return false;
+    }
+    const body = applyBody(j, e);
+    if (!Object.keys(body).length) {
+      ctx.flash(`${j.productName}: tick what to apply, or skip it (nothing ticked differs from the product now).`);
       return false;
     }
     busy(j.id, true);
     try {
-      await api(`/admin/describe-jobs/${j.id}/apply`, { method: "POST", body: JSON.stringify(applyBody(j, e)) });
+      await api(`/admin/describe-jobs/${j.id}/apply`, { method: "POST", body: JSON.stringify(body) });
       drop(j.id);
       return true;
     } catch (err) {
@@ -226,7 +285,7 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
       setBulk({ done: i + 1, total: list.length });
     }
     setBulk(null);
-    ctx.flash(`${plural(ok, "description")} applied${ok < list.length ? `; ${list.length - ok} still waiting` : ""}`);
+    ctx.flash(`${plural(ok, "proposal")} applied${ok < list.length ? `; ${list.length - ok} still waiting` : ""}`);
     await load();
   };
   const clearQueue = async () => {
@@ -283,8 +342,9 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
 
       <Card title="Write descriptions" padded>
         <p style={{ margin: 0 }} className="ui-text2">
-          The photo computer reads each product's photo, looks the product up online and proposes a description, series and maker. It runs
-          on the shop's own computer, so it's free. Nothing changes in the shop until you apply a proposal.
+          The photo computer reads each product's photo, looks the product up online and proposes a title, description, series, maker and
+          category. It runs on the shop's own computer, so it's free. Nothing changes in the shop until you apply a proposal. For a new
+          title or category, tick products in Products and press Redo with Gleamshelf.
         </p>
         <Toolbar>
           <SegmentedControl
@@ -348,6 +408,7 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
               <ProposalCard
                 key={j.id}
                 job={j}
+                tree={tree}
                 edit={edit(j)}
                 onEdit={(c) => setEdit(j, c)}
                 picked={picked.has(j.id)}
@@ -361,7 +422,7 @@ export function DescriptionsScreen({ ctx }: { ctx: Ctx }) {
                   })
                 }
                 onApply={async () => {
-                  if (await apply(j)) ctx.flash(`Description applied to ${j.productName}`);
+                  if (await apply(j)) ctx.flash(`Applied to ${j.productName}`);
                 }}
                 onSkip={() => act(j, "dismiss", "Skipped: the product is unchanged")}
               />
@@ -468,9 +529,13 @@ const finishedColumns = (working: Set<string>, act: Act): Column<Job>[] => [
   },
 ];
 
-/** One proposal: the product's photo, what it has now, and the proposed description, series and maker, all editable, with where the facts came from. */
+/**
+ * One proposal: the product's photo, what it has now, and the proposed title, description, series and maker, and category, all editable, each with a
+ * tick for whether it is applied, with where the facts came from.
+ */
 function ProposalCard({
   job: j,
+  tree,
   edit,
   onEdit,
   picked,
@@ -480,6 +545,7 @@ function ProposalCard({
   onSkip,
 }: {
   job: Job;
+  tree: CategoryTree;
   edit: Edit;
   onEdit: (change: Partial<Edit>) => void;
   picked: boolean;
@@ -489,6 +555,7 @@ function ProposalCard({
   onSkip: () => void;
 }) {
   const p = j.proposal!;
+  const use = (part: Part, on: boolean) => onEdit({ use: { ...edit.use, [part]: on } });
   const notes = [...p.flags, ...(p.unsupported.length ? [`Not found online: ${p.unsupported.join(", ")}`] : [])];
   return (
     <Card title={j.productName} action={<CheckboxField label="Tick" checked={picked} onChange={(e) => onPick(e.target.checked)} />} padded>
@@ -497,6 +564,26 @@ function ProposalCard({
           {j.photoUrl ? <img src={j.photoUrl} alt={j.productName} loading="lazy" /> : <span className="ui-muted ui-sm">No photo</span>}
         </div>
         <div className="ad-describe__main">
+          <CheckboxField
+            label={p.title ? "Use the new title" : "Use a new title (Gleamshelf proposed none: type one)"}
+            checked={edit.use.title}
+            onChange={(e) => use("title", e.target.checked)}
+          />
+          {(edit.use.title || p.title) && (
+            <TextField
+              label="Title"
+              hint={j.current.name && j.current.name !== edit.title ? `now: ${j.current.name}` : undefined}
+              maxLength={255}
+              value={edit.title}
+              disabled={!edit.use.title}
+              onChange={(e) => onEdit({ title: e.target.value })}
+            />
+          )}
+          <CheckboxField
+            label="Use the new description"
+            checked={edit.use.description}
+            onChange={(e) => use("description", e.target.checked)}
+          />
           <p className="ad-describe__now ui-sm">
             <b>Now:</b> {j.current.description?.trim() ? j.current.description : <span className="ui-muted">no description</span>}
           </p>
@@ -506,13 +593,16 @@ function ProposalCard({
             rows={5}
             maxLength={4000}
             value={edit.description}
+            disabled={!edit.use.description}
             onChange={(e) => onEdit({ description: e.target.value })}
           />
+          <CheckboxField label="Use the series and maker" checked={edit.use.details} onChange={(e) => use("details", e.target.checked)} />
           <FormRow>
             <TextField
               label="Series"
               hint={j.current.series && j.current.series !== edit.series ? `now: ${j.current.series}` : undefined}
               value={edit.series}
+              disabled={!edit.use.details}
               onChange={(e) => onEdit({ series: e.target.value })}
             />
             <TextField
@@ -520,9 +610,31 @@ function ProposalCard({
               hint={p.manufacturer ? "read off the box: check it" : undefined}
               placeholder="e.g. Good Smile Company"
               value={edit.maker}
+              disabled={!edit.use.details}
               onChange={(e) => onEdit({ maker: e.target.value })}
             />
           </FormRow>
+          <CheckboxField label="Use the category" checked={edit.use.category} onChange={(e) => use("category", e.target.checked)} />
+          <SelectField
+            label="Category"
+            hint={[
+              p.category
+                ? categoryNamed(tree, p.category)
+                  ? `proposed: ${p.category}`
+                  : `proposed: ${p.category} (not one of the shop's: pick one)`
+                : "none proposed",
+              j.current.categoryId !== undefined
+                ? `now: ${j.current.categoryId ? (tree.byId.get(j.current.categoryId)?.name ?? "?") : "none"}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            placeholder="— No category —"
+            options={tree.flat.map((c) => ({ value: c.id, label: indentLabel(c) }))}
+            value={edit.categoryId}
+            disabled={!edit.use.category}
+            onChange={(e) => onEdit({ categoryId: e.target.value })}
+          />
           {(p.lookup || notes.length > 0) && (
             <ul className="ad-describe__notes ui-sm">
               {p.lookup && <li className="ui-muted">{p.lookup}</li>}
