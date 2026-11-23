@@ -135,6 +135,14 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
   };
   // price tags as P-touch Editor files (16 tags each): open one, File > Print, "All Sheets"
   const [ptouchBusy, setPtouchBusy] = useState(false);
+  // the P-touch files made for these tags, each a link of its own: a browser lets a page start one download by itself, and blocks the
+  // rest ("multiple automatic downloads"), so the first downloads at once and each other one is downloaded by its own click
+  const [ptouchLinks, setPtouchLinks] = useState<{ name: string; url: string; got: boolean }[] | null>(null);
+  useEffect(() => {
+    setPtouchLinks(null); // other tags now: the files made before are for the old ones
+  }, [sheets]);
+  useEffect(() => () => ptouchLinks?.forEach((l) => URL.revokeObjectURL(l.url)), [ptouchLinks]);
+  const gotPtouch = (i: number) => setPtouchLinks((ls) => ls && ls.map((l, j) => (j === i ? { ...l, got: true } : l)));
   const downloadPtouch = async () => {
     setPtouchBusy(true);
     try {
@@ -144,15 +152,16 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
         printed.map((l) => `${l.price ?? ""} ${l.name}`.trim()),
       );
       const day = new Date().toISOString().slice(0, 10);
-      for (const [i, blob] of files.entries()) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `spinhobby-tags-${day}${files.length > 1 ? `-${i + 1}-of-${files.length}` : ""}.lbx`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        await new Promise((r) => setTimeout(r, 400)); // browsers drop downloads fired all at once
-      }
+      const links = files.map((blob, i) => ({
+        name: `spinhobby-tags-${day}${files.length > 1 ? `-${i + 1}-of-${files.length}` : ""}.lbx`,
+        url: URL.createObjectURL(blob),
+        got: i === 0,
+      }));
+      setPtouchLinks(links);
+      const a = document.createElement("a");
+      a.href = links[0]!.url;
+      a.download = links[0]!.name;
+      a.click();
     } catch (e) {
       ctx.flash(errMsg(e));
     } finally {
@@ -329,6 +338,27 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                   Done
                 </button>
               </div>
+              {size === "tag" && ptouchLinks && ptouchLinks.length > 1 && (
+                <div className="ad-labels__files" role="group" aria-label="P-touch Editor files">
+                  <p className="ad-sm">
+                    <b>{ptouchLinks.length} P-touch files</b> ({SHEETS_PER_FILE} tags each at most). The first one downloaded; download each
+                    of the others here:
+                  </p>
+                  <div className="ad-imports__actions">
+                    {ptouchLinks.map((l, i) => (
+                      <a
+                        key={l.url}
+                        href={l.url}
+                        download={l.name}
+                        className={`sh-btn ad-btn-sm${l.got ? " sh-btn--ghost" : ""}`}
+                        onClick={() => gotPtouch(i)}
+                      >
+                        {l.got ? "✓ " : ""}File {i + 1} of {ptouchLinks.length}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {size === "tag" && (
                 <details className="ad-labels__howto" open>
@@ -336,7 +366,8 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                   <ol>
                     <li>
                       Press <b>For P-touch Editor</b> and open the downloaded <b>.lbx</b> file: every tag is a sheet in it (
-                      {SHEETS_PER_FILE} at most per file; more tags download as several files).
+                      {SHEETS_PER_FILE} at most per file; more tags make several files: the first downloads at once, and a button for each
+                      of the others appears under the buttons).
                     </li>
                     <li>
                       Load <b>62 mm continuous tape</b> (DK-2205) in the QL-810W. Each tag is cut at about 25 mm, the tag drawn a little
