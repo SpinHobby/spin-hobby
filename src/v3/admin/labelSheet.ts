@@ -202,8 +202,8 @@ function tagColumns(w: number, h: number) {
 /**
  * A price tag for the Brother QL-810 (62 × 20 mm): on the left the mascot's line drawing from the ears down to the chest, filling the column,
  * the price over the empty corner beside her ears and spinhobby.com across her chest (both white-edged so they read over the lines); on the
- * right the product's name, the barcode of its SKU (the cashier's Square app scans it), the code, and the social handle with Instagram and
- * Facebook marks when one is given.
+ * right the product's name, the barcode of its SKU (the cashier's Square app scans it), the code, and the social handle with the Instagram
+ * mark when one is given (no Facebook mark: the shop's Facebook page doesn't have the same name for now).
  */
 function drawPriceTag(
   ctx: CanvasRenderingContext2D,
@@ -295,17 +295,15 @@ function drawPriceTag(
   }
   ctx.textAlign = "start";
   if (label.handle) {
-    // the Instagram and Facebook marks, then the handle, centred as one line
+    // the Instagram mark, then the handle, centred as one line
     ctx.font = `600 ${handleSize}px ${UI_FONT}`;
     const icon = Math.round(handleSize * 1.1);
     const gap = Math.round(handleSize * 0.35);
-    const textW = Math.min(ctx.measureText(label.handle).width, right.w - 2 * (icon + gap));
-    const lineW = icon + gap + icon + gap + textW;
+    const textW = Math.min(ctx.measureText(label.handle).width, right.w - (icon + gap));
+    const lineW = icon + gap + textW;
     let lx = x + right.x + Math.round((right.w - lineW) / 2);
     const ly = y + h - pad - icon;
     drawInstagramMark(ctx, lx, ly, icon);
-    lx += icon + gap;
-    drawFacebookMark(ctx, lx, ly, icon);
     lx += icon + gap;
     ctx.fillStyle = "#000000";
     ctx.fillText(label.handle, lx, ly + Math.round((icon - handleSize) / 2), textW);
@@ -329,21 +327,6 @@ function drawInstagramMark(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.beginPath();
   ctx.arc(x + s * 0.74, y + s * 0.26, s * 0.065, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
-}
-
-/** Facebook's mark in black: a filled circle with a white "f". */
-function drawFacebookMark(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
-  ctx.save();
-  ctx.fillStyle = "#000000";
-  ctx.beginPath();
-  ctx.arc(x + s / 2, y + s / 2, s / 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `800 ${Math.round(s * 0.82)}px Arial, Helvetica, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText("f", x + s * 0.55, y + s * 0.92);
   ctx.restore();
 }
 
