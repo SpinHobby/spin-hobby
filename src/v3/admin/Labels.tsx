@@ -53,7 +53,7 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
   const [labels, setLabels] = useState<Label[] | null>(null);
   const [assigned, setAssigned] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [size, setSize] = useState<LabelSize>("small");
+  const [size, setSize] = useState<LabelSize>("tag");
   const [perUnit, setPerUnit] = useState(false);
   // a social handle printed on price tags, @spinhobby unless cleared; remembered on this computer
   const [handle, setHandle] = useState(() => {
@@ -339,7 +339,7 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                       {SHEETS_PER_FILE} at most per file; more tags download as several files).
                     </li>
                     <li>
-                      Load <b>62 mm continuous tape</b> (DK-2205) in the QL-810W. Each tag is cut at about 33 mm, the tag drawn a little
+                      Load <b>62 mm continuous tape</b> (DK-2205) in the QL-810W. Each tag is cut at about 25 mm, the tag drawn a little
                       smaller to stay clear of the edges the printer can’t reach.
                     </li>
                     <li>
@@ -384,17 +384,17 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
 }
 
 /**
- * Prints price tags on the Brother QL-810: a page per tag, exactly 62 × 22 mm, so the printer's own driver cuts after each one. In the print
- * dialog choose the QL-810, paper 62 mm × 22 mm (DK-2205 continuous tape), margins none, scale 100%.
+ * Prints price tags on the Brother QL-810: a page per tag, exactly 62 × 20 mm, so the printer's own driver cuts after each one. In the print
+ * dialog choose the QL-810, paper 62 mm × 20 mm (DK-2205 continuous tape), margins none, scale 100%.
  */
 function printTags(urls: string[]) {
   const w = window.open("", "_blank");
   if (!w) return;
   const pages = urls.map((u) => `<img src="${u}" alt="">`).join("");
   w.document.write(`<!doctype html><html><head><title>Spin Hobby price tags</title><style>
-    @page { size: 62mm 22mm; margin: 0; }
+    @page { size: 62mm 20mm; margin: 0; }
     html, body { margin: 0; padding: 0; }
-    img { display: block; width: 62mm; height: 22mm; page-break-after: always; break-after: page; }
+    img { display: block; width: 62mm; height: 20mm; page-break-after: always; break-after: page; }
     img:last-child { page-break-after: auto; break-after: auto; }
   </style></head><body>${pages}</body></html>`);
   w.document.close();

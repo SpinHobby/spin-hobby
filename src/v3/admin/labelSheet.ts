@@ -12,8 +12,8 @@ export type LabelSize = "small" | "large" | "tag";
 export const SIZES: Record<LabelSize, { width: number; height: number; name: string }> = {
   small: { width: 2.1, height: 1.2, name: "Small, 2.1 × 1.2 in" },
   large: { width: 3, height: 1.6, name: "Large, 3 × 1.6 in" },
-  // a price tag for the Brother QL-810 (300 dpi, black): DK-2205 62 mm continuous tape cut every 22 mm (the printer adds a few mm of feed)
-  tag: { width: 62 / 25.4, height: 22 / 25.4, name: "Price tag, Brother QL-810 (62 × 22 mm)" },
+  // a price tag for the Brother QL-810 (300 dpi, black): DK-2205 62 mm continuous tape; the printer adds its 3 mm unprintable margin at each end
+  tag: { width: 62 / 25.4, height: 20 / 25.4, name: "Price tag, Brother QL-810 (62 × 20 mm)" },
 };
 
 export interface StickerLabel {
@@ -183,7 +183,15 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: StickerLabel, x: number
   ctx.restore();
 }
 
-/** Where a price tag's two columns are, in pixels from its left edge: the price on the left, what to scan on the right. */
+/**
+ * A tag is laid out as if 5% taller at the top and bottom, then that much is cut off: the label printer already leaves 3 mm blank at
+ * each end of the tape, so the tag's own top and bottom padding would only make the cut tag longer.
+ */
+function tagTrim(h: number) {
+  return Math.round(h * 0.05);
+}
+
+/** Where a price tag's two columns are, in pixels from its left edge: the price on the left, what to scan on the right (h: the layout height). */
 function tagColumns(w: number, h: number) {
   const pad = Math.round(h * 0.055);
   const leftW = Math.round(w * 0.3);
@@ -192,7 +200,7 @@ function tagColumns(w: number, h: number) {
 }
 
 /**
- * A price tag for the Brother QL-810 (62 × 22 mm): on the left the mascot's line drawing from the ears down to the chest, filling the column,
+ * A price tag for the Brother QL-810 (62 × 20 mm): on the left the mascot's line drawing from the ears down to the chest, filling the column,
  * the price over the empty corner beside her ears and spinhobby.com across her chest (both white-edged so they read over the lines); on the
  * right the product's name, the barcode of its SKU (the cashier's Square app scans it), the code, and the social handle with Instagram and
  * Facebook marks when one is given.
@@ -201,15 +209,22 @@ function drawPriceTag(
   ctx: CanvasRenderingContext2D,
   label: StickerLabel,
   x: number,
-  y: number,
+  tagY: number,
   w: number,
-  h: number,
+  tagH: number,
   art: HTMLImageElement,
 ) {
+  // laid out on a taller tag, its top and bottom padding cut off (see tagTrim)
+  const trim = tagTrim(tagH);
+  const y = tagY - trim;
+  const h = tagH + 2 * trim;
   const { pad, left, right } = tagColumns(w, h);
   ctx.save();
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(x, y, w, h);
+  ctx.fillRect(x, tagY, w, tagH);
+  ctx.beginPath();
+  ctx.rect(x, tagY, w, tagH);
+  ctx.clip();
   ctx.textBaseline = "top";
   ctx.lineJoin = "round";
 
@@ -346,7 +361,8 @@ export function barcodeFits(code: string, size: LabelSize) {
   const widths = code128Widths(code);
   const w = Math.round(SIZES[size].width * DPI);
   const pad = Math.round(18 * ((SIZES[size].height * DPI) / 360));
-  const room = size === "tag" ? tagColumns(w, Math.round(SIZES.tag.height * DPI)).right.w : w - 2 * pad;
+  const tagH = Math.round(SIZES.tag.height * DPI);
+  const room = size === "tag" ? tagColumns(w, tagH + 2 * tagTrim(tagH)).right.w : w - 2 * pad;
   return !!widths && barUnit(widths, room) > 0;
 }
 

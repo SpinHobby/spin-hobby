@@ -7,7 +7,8 @@
  *
  * The layout follows a file P-touch Editor 5.4 saved for the shop's QL-810W (printer id 14644; media 259 is 62 mm continuous tape, as in
  * P-touch Editor's own QL templates). The printer can't print the 3 mm at each end of a label or the edges of the tape, so each label is
- * a little longer than the tag (cut at about 33.5 mm) and the tag is drawn at 95% to fit the printable width.
+ * a little longer than the tag (cut at about 25 mm) and the tag is drawn at 95% to fit the printable width. P-touch Editor won't set
+ * those end margins under 3 mm for this printer.
  */
 
 /** P-touch Editor's limit on layout sheets in one file. */
