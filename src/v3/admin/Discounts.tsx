@@ -344,8 +344,8 @@ function EditDrawer({ code, onClose, onSaved }: { code: DiscountCode; onClose: (
         }}
       >
         <p className="ad-muted ad-sm" style={{ margin: 0 }}>
-          {label(code)} · the code, its kind and its amount can't be changed here — past orders depend on them. You can change its end
-          date, use limit and note.
+          {label(code)} · the code, its kind and its amount can't be changed here — past orders depend on them. You can change its end date,
+          use limit and note.
         </p>
         <TextField
           label="Ends (optional)"
