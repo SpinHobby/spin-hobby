@@ -22,7 +22,8 @@ The clover copies have near-invisible stray pixels (alpha under 40) cleared befo
 
 Only official, artist-drawn art goes here. No AI-generated pictures: anime fans and artists dislike them.
 
-line-head.png: black lines on transparent (alpha = 255 minus the drawing's grey, greys under 24 cleared as JPEG noise). Before
-scaling down, every line except the eyes was widened by 2 px at full size (a 5 px max filter; the eyes, two ellipses centred at
-655,735 and 987,685 in the crop with radii 100×90 and 108×90, blurred 12 px, keep the drawn lines), so the label printer's
-black-or-white print doesn't break the thin hair and clothes lines. Nothing was redrawn.
+line-head.png: black lines on transparent (alpha = 255 minus the drawing's grey, greys under 24 cleared as JPEG noise). The
+label printer prints black or white only, so the thin lines would break: every line was made 2.5 times as wide, keeping the
+drawing's own thick and thin lines, and nothing was redrawn. How: at twice the crop's size, for each half-width r from 1 to 6 px
+the parts where a (2r+1) square fits (an opening) were widened by round(1.5 × (r + 0.5)) px, and the largest result kept; strokes
+wider than that (the black of the eyes and mouth) only grow by the r = 6 amount. Then scaled down to 700 px.
