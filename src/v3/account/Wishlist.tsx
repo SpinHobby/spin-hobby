@@ -1,12 +1,13 @@
 import { Pagination, Button, Dialog, TextareaField, useToast } from "@/components";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { CardAction, ProductCard, type CardActions } from "@/components/shop/ProductCards";
 import { useAuth } from "../hooks";
+import { api } from "../../lib/api";
 import { ALL, DEFAULT_AVAIL, productPath, useCart, useProducts, useWishlist, type Filters } from "@/v3/storefront/data";
 import "./wishlist.scss";
 
-// same starting filters as Storefront.tsx; defined outside the component so the object stays the same between renders
 const FILTERS: Filters = {
   nav: "Home",
   category: ALL,
@@ -18,6 +19,10 @@ const FILTERS: Filters = {
   series: null,
 };
 
+type NotesResponse = { success: boolean; message: string };
+
+const fetchNotes = () => api<NotesResponse>("/notes");
+
 export function Wishlist() {
   const navigate = useNavigate();
   const auth = useAuth();
@@ -28,16 +33,25 @@ export function Wishlist() {
   const [view, setView] = useState<"grid" | "row">("row");
   const PAGE = 5;
 
-  // which product the note dialog is open for (null = closed), and the text typed so far
   const [noteFor, setNoteFor] = useState<{ id: string | number; name: string } | null>(null);
   const [noteText, setNoteText] = useState("");
 
   const { toast, flash } = useToast();
   const [saving, setSaving] = useState(false);
 
-  // the saved ids -> the real products (the same way Storefront.tsx does it)
+  const [showNotes, setShowNotes] = useState(false);
+  const notesQuery = useQuery({
+    queryKey: ["notes"],
+    queryFn: fetchNotes,
+    enabled: showNotes,
+  });
+
+  useEffect(() => {
+    if (notesQuery.data) console.log("notes from backend:", notesQuery.data);
+    if (notesQuery.error) console.error("notes request failed:", notesQuery.error);
+  }, [notesQuery.data, notesQuery.error]);
+
   const results = useProducts(FILTERS, wishlist.list);
-  // keep only items still saved, so a removed item disappears right away
   const items = wishlist.list.length ? results.items.filter((p) => wishlist.ids.has(p.id)) : [];
 
   const a: CardActions = {
@@ -62,11 +76,9 @@ export function Wishlist() {
     if (!noteFor) return;
     setSaving(true);
     try {
-      // await saveWishlistNote(noteFor.id, noteText.trim()); // you write this next
       closeNote();
       flash("Note added");
     } catch {
-      // keep the dialog open so the user can try again
       flash("Unable to save note");
     } finally {
       setSaving(false);
@@ -130,6 +142,7 @@ export function Wishlist() {
                 actions={
                   <>
                     <CardAction onClick={() => openNote(p)}>Add a note</CardAction>
+                    <CardAction onClick={() => setShowNotes(true)}>View notes</CardAction>
                     <CardAction icon label={`Share ${p.name}`} onClick={() => {}}>
                       ↗
                     </CardAction>
