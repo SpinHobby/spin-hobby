@@ -139,9 +139,10 @@ export default function Checkout() {
   const fullCart = useCart();
   const single = useBuyNow();
   const cart = buyingNow ? single : fullCart;
-  // one anonymous "checkout opened" per tab session for the same cart (src/lib/analytics.ts)
+  // one anonymous "checkout opened" per tab session for the same cart (src/lib/analytics.ts); "now:"/"cart:" keeps
+  // a buy-now checkout from being mistaken for a cart checkout that happens to hold the same item and quantity
   const hasItems = cart.lines.length > 0;
-  const cartKey = cart.lines.map((l) => `${l.variationId}:${l.quantity}`).join(",");
+  const cartKey = `${buyingNow ? "now" : "cart"}:${cart.lines.map((l) => `${l.variationId}:${l.quantity}`).join(",")}`;
   useEffect(() => {
     if (hasItems) countCheckoutView(cartKey);
   }, [hasItems, cartKey]);
