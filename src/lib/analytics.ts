@@ -51,6 +51,21 @@ function countVisit() {
   track("visit");
 }
 
+/**
+ * One "checkout opened" per browser tab session for the same cart: reloading or revisiting checkout with the same
+ * items and quantities doesn't count again, but changing the cart and opening checkout again does. `cartKey` is
+ * just the item ids and quantities joined into a string — nothing that identifies a person.
+ */
+export function countCheckoutView(cartKey: string) {
+  try {
+    if (sessionStorage.getItem("spinhobby-checkout") === cartKey) return;
+    sessionStorage.setItem("spinhobby-checkout", cartKey);
+  } catch {
+    /* storage blocked: count it anyway */
+  }
+  track("checkout_view");
+}
+
 let reported = 0;
 /** Sends an error from this browser to the API (at most 5 per page, so a loop can't flood it). */
 function reportError(message: string, stack?: string) {
