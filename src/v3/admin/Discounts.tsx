@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api } from "../../lib/api";
 import { dateLabel, money } from "../format";
-import { Banner, Button, Card, DataTable, EmptyState, SegmentedControl, Switch, TextField, type Column } from "../../components";
+import { Banner, Button, Card, DataTable, Drawer, EmptyState, SegmentedControl, Switch, TextField, type Column } from "../../components";
 import type { Ctx } from "./Screens";
 
 /** A code as GET /admin/discounts returns it. */
@@ -25,6 +25,8 @@ const label = (c: Pick<DiscountCode, "kind" | "value">) => (c.kind === "percent"
 /** A day from the date picker, as the start or end of that day in the browser's time zone. */
 const dayStart = (d: string) => (d ? new Date(`${d}T00:00:00`).toISOString() : null);
 const dayEnd = (d: string) => (d ? new Date(`${d}T23:59:59`).toISOString() : null);
+/** An instant back into a date-input value ("yyyy-mm-dd" in the browser's time zone), or "" for none. */
+const dayInput = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-CA") : "");
 
 function state(c: DiscountCode) {
   const now = Date.now();
@@ -40,6 +42,7 @@ export function DiscountsScreen({ ctx }: { ctx: Ctx }) {
   const [codes, setCodes] = useState<DiscountCode[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<DiscountCode | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -91,6 +94,16 @@ export function DiscountsScreen({ ctx }: { ctx: Ctx }) {
     { key: "uses", header: "Used", width: "90px", align: "right", render: (c) => (c.max_uses ? `${c.uses} / ${c.max_uses}` : c.uses) },
     { key: "state", header: "Status", width: "150px", render: (c) => <span className="ad-sm">{state(c)}</span> },
     {
+      key: "edit",
+      header: "",
+      width: "70px",
+      render: (c) => (
+        <button type="button" className="ad-link" onClick={() => setEditing(c)}>
+          Edit
+        </button>
+      ),
+    },
+    {
       key: "on",
       header: "On",
       width: "70px",
@@ -134,6 +147,17 @@ export function DiscountsScreen({ ctx }: { ctx: Ctx }) {
           empty={<EmptyState>No codes yet. Make one above.</EmptyState>}
         />
       </Card>
+      {editing && (
+        <EditDrawer
+          code={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(c) => {
+            setCodes((list) => list?.map((x) => (x.id === c.id ? c : x)) ?? null);
+            ctx.flash(`${c.code} saved`);
+            setEditing(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -259,5 +283,88 @@ function NewCode({ onMade }: { onMade: (c: DiscountCode) => void }) {
         </div>
       </form>
     </Card>
+  );
+}
+
+/** Editing a code: its end date, use limit and note only — the code, kind and amount stay fixed because past orders depend on them. */
+function EditDrawer({ code, onClose, onSaved }: { code: DiscountCode; onClose: () => void; onSaved: (c: DiscountCode) => void }) {
+  const [ends, setEnds] = useState(dayInput(code.ends_at));
+  const [maxUses, setMaxUses] = useState(code.max_uses != null ? String(code.max_uses) : "");
+  const [note, setNote] = useState(code.note ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const initialEnds = dayInput(code.ends_at);
+  const initialMaxUses = code.max_uses != null ? String(code.max_uses) : "";
+  const initialNote = code.note ?? "";
+
+  const maxUsesN = maxUses ? Number(maxUses) : null;
+  const underUsed = maxUsesN != null && maxUsesN < code.uses;
+
+  const patch: Record<string, unknown> = {};
+  if (ends !== initialEnds) patch.endsAt = dayEnd(ends);
+  if (maxUses !== initialMaxUses) patch.maxUses = maxUsesN;
+  if (note !== initialNote) patch.note = note.trim() || null;
+  const dirty = Object.keys(patch).length > 0;
+
+  const save = async () => {
+    if (underUsed || !dirty) return;
+    setError(null);
+    setSaving(true);
+    try {
+      const r = await api<{ code: DiscountCode }>(`/admin/discounts/${code.id}`, { method: "PATCH", body: JSON.stringify(patch) });
+      onSaved(r.code);
+    } catch (err) {
+      setError(errMsg(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Drawer
+      title={`Edit ${code.code}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => void save()} loading={saving} disabled={underUsed || !dirty}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <form
+        className="ad-discount-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+          {label(code)} · the code, its kind and its amount can't be changed here — past orders depend on them. You can change its end
+          date, use limit and note.
+        </p>
+        <TextField
+          label="Ends (optional)"
+          type="date"
+          value={ends}
+          onChange={(e) => setEnds(e.target.value)}
+          hint="Works until the end of this day. Clear it to remove the end date."
+        />
+        <TextField
+          label="Use limit (optional)"
+          inputMode="numeric"
+          value={maxUses}
+          onChange={(e) => setMaxUses(e.target.value.replace(/\D/g, ""))}
+          error={underUsed ? `Already used ${code.uses} time${code.uses === 1 ? "" : "s"} — can't set a lower limit.` : undefined}
+          hint="How many paid orders may use it. Clear it to remove the limit."
+        />
+        <TextField label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
+        {error && <Banner tone="error">{error}</Banner>}
+      </form>
+    </Drawer>
   );
 }
