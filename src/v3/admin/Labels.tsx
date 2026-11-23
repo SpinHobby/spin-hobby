@@ -137,12 +137,15 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
   const [ptouchBusy, setPtouchBusy] = useState(false);
   // the P-touch files made for these tags, each a link of its own: a browser lets a page start one download by itself, and blocks the
   // rest ("multiple automatic downloads"), so the first downloads at once and each other one is downloaded by its own click
-  const [ptouchLinks, setPtouchLinks] = useState<{ name: string; url: string; got: boolean }[] | null>(null);
+  const [ptouchLinks, setPtouchLinks] = useState<{ name: string; url: string }[] | null>(null);
+  // which of them were downloaded: kept apart from the files, so ticking one never lets go of them (see below)
+  const [gotPtouch, setGotPtouch] = useState<Set<number>>(new Set());
   useEffect(() => {
     setPtouchLinks(null); // other tags now: the files made before are for the old ones
   }, [sheets]);
+  // the files are let go only when other files replace them or the panel closes: letting go while a download is starting breaks it
   useEffect(() => () => ptouchLinks?.forEach((l) => URL.revokeObjectURL(l.url)), [ptouchLinks]);
-  const gotPtouch = (i: number) => setPtouchLinks((ls) => ls && ls.map((l, j) => (j === i ? { ...l, got: true } : l)));
+  const markGot = (i: number) => setGotPtouch((s) => new Set(s).add(i));
   const downloadPtouch = async () => {
     setPtouchBusy(true);
     try {
@@ -155,9 +158,9 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
       const links = files.map((blob, i) => ({
         name: `spinhobby-tags-${day}${files.length > 1 ? `-${i + 1}-of-${files.length}` : ""}.lbx`,
         url: URL.createObjectURL(blob),
-        got: i === 0,
       }));
       setPtouchLinks(links);
+      setGotPtouch(new Set([0]));
       const a = document.createElement("a");
       a.href = links[0]!.url;
       a.download = links[0]!.name;
@@ -350,10 +353,10 @@ export function LabelsDialog({ productIds, ctx, onClose }: { productIds: string[
                         key={l.url}
                         href={l.url}
                         download={l.name}
-                        className={`sh-btn ad-btn-sm${l.got ? " sh-btn--ghost" : ""}`}
-                        onClick={() => gotPtouch(i)}
+                        className={`sh-btn ad-btn-sm${gotPtouch.has(i) ? " sh-btn--ghost" : ""}`}
+                        onClick={() => markGot(i)}
                       >
-                        {l.got ? "✓ " : ""}File {i + 1} of {ptouchLinks.length}
+                        {gotPtouch.has(i) ? "✓ " : ""}File {i + 1} of {ptouchLinks.length}
                       </a>
                     ))}
                   </div>
