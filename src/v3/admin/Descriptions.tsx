@@ -1,3 +1,5 @@
+import { PRODUCT_TYPES_LIST } from "../productTypes";
+import { ProductTypeOptions } from "../ProductTypeOptions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { inUse } from "./inUse";
 import {
@@ -39,6 +41,8 @@ interface Proposal {
   manufacturer: string | null;
   /** The product line (Gleamshelf apps from November 2026). */
   line?: string | null;
+  /** What kind of product it is, worked out by Gleamshelf. */
+  productType?: string | null;
   category: string | null;
   highlights: string[];
   unsupported: string[];
@@ -68,6 +72,7 @@ interface Job {
     series: string | null;
     manufacturer: string | null;
     line?: string | null;
+    productType?: string | null;
     category: string | null;
   };
   createdAt: string;
@@ -94,6 +99,7 @@ interface Edit {
   series: string;
   maker: string;
   line: string;
+  productType: string;
   categoryId: string;
   /** The parts that will be applied. */
   use: Record<Part, boolean>;
@@ -129,6 +135,7 @@ const editOf = (j: Job, tree: CategoryTree): Edit => {
     series: p?.series ?? j.current.series ?? "",
     maker: p?.manufacturer ?? j.current.manufacturer ?? "",
     line: p?.line ?? j.current.line ?? "",
+    productType: p?.productType ?? j.current.productType ?? "",
     categoryId: category?.id ?? j.current.categoryId ?? "",
     use: {
       title: asked.has("title") && !!p?.title,
@@ -148,6 +155,7 @@ function applyBody(j: Job, e: Edit) {
     if (e.series.trim() !== (j.current.series ?? "")) body.series = e.series.trim() || null;
     if (e.maker.trim() !== (j.current.manufacturer ?? "")) body.manufacturer = e.maker.trim() || null;
     if (e.line.trim() !== (j.current.line ?? "")) body.product_line = e.line.trim() || null;
+    if (e.productType.trim() !== (j.current.productType ?? "")) body.product_type = e.productType.trim() || null;
   }
   if (e.use.category && e.categoryId !== (j.current.categoryId ?? "")) body.category_id = e.categoryId || null;
   return body;
@@ -631,6 +639,16 @@ function ProposalCard({
               disabled={!edit.use.details}
               onChange={(e) => onEdit({ line: e.target.value })}
             />
+            <TextField
+              label="Product type"
+              hint={j.current.productType && j.current.productType !== edit.productType ? `now: ${j.current.productType}` : undefined}
+              placeholder="e.g. Prize Figure"
+              list={PRODUCT_TYPES_LIST}
+              value={edit.productType}
+              disabled={!edit.use.details}
+              onChange={(e) => onEdit({ productType: e.target.value })}
+            />
+            <ProductTypeOptions />
           </FormRow>
           <CheckboxField label="Use the category" checked={edit.use.category} onChange={(e) => use("category", e.target.checked)} />
           <SelectField

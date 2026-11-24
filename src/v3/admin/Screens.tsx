@@ -1,3 +1,5 @@
+import { PRODUCT_TYPES_LIST } from "../productTypes";
+import { ProductTypeOptions } from "../ProductTypeOptions";
 import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
@@ -1028,6 +1030,7 @@ function ProductDrawer({
     series: p.series ?? "",
     maker: p.manufacturer ?? "",
     line: p.productLine ?? "",
+    type: p.productType ?? "",
     jan: p.janCode ?? "",
     categoryId: p.categoryId ?? "",
   });
@@ -1084,6 +1087,7 @@ function ProductDrawer({
         series: form.series.trim(),
         manufacturer: form.maker.trim(),
         product_line: form.line.trim(),
+        product_type: form.type.trim(),
         jan_code: form.jan.trim(),
         category_id: form.categoryId || null,
       });
@@ -1096,6 +1100,7 @@ function ProductDrawer({
         series: form.series.trim() || null,
         manufacturer: form.maker.trim() || null,
         productLine: form.line.trim() || null,
+        productType: form.type.trim() || null,
         janCode: form.jan.trim() || null,
         categoryId: form.categoryId || null,
       });
@@ -1368,6 +1373,18 @@ function ProductDrawer({
             <label className="ad-field">
               Product line
               <input className="sh-input" maxLength={120} placeholder="e.g. Relax Time" value={form.line} onChange={set("line")} />
+            </label>
+            <label className="ad-field">
+              Product type
+              <input
+                className="sh-input"
+                maxLength={60}
+                list={PRODUCT_TYPES_LIST}
+                placeholder="e.g. Prize Figure"
+                value={form.type}
+                onChange={set("type")}
+              />
+              <ProductTypeOptions />
             </label>
             <label className="ad-field">
               JAN code

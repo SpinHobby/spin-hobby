@@ -56,6 +56,8 @@ export interface Product {
   manufacturer?: string | null;
   /** The product line ("Relax Time", "Luminasta"). */
   productLine?: string | null;
+  /** What kind of product it is ("Prize Figure", "Plush", "Keychain"). */
+  productType?: string | null;
   isActive?: boolean;
   isVisible?: boolean;
   sellable?: boolean;
