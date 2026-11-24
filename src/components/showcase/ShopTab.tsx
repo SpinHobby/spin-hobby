@@ -97,6 +97,60 @@ function Sample({ name, note, children }: { name: string; note: ReactNode; child
   );
 }
 
+/** The same sample products with what the shop may know about each: character, version, product type. */
+const NAMED: Product[] = [
+  {
+    ...PRODUCTS[0],
+    id: "n1",
+    name: "Rem Flower Dress Trio-Try-iT Figure (Re:Zero)",
+    series: "Re:Zero",
+    category: "Prize Figures",
+    character: "Rem",
+    version: "Flower Dress",
+    productType: "Prize Figure",
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n2",
+    name: "Hatsune Miku Luminasta Figure",
+    series: "Hatsune Miku",
+    category: "Prize Figures",
+    character: "Hatsune Miku",
+    version: null,
+    productType: null,
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n3",
+    name: "Hololive Usada Pekora Plush",
+    series: "Hololive",
+    category: "Plushies",
+    character: "Usada Pekora",
+    version: null,
+    productType: "Plush",
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n4",
+    name: "Hololive Shirogane Noel Glass",
+    series: "Hololive",
+    category: "Goods",
+    character: "Shirogane Noel",
+    version: null,
+    productType: null,
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n5",
+    name: "Kaiju No. 8 Figure",
+    series: "Kaiju No. 8",
+    category: "Prize Figures",
+    character: null,
+    version: null,
+    productType: "Prize Figure",
+  },
+];
+
 /** /ui-kit's Shop tab: the product cards from src/components/shop, with made-up products. */
 export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
   const a = useFakeShop(onDone);
@@ -111,6 +165,17 @@ export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
       >
         <div className="ui-kit-shop-grid">
           {PRODUCTS.map((p) => (
+            <ProductCard key={p.id} p={p} a={a} />
+          ))}
+        </div>
+      </Sample>
+
+      <Sample
+        name="shortName(product): the name on a card"
+        note="The series sits on its own line, so a figure whose character the shop knows is named by the character and the version on its box. Other goods are named by the character and what they are. A product whose character or kind is not known keeps its full name: nothing is guessed. Point at a name to see the full one."
+      >
+        <div className="ui-kit-shop-grid">
+          {NAMED.map((p) => (
             <ProductCard key={p.id} p={p} a={a} />
           ))}
         </div>

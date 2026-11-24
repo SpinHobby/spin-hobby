@@ -13,6 +13,9 @@ export interface Product {
   name: string;
   series: string | null;
   character: string | null;
+  /** The version its box names ("Flower Dress") and what kind of product it is ("Prize Figure", "Plush"), when the shop knows them. */
+  version?: string | null;
+  productType?: string | null;
   category: string | null;
   categoryId?: string | null;
   images: string[];
