@@ -1,6 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Card } from "../layout/Card";
 import { CardAction, MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "../shop/ProductCards";
+import { BannerAds } from "../shop/BannerAds";
+import { RecentlySold } from "../shop/RecentlySold";
+import type { BannerAd } from "../shop/adRules";
 import type { Product } from "../../v3/types";
 
 /** Made-up products: every status a card can show (in stock, low, pre-order, sold out, on sale, ranked). */
@@ -97,6 +100,82 @@ function Sample({ name, note, children }: { name: string; note: ReactNode; child
   );
 }
 
+/** Made-up banner ads: a label and a button, a plain one, and one that is a link as a whole. */
+const ADS: BannerAd[] = [
+  {
+    id: "ad1",
+    label: "Pre-orders",
+    headline: "Spring 2027 figures are open",
+    subheading: "Reserve now, pay when they arrive.",
+    button_text: "See pre-orders",
+    link_url: "#ads",
+    image_url: null,
+  },
+  { id: "ad2", headline: "New arrivals every week", subheading: "Fresh goods added regularly.", link_url: null, image_url: null },
+  {
+    id: "ad3",
+    label: "Events",
+    headline: "Thank you, Calgary",
+    subheading: "See photos from our last booth.",
+    link_url: "#ads",
+    image_url: null,
+  },
+];
+
+/** The same sample products with what the shop may know about each: character, version, product type. */
+const NAMED: Product[] = [
+  {
+    ...PRODUCTS[0],
+    id: "n1",
+    name: "Rem Flower Dress Trio-Try-iT Figure (Re:Zero)",
+    series: "Re:Zero",
+    category: "Prize Figures",
+    character: "Rem",
+    version: "Flower Dress",
+    productType: "Prize Figure",
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n2",
+    name: "Hatsune Miku Luminasta Figure",
+    series: "Hatsune Miku",
+    category: "Prize Figures",
+    character: "Hatsune Miku",
+    version: null,
+    productType: null,
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n3",
+    name: "Hololive Usada Pekora Plush",
+    series: "Hololive",
+    category: "Plushies",
+    character: "Usada Pekora",
+    version: null,
+    productType: "Plush",
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n4",
+    name: "Hololive Shirogane Noel Glass",
+    series: "Hololive",
+    category: "Goods",
+    character: "Shirogane Noel",
+    version: null,
+    productType: null,
+  },
+  {
+    ...PRODUCTS[0],
+    id: "n5",
+    name: "Kaiju No. 8 Figure",
+    series: "Kaiju No. 8",
+    category: "Prize Figures",
+    character: null,
+    version: null,
+    productType: "Prize Figure",
+  },
+];
+
 /** /ui-kit's Shop tab: the product cards from src/components/shop, with made-up products. */
 export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
   const a = useFakeShop(onDone);
@@ -114,6 +193,39 @@ export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
             <ProductCard key={p.id} p={p} a={a} />
           ))}
         </div>
+      </Sample>
+
+      <Sample
+        name="shortName(product): the name on a card"
+        note="The series sits on its own line, so a figure whose character the shop knows is named by the character and the version on its box. Other goods are named by the character and what they are. A product whose character or kind is not known keeps its full name: nothing is guessed. Point at a name to see the full one."
+      >
+        <div className="ui-kit-shop-grid">
+          {NAMED.map((p) => (
+            <ProductCard key={p.id} p={p} a={a} />
+          ))}
+        </div>
+      </Sample>
+
+      <Sample
+        name="BannerAds"
+        note="The home page banner: one to ten ads set in Admin > Homepage. Arrows and dots switch between them; it moves on by itself every seven seconds and waits while pointed at. Behind each ad go product photos (they arrive one after another, and each opens its product), one uploaded photo, or the mascot when there is nothing to show, as here. An ad with a button links from the button; one without is a link as a whole. One ad shows no arrows."
+      >
+        <div className="sf-hero" id="ads">
+          <BannerAds ads={ADS} />
+        </div>
+      </Sample>
+
+      <Sample
+        name="RecentlySold (with AskToFind)"
+        note={
+          <>
+            Sold items, greyed, each with <code>AskToFind</code>: the shopper leaves an email and an optional note, with no payment and no
+            promise. The shop answers in Admin &gt; Requests. These are made-up products, so sending the form here shows the shop's "not
+            found" message.
+          </>
+        }
+      >
+        <RecentlySold items={PRODUCTS.slice(0, 3).map((p) => ({ ...p, id: `sold-${p.id}`, status: "out" }))} />
       </Sample>
 
       <Sample

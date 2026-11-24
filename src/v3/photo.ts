@@ -286,6 +286,28 @@ export function framedPhoto(url: string, width: number, cutout = false, frame?: 
   };
 }
 
+/* ---------- Face focus ----------
+ * A card shows the whole product. A picture shown large and cropped (behind a home page banner ad) is framed on the character's face
+ * instead: the point kept in view (x, y: 0-100 % across and down the photo file) and how far in. An admin sets it per photo
+ * (Admin > product > Photos > Face, or on a banner ad's picked products); the shop sends it with the product (`focus`). */
+
+/** The frame used when no admin has marked the face: upper middle, where a standing figure's face usually is. A guess. */
+export const GUESSED_FOCUS: PhotoFrame = { x: 50, y: 22, zoom: 1.5 };
+
+/** Where the face is in `url`: the admin's point, or the guess. */
+export const focusOf = (p: { focus?: Record<string, PhotoFrame> }, url: string | null | undefined): PhotoFrame =>
+  (url && p.focus?.[url]) || GUESSED_FOCUS;
+
+/** The CSS variables that frame a picture on `focus` (see .sf-ads__tile img: object-position, then scaled round the same point). */
+export const focusStyle = (focus: PhotoFrame): CSSProperties =>
+  ({ "--fx": `${focus.x}%`, "--fy": `${focus.y}%`, "--fz": String(focus.zoom) }) as CSSProperties;
+
+/** Props for an <img> that shows a product photo framed on the face. */
+export function focusPhoto(p: { id?: string; cutouts?: string[]; focus?: Record<string, PhotoFrame> }, url: string, width: number) {
+  const base = photo(url, width, isCutout(p, url), p.id);
+  return { ...base, style: { ...base.style, ...focusStyle(focusOf(p, url)) } as CSSProperties };
+}
+
 /** Whether `url` is one of the product's transparent cut-out photos. */
 export const isCutout = (p: { cutouts?: string[] }, url: string | null | undefined) => !!url && !!p.cutouts?.includes(url);
 

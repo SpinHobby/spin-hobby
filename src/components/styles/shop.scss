@@ -211,3 +211,325 @@ $ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   flex-direction: column;
   gap: 12px;
 }
+
+// ---- banner ads (components/shop/BannerAds.tsx): the home page banner, one ad at a time, each with its own pictures behind.
+// It is the `sf-hero__banner` block (storefront.scss) with layers: the pictures, a link over the whole ad, then the words.
+$ad-leave: 0.32s; // keep in step with LEAVE_MS in BannerAds.tsx
+.sf-ads {
+  isolation: isolate;
+}
+.sf-ads__back {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  &.is-leaving {
+    animation: sf-ad-out $ad-leave ease-in both;
+  }
+}
+.sf-ads__cover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.sf-ads .sf-hero__copy {
+  z-index: 2;
+  pointer-events: none;
+  a,
+  button {
+    pointer-events: auto;
+  }
+}
+.sf-ads .sf-hero__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  // the words come after the pictures
+  animation-delay: 0.22s;
+  animation-fill-mode: both;
+}
+// product photos take the right half, so the words keep to the left one
+.sf-ads[data-back="products"] .sf-hero__copy {
+  max-width: 48%;
+}
+.sf-ads__tiles {
+  position: absolute;
+  inset: 0 2% 0 auto;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 2;
+}
+.sf-ads__tile {
+  --tilt: -4deg;
+  --drop: 0px;
+  pointer-events: auto;
+  flex: 0 1 132px;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  margin-left: -22px;
+  &:first-child {
+    margin-left: 0;
+  }
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 3px solid var(--surface);
+  box-shadow: var(--shadow-card);
+  transform: translateY(var(--drop)) rotate(var(--tilt));
+  transition:
+    transform 0.2s $ease,
+    box-shadow 0.2s;
+  animation: sf-ad-in 0.5s $ease both;
+  animation-delay: calc(var(--i) * 70ms);
+  &:nth-child(even) {
+    --tilt: 3deg;
+    --drop: 12px;
+  }
+  &:nth-child(3n) {
+    --tilt: -1deg;
+    --drop: -8px;
+  }
+  &:hover,
+  &:focus-visible {
+    z-index: 1;
+    transform: translateY(calc(var(--drop) - 6px)) rotate(0deg) scale(1.04);
+  }
+  // framed on the character's face (photo.ts focusPhoto): the point kept in view, then scaled round that same point
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
+    transition: transform 0.3s $ease;
+  }
+  &:hover img,
+  &:focus-visible img {
+    transform: scale(calc(var(--fz, 1) * 1.06));
+  }
+}
+.sf-ads__back.is-leaving .sf-ads__tile {
+  animation: none;
+}
+.sf-ads__label {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--on-red);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sf-ads .sf-ads__button {
+  // the banner is a dark block: the shop's amber stands out on it
+  margin-bottom: 16px;
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--on-gold);
+  transition:
+    transform 0.2s $ease,
+    box-shadow 0.2s;
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card);
+  }
+}
+.sf-ads__nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sf-ads__arrow {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--on-block-muted);
+  background: transparent;
+  color: var(--on-block);
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0 0 2px;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+  &:hover,
+  &:focus-visible {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--on-gold, var(--block));
+  }
+}
+@keyframes sf-ad-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--drop) + 26px)) rotate(var(--tilt)) scale(0.94);
+  }
+}
+@keyframes sf-ad-out {
+  to {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@media (max-width: 900px) {
+  .sf-ads[data-back="products"] .sf-hero__copy {
+    max-width: 56%;
+  }
+  .sf-ads__tiles {
+    width: 44%;
+  }
+  .sf-ads__tile:nth-child(n + 4) {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .sf-ads[data-back="products"] .sf-hero__copy {
+    max-width: 58%;
+  }
+  .sf-ads__tiles {
+    width: 44%;
+    right: -6%;
+  }
+  .sf-ads__tile {
+    flex-basis: 96px;
+    margin-left: -34px;
+  }
+  .sf-ads__tile:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+// ---- sold items (components/shop/RecentlySold.tsx, AskToFind.tsx): what sold lately, greyed, with "Ask us to find one"
+.sf-sold__hint {
+  font-size: 13px;
+}
+.sf-sold__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+.sf-sold__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.sf-sold__photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  .sf-img img {
+    filter: grayscale(0.85);
+    opacity: 0.75;
+    transition:
+      filter 0.2s,
+      opacity 0.2s;
+  }
+  &:hover .sf-img img,
+  &:focus-visible .sf-img img {
+    filter: none;
+    opacity: 1;
+  }
+}
+.sf-sold__tag {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--block);
+  color: var(--on-block);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sf-sold__name {
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf-ask__open {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  &:hover,
+  &:focus-visible {
+    border-color: var(--primary);
+    background: var(--surface);
+  }
+}
+.sf-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  font-size: 13px;
+  animation: sh-fade 0.2s;
+  .sh-input {
+    width: 100%;
+    font-size: 16px; // a phone zooms the page in on a smaller field
+    padding: 7px 10px;
+  }
+}
+.sf-ask__line {
+  margin: 0;
+  color: var(--text2);
+}
+.sf-ask__error {
+  color: var(--red);
+  font-weight: 600;
+}
+.sf-ask__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sf-ask--done {
+  margin: 0;
+  color: var(--teal);
+  font-weight: 700;
+}
+// on the product page the button sits under "Notify me", full width like it
+.sf-pp__ask {
+  margin-top: 8px;
+}
+@media (max-width: 900px) {
+  .sf-sold__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .sf-sold__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}

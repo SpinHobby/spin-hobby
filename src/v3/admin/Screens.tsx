@@ -1,8 +1,12 @@
-import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
+import { BACKDROP_PHOTOS, MAX_ADS, MAX_PICKED, adTiming, dealBackdrops, type AdBackdrop } from "../../components/shop/adRules";
+import { resized, type PhotoFrame } from "../photo";
+import { PhotoFocusEditor } from "./PhotoFocusEditor";
+import { loadFocus } from "./photoFocus";
 import { useEscape } from "../hooks";
 import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
@@ -1702,9 +1706,15 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
           linkUrl: next.link_url,
           isVisible: next.is_visible,
           sortOrder: next.sort_order,
+          label: next.label ?? null,
+          buttonText: next.button_text ?? null,
+          startsAt: next.starts_at ?? null,
+          endsAt: next.ends_at ?? null,
+          backdrop: next.backdrop ?? (next.image_url ? "photo" : "products"),
+          productIds: next.product_ids ?? [],
         }),
       });
-      ctx.flash("Slide saved");
+      ctx.flash("Ad saved");
     } catch (e) {
       ctx.flash(errMsg(e));
     }
@@ -1726,8 +1736,8 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
 
   const addSlide = async () => {
     const draft = {
-      headline: "New slide headline",
-      subheading: "Subheading",
+      headline: "New ad headline",
+      subheading: "One line under it",
       image_url: null,
       link_url: null,
       is_visible: false,
@@ -1739,7 +1749,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
         body: JSON.stringify({ headline: draft.headline, subheading: draft.subheading, isVisible: false, sortOrder: draft.sort_order }),
       });
       setSlides([...slides, res.slide]);
-      ctx.flash("Slide added (hidden until you switch it on)");
+      ctx.flash("Ad added (hidden until you switch it on)");
     } catch (e) {
       ctx.flash(errMsg(e));
     }
@@ -1749,14 +1759,34 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     setSlides(slides.filter((x) => x.id !== s.id));
     try {
       await api(`/admin/homepage/slides/${s.id}`, { method: "DELETE" });
-      ctx.flash("Slide removed");
+      ctx.flash("Ad removed");
     } catch (e) {
       ctx.flash(errMsg(e));
       ctx.reload();
     }
   };
 
-  const visibleSlides = slides.filter((sl) => sl.is_visible);
+  // What shoppers see now: switched on and inside its dates, with the pictures the shop would put behind each (adRules.ts).
+  const liveSlides = slides.filter((sl) => sl.is_visible && adTiming(sl) === "live");
+  const recent = useMemo(
+    () =>
+      ctx.data.products
+        .filter((p) => p.images.length > 0 && ["in", "low", "pre"].includes(String(p.status)))
+        .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? ""))),
+    [ctx.data.products],
+  );
+  // face points marked in this screen, by product, so the preview shows them at once (the shop sends them on the home page)
+  const [faces, setFaces] = useState<Record<string, Record<string, PhotoFrame>>>({});
+  const onFaces = useCallback(
+    (productId: string, focus: Record<string, PhotoFrame>) => setFaces((f) => ({ ...f, [productId]: focus })),
+    [],
+  );
+  const visibleSlides = useMemo(() => {
+    const shown = liveSlides.length ? liveSlides : ctx.data.previewSlides;
+    const dealt = dealBackdrops(shown, ctx.data.products, recent);
+    return shown.map((sl, i) => ({ ...sl, products: dealt[i].map((p) => (faces[p.id] ? { ...p, focus: faces[p.id] } : p)) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slides, ctx.data.previewSlides, ctx.data.products, recent, faces]);
   const { closingSoon, maxDiscountPct: maxOff } = ctx.data.promos;
 
   const moveFeatured = async (i: number, dir: number) => {
@@ -1778,15 +1808,15 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
     <>
       <StorefrontPreview
         label={
-          visibleSlides.length
-            ? `Storefront hero · ${visibleSlides.length} visible slide${visibleSlides.length === 1 ? "" : "s"}`
-            : "Storefront hero · no visible slides, so the default welcome slides show"
+          liveSlides.length
+            ? `Home page banner · ${liveSlides.length} ad${liveSlides.length === 1 ? "" : "s"} showing now`
+            : "Home page banner · no ad is showing, so the default welcome ads show"
         }
         className="ad-preview--hero"
       >
         <HeroRow
-          key={visibleSlides.map((sl) => sl.id + sl.headline + sl.subheading + sl.image_url).join("|")}
-          slides={visibleSlides.length ? visibleSlides : ctx.data.previewSlides}
+          key={visibleSlides.map((sl) => sl.id).join("|") + JSON.stringify(faces)}
+          slides={visibleSlides}
           closingSoon={closingSoon}
           maxOff={maxOff}
           onPreorders={() => {}}
@@ -1797,14 +1827,25 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
       <PageLayoutCard ctx={ctx} />
       <div className="ad-two">
         <Card
-          title="Hero slides"
+          title={`Banner ads · ${slides.length} of ${MAX_ADS}`}
           action={
-            <button type="button" className="sh-btn ad-btn-sm" onClick={addSlide}>
-              + Add slide
+            <button
+              type="button"
+              className="sh-btn ad-btn-sm"
+              onClick={addSlide}
+              disabled={slides.length >= MAX_ADS}
+              title={slides.length >= MAX_ADS ? `The banner holds at most ${MAX_ADS} ads. Remove one first.` : undefined}
+            >
+              + Add ad
             </button>
           }
         >
-          {slides.length === 0 && <Empty>No slides yet. The storefront shows its default welcome slides until you add one.</Empty>}
+          <p className="ad-muted ad-sm ad-ads__help">
+            The big banner at the top of the home page. Shoppers see these one at a time, in this order, and can switch with the arrows. The
+            first ad is seen the most, so put the most important one first. Each ad can have a button, dates to show between, and its own
+            pictures behind it.
+          </p>
+          {slides.length === 0 && <Empty>No ads yet. The home page shows its default welcome ads until you add one.</Empty>}
           {slides.map((s, i) => (
             <SlideRow
               key={s.id}
@@ -1812,6 +1853,8 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
               first={i === 0}
               last={i === slides.length - 1}
               onMove={(d) => move(i, d)}
+              products={ctx.data.products}
+              onFaces={onFaces}
               onSave={(patch) => saveSlide(s, patch)}
               onRemove={() => removeSlide(s)}
             />
@@ -1871,10 +1914,26 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
   );
 }
 
+/** A day ("2026-12-01") as the moment it starts or ends here, and back. */
+const dayStart = (day: string) => (day ? new Date(`${day}T00:00:00`).toISOString() : null);
+const dayEnd = (day: string) => (day ? new Date(`${day}T23:59:59`).toISOString() : null);
+const dayOf = (at: string | null | undefined) => {
+  if (!at) return "";
+  const d = new Date(at);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const BACKDROPS: { value: AdBackdrop; label: string; help: string }[] = [
+  { value: "products", label: "Product photos", help: "The shop picks recent products with photos. Nothing to keep up to date." },
+  { value: "photo", label: "My photo", help: "One photo you upload, for example the booth at an event." },
+  { value: "chosen", label: "Products I pick", help: "Pick the products to show, to promote a series. Up to five show at once." },
+];
+
 function SlideRow({
   s,
   first,
   last,
+  products,
+  onFaces,
   onMove,
   onSave,
   onRemove,
@@ -1882,6 +1941,9 @@ function SlideRow({
   s: HeroSlide;
   first: boolean;
   last: boolean;
+  products: Product[];
+  /** Tells the screen a product's face points (loaded, or just saved), for the preview. */
+  onFaces: (productId: string, focus: Record<string, PhotoFrame>) => void;
   onMove: (d: number) => void;
   onSave: (patch: Partial<HeroSlide>) => void;
   onRemove: () => void;
@@ -1889,9 +1951,48 @@ function SlideRow({
   const [headline, setHeadline] = useState(s.headline);
   const [sub, setSub] = useState(s.subheading ?? "");
   const [link, setLink] = useState(s.link_url ?? "");
+  const [label, setLabel] = useState(s.label ?? "");
+  const [button, setButton] = useState(s.button_text ?? "");
+  const [find, setFind] = useState("");
   const url = (v: string) => v.trim() || null;
+  const backdrop: AdBackdrop = s.backdrop ?? (s.image_url ? "photo" : "products");
+  const picked = s.product_ids ?? [];
+  const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const words = find.trim().toLowerCase();
+  const found = useMemo(
+    () =>
+      words.length < 2
+        ? []
+        : products
+            .filter((p) => !picked.includes(p.id) && `${p.name} ${p.series ?? ""} ${p.character ?? ""}`.toLowerCase().includes(words))
+            .slice(0, 8),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [words, products, picked.join("|")],
+  );
+  // the picked product whose face is being marked; the points already saved for the picked ones are loaded for the preview
+  const [facing, setFacing] = useState<string | null>(null);
+  const pickedKey = picked.join("|");
+  useEffect(() => {
+    if (backdrop !== "chosen") return;
+    for (const id of pickedKey ? pickedKey.split("|") : [])
+      loadFocus(id)
+        .then((focus) => Object.keys(focus).length && onFaces(id, focus))
+        .catch(() => undefined); // without them the preview shows the shop's guess
+  }, [backdrop, pickedKey, onFaces]);
+  const timing = adTiming(s);
+  const state = !s.is_visible
+    ? "Hidden"
+    : timing === "waiting"
+      ? `Waiting: shows from ${dayOf(s.starts_at)}`
+      : timing === "ended"
+        ? `Ended ${dayOf(s.ends_at)}: no longer showing`
+        : "Showing now";
+  const saveDates = (starts: string | null, ends: string | null) => {
+    if (starts && ends && new Date(ends) <= new Date(starts)) return window.alert("The last day must be after the first day.");
+    onSave({ starts_at: starts, ends_at: ends });
+  };
   return (
-    <div className="ad-slide" style={{ opacity: s.is_visible ? 1 : 0.55 }}>
+    <div className={`ad-slide ad-ads ${s.is_visible && timing === "live" ? "" : "is-off"}`}>
       <div className="ad-slide__order">
         <button type="button" onClick={() => onMove(-1)} disabled={first} aria-label="Move up">
           ▲
@@ -1900,16 +2001,19 @@ function SlideRow({
           ▼
         </button>
       </div>
-      <div className="ad-slide__photo">
-        <PhotoUploader
-          single
-          folder="slides"
-          urls={s.image_url ? [s.image_url] : []}
-          onChange={(urls) => onSave({ image_url: urls[0] ?? null })}
-        />
-        {!s.image_url && <span className="ad-muted ad-sm">No photo: the mascot shows instead</span>}
-      </div>
       <div className="ad-slide__fields">
+        <span className={`ad-ads__state ${s.is_visible && timing === "live" ? "is-live" : ""}`}>{state}</span>
+        <div className="ad-slide__urls">
+          <input
+            className="sh-input ad-slide__sub"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            aria-label="Small label above the headline"
+            placeholder="Small label (optional), e.g. Pre-orders"
+            maxLength={40}
+            onBlur={() => label.trim() !== (s.label ?? "") && onSave({ label: label.trim() || null })}
+          />
+        </div>
         <input
           className="sh-input ad-slide__headline"
           value={headline}
@@ -1922,19 +2026,160 @@ function SlideRow({
           className="sh-input ad-slide__sub"
           value={sub}
           onChange={(e) => setSub(e.target.value)}
-          aria-label="Subheading"
-          placeholder="Subheading"
+          aria-label="One line under the headline"
+          placeholder="One line under the headline"
           maxLength={300}
           onBlur={() => sub !== (s.subheading ?? "") && onSave({ subheading: sub || null })}
         />
-        <input
-          className="sh-input ad-slide__sub"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          aria-label="Link when clicked"
-          placeholder="Link when clicked (optional)"
-          onBlur={() => url(link) !== s.link_url && onSave({ link_url: url(link) })}
-        />
+        <div className="ad-slide__urls">
+          <input
+            className="sh-input ad-slide__sub"
+            value={button}
+            onChange={(e) => setButton(e.target.value)}
+            aria-label="Button text"
+            placeholder="Button text (optional), e.g. Shop now"
+            maxLength={40}
+            onBlur={() => button.trim() !== (s.button_text ?? "") && onSave({ button_text: button.trim() || null })}
+          />
+          <input
+            className="sh-input ad-slide__sub"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            aria-label="Where the ad goes when clicked"
+            placeholder="Link, e.g. /shop?series=Re:Zero"
+            onBlur={() => url(link) !== s.link_url && onSave({ link_url: url(link) })}
+          />
+        </div>
+        {button.trim() && !link.trim() && <span className="ad-muted ad-sm">The button shows once the ad has a link.</span>}
+        <div className="ad-ads__dates">
+          <label>
+            <span>Show from</span>
+            <input
+              type="date"
+              className="sh-input"
+              value={dayOf(s.starts_at)}
+              onChange={(e) => saveDates(dayStart(e.target.value), s.ends_at ?? null)}
+            />
+          </label>
+          <label>
+            <span>Last day</span>
+            <input
+              type="date"
+              className="sh-input"
+              value={dayOf(s.ends_at)}
+              onChange={(e) => saveDates(s.starts_at ?? null, dayEnd(e.target.value))}
+            />
+          </label>
+          <span className="ad-muted ad-sm">Leave empty to show always. With dates, the ad switches on and off by itself.</span>
+        </div>
+        <div className="ad-ads__behind">
+          <b>Pictures behind the ad</b>
+          <div className="ad-seg" role="group" aria-label="Pictures behind the ad">
+            {BACKDROPS.map((b) => (
+              <button
+                key={b.value}
+                type="button"
+                className={backdrop === b.value ? "is-active" : ""}
+                aria-pressed={backdrop === b.value}
+                onClick={() => backdrop !== b.value && onSave({ backdrop: b.value })}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+          <span className="ad-muted ad-sm">{BACKDROPS.find((b) => b.value === backdrop)?.help}</span>
+          {backdrop === "photo" && (
+            <div className="ad-slide__photo">
+              <PhotoUploader
+                single
+                folder="slides"
+                urls={s.image_url ? [s.image_url] : []}
+                onChange={(urls) => onSave({ image_url: urls[0] ?? null })}
+              />
+              {!s.image_url && <span className="ad-muted ad-sm">No photo yet: product photos show until you add one.</span>}
+            </div>
+          )}
+          {backdrop === "chosen" && (
+            <div className="ad-ads__pick">
+              {picked.length > 0 && (
+                <ul className="ad-ads__picked">
+                  {picked.map((id, i) => {
+                    const p = byId.get(id);
+                    return (
+                      <li key={id} className={i >= BACKDROP_PHOTOS ? "is-extra" : ""}>
+                        {p?.images[0] ? <img src={resized(p.images[0], 96)} alt="" /> : <i aria-hidden />}
+                        <span title={p?.name}>{p ? p.name : "No longer in the shop"}</span>
+                        {p?.images[0] && (
+                          <button
+                            type="button"
+                            className="ad-ads__face"
+                            aria-pressed={facing === id}
+                            title="Mark the character's face, so the picture behind the ad is framed on it"
+                            onClick={() => setFacing(facing === id ? null : id)}
+                          >
+                            ◎ Face
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          aria-label={`Take ${p?.name ?? "this product"} off the ad`}
+                          onClick={() => onSave({ product_ids: picked.filter((x) => x !== id) })}
+                        >
+                          ×
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {facing && byId.get(facing)?.images[0] && (
+                <PhotoFocusEditor
+                  key={facing}
+                  productId={facing}
+                  url={byId.get(facing)!.images[0]}
+                  onSaved={(focus) => onFaces(facing, focus)}
+                  onClose={() => setFacing(null)}
+                />
+              )}
+              {picked.length > 0 && (
+                <span className="ad-muted ad-sm">
+                  Each picture is framed on the character's face. The shop guesses where it is; press ◎ Face to mark it yourself.
+                </span>
+              )}
+              {picked.length === 0 && (
+                <span className="ad-muted ad-sm">Nothing picked yet: recent product photos show until you pick.</span>
+              )}
+              {picked.length > BACKDROP_PHOTOS && (
+                <span className="ad-muted ad-sm">The first {BACKDROP_PHOTOS} that shoppers can see are shown; the rest stand by.</span>
+              )}
+              {picked.length < MAX_PICKED && (
+                <>
+                  <input
+                    className="sh-input ad-slide__sub"
+                    value={find}
+                    onChange={(e) => setFind(e.target.value)}
+                    aria-label="Find a product to show behind the ad"
+                    placeholder="Find a product by name, series or character"
+                  />
+                  {found.length > 0 && (
+                    <ul className="ad-ads__found">
+                      {found.map((p) => (
+                        <li key={p.id}>
+                          <button type="button" onClick={() => onSave({ product_ids: [...picked, p.id] })}>
+                            {p.images[0] ? <img src={resized(p.images[0], 96)} alt="" /> : <i aria-hidden />}
+                            <span>{p.name}</span>
+                            {!p.images.length && <em>no photo</em>}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {words.length >= 2 && found.length === 0 && <span className="ad-muted ad-sm">No product matches.</span>}
+                </>
+              )}
+            </div>
+          )}
+        </div>
         <button type="button" className="ad-remove" onClick={onRemove}>
           Remove
         </button>

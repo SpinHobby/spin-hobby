@@ -13,6 +13,9 @@ export interface Product {
   name: string;
   series: string | null;
   character: string | null;
+  /** The version its box names ("Flower Dress") and what kind of product it is ("Prize Figure", "Plush"), when the shop knows them. */
+  version?: string | null;
+  productType?: string | null;
   category: string | null;
   categoryId?: string | null;
   images: string[];
@@ -20,6 +23,8 @@ export interface Product {
   cutouts?: string[];
   /** Photos an admin moved or zoomed inside their square, by address (the rest sit in the middle). */
   frames?: Record<string, PhotoFrame>;
+  /** Where the face is in a photo, by address: a large, cropped picture of it is framed there (photo.ts focusOf). Home page banner only. */
+  focus?: Record<string, PhotoFrame>;
   priceCents: number;
   compareAtCents: number | null;
   currency: "CAD";
@@ -98,6 +103,15 @@ export interface HeroSlide {
   link_url: string | null;
   sort_order: number;
   is_visible: boolean;
+  /** Banner ad fields (components/shop/adRules.ts); absent from a shop older than them. */
+  label?: string | null;
+  button_text?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  backdrop?: "products" | "photo" | "chosen";
+  product_ids?: string[];
+  /** The products whose photos show behind the ad (home page only). */
+  products?: Product[];
 }
 
 export interface StoreEvent {
@@ -132,6 +146,8 @@ export interface Homepage {
   preorders: Product[];
   ranking: Product[];
   newInStock: Product[];
+  /** What sold lately, with a photo ("Recently sold"); absent from a shop older than it. */
+  recentlySold?: Product[];
   events: StoreEvent[];
   categories?: ShopCategory[];
   /** Two numbers for the promo cards beside the hero, worked out by the server over the whole catalog. */

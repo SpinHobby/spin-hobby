@@ -3770,3 +3770,271 @@
 .ad-check.ad-check--sub {
   margin-left: 26px;
 }
+
+// ------------------------------------------------------------ banner ads (Homepage > Banner ads; Screens.tsx SlideRow)
+.ad-ads__help {
+  margin: 0;
+  padding: 12px 18px 0;
+  max-width: 70ch;
+}
+.ad-ads {
+  &.is-off .ad-slide__fields > :not(.ad-ads__state) {
+    opacity: 0.6;
+  }
+  .ad-slide__fields {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.ad-ads__state {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text2);
+  transition: color 0.2s;
+  &.is-live {
+    color: var(--teal);
+  }
+}
+.ad-ads__dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+  }
+  > span {
+    flex: 1 1 200px;
+  }
+}
+.ad-ads__behind,
+.ad-ads__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ad-ads__behind > b {
+  font-size: 13px;
+  margin-top: 4px;
+}
+.ad-ads__picked,
+.ad-ads__found {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  img,
+  i {
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--surface2);
+  }
+  span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    text-align: left;
+  }
+  em {
+    font-size: 11.5px;
+    color: var(--text2);
+  }
+}
+.ad-ads__picked li,
+.ad-ads__found button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  animation: sh-fade 0.2s;
+}
+.ad-ads__picked li.is-extra {
+  opacity: 0.6;
+}
+.ad-ads__picked .ad-ads__face {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text2);
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+  &:hover,
+  &[aria-pressed="true"] {
+    border-color: var(--primary);
+    color: var(--text);
+  }
+}
+.ad-ads__picked button {
+  border: 0;
+  background: transparent;
+  color: var(--text2);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  &:hover {
+    color: var(--red);
+  }
+}
+.ad-ads__found button {
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  &:hover,
+  &:focus-visible {
+    border-color: var(--primary);
+    background: var(--surface2);
+  }
+}
+
+// ------------------------------------------------------------ face focus (PhotoFocusEditor.tsx): mark the face in a photo
+.ad-focus__whole {
+  width: min(280px, 100%);
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: crosshair;
+  touch-action: none;
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+.ad-focus__photo {
+  position: relative;
+  display: block;
+  line-height: 0;
+  img {
+    display: block;
+    max-width: 100%;
+    max-height: 320px;
+    border-radius: 8px;
+    user-select: none;
+    pointer-events: none;
+  }
+}
+.ad-focus__ring {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  box-shadow:
+    0 0 0 2px var(--block),
+    inset 0 0 0 2px var(--block);
+  pointer-events: none;
+  transition:
+    left 0.12s,
+    top 0.12s;
+}
+.ad-focus__tile {
+  display: block;
+  width: 108px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface);
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--fx, 50%) var(--fy, 50%);
+    transform-origin: var(--fx, 50%) var(--fy, 50%);
+    transform: scale(var(--fz, 1));
+    transition: transform 0.2s;
+  }
+}
+
+// ------------------------------------------------------------ requests (Requests.tsx): "Ask us to find one" on sold items
+.ad-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  > p {
+    margin: 0;
+    max-width: 80ch;
+  }
+}
+.ad-request__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  img,
+  i {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--surface2);
+  }
+  span {
+    display: flex;
+    flex-direction: column;
+  }
+  b {
+    font-size: 12px;
+    color: var(--text2);
+  }
+}
+.ad-request {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px;
+}
+.ad-request__people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13.5px;
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+  }
+  em {
+    color: var(--text2);
+  }
+}
+.ad-request__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ad-request__picked {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 13.5px;
+}

@@ -24,6 +24,7 @@ import { AccountsScreen } from "./Accounts";
 import { DiscountsScreen } from "./Discounts";
 import { RewardsScreen } from "./Rewards";
 import { ReviewsScreen } from "./Reviews";
+import { RequestsScreen } from "./Requests";
 import { SearchScreen } from "./SearchScreen";
 import { AuditScreen } from "./Audit";
 import { CategoriesScreen } from "./Categories";
@@ -187,6 +188,7 @@ export default function Admin() {
       {screen === "Categories" && <CategoriesScreen ctx={ctx} />}
       {screen === "Orders" && <OrdersScreen ctx={ctx} />}
       {screen === "Reviews" && <ReviewsScreen ctx={ctx} />}
+      {screen === "Requests" && <RequestsScreen ctx={ctx} />}
       {screen === "Search" && <SearchScreen ctx={ctx} />}
       {screen === "Homepage" && <HomepageScreen ctx={ctx} />}
       {screen === "Settings" && <SettingsScreen ctx={ctx} />}

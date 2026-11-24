@@ -42,7 +42,8 @@ export function ShopTheme() {
   const shown = preview ?? saved;
   useEffect(() => {
     const html = document.documentElement;
-    if (inAdmin || shown === DEFAULT_THEME) delete html.dataset.shopTheme;
+    // on every shop page, Classic included: its dark colours on the shop are not the Admin's (themes.scss)
+    if (inAdmin) delete html.dataset.shopTheme;
     else html.dataset.shopTheme = shown;
   }, [inAdmin, shown]);
 

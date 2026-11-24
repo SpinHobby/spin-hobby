@@ -29,6 +29,7 @@ import type { MouseEvent, ReactNode } from "react";
 import type { Product } from "../../v3/types";
 import { productPath } from "../../v3/storefront/data";
 import { productPhoto } from "../../v3/photo";
+import { shortName } from "./productName";
 import { closingLabel } from "../../v3/storefront/nudges";
 import { askHref, noPrice } from "./priceOnRequest";
 import "../../v3/storefront/storefront.scss";
@@ -202,7 +203,7 @@ function VerticalCard({ p, a }: { p: Product; a: CardActions }) {
         <span className="sf-card__series">{p.series ?? p.category ?? "Spin Hobby"}</span>
         <h3 className="sf-card__name" title={p.name}>
           <ProductLink p={p} a={a}>
-            {p.name}
+            {shortName(p)}
           </ProductLink>
         </h3>
         <div className="sf-card__price">
@@ -251,7 +252,7 @@ function HorizontalCard({ p, a, meta, actions, onRemove }: ProductCardProps) {
           <span className="sf-card__series">{p.series ?? p.category ?? "Spin Hobby"}</span>
           <h3 className="sf-hcard__name" title={p.name}>
             <ProductLink p={p} a={a}>
-              {p.name}
+              {shortName(p)}
             </ProductLink>
           </h3>
           <span className="sf-hcard__status" style={{ color: status.color }}>
@@ -346,7 +347,7 @@ export function ProductRow({ p, a }: { p: Product; a: CardActions }) {
         <div className="sf-row__meta">{[p.series, p.category].filter(Boolean).join(" · ")}</div>
         <div className="sf-row__name">
           <ProductLink p={p} a={a}>
-            {p.name}
+            {shortName(p)}
           </ProductLink>
         </div>
         <div className="sf-row__status" style={{ color: meta.color }}>
@@ -387,7 +388,7 @@ export function PreorderCard({ p, a }: { p: Product; a: CardActions }) {
       </ProductLink>
       <div className="sf-pre__body">
         <ProductLink p={p} a={a} className="sf-pre__name">
-          {p.name}
+          {shortName(p)}
         </ProductLink>
         <ProductPrice p={p} currency={a.currency} />
         {discountPct(p) > 0 && <s className="sf-muted">{price(p.compareAtCents, a.currency, { code: false })}</s>}
@@ -414,7 +415,7 @@ export function MiniRow({ p, a, rank, quickAdd }: { p: Product; a: CardActions; 
       </ProductLink>
       <div className="sf-mini__main">
         <ProductLink p={p} a={a} className="sf-mini__name">
-          {p.name}
+          {shortName(p)}
         </ProductLink>
         <div className="sf-mini__status" style={{ color: STATUS_META[s].color }}>
           {statusShort(p)}
