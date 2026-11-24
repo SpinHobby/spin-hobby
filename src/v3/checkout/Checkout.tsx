@@ -786,7 +786,7 @@ export default function Checkout() {
                   return (
                     <div key={l.variationId} className="co-line">
                       <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 68, height: 68 }}>
-                        {l.imageUrl && <img {...framedPhoto(l.imageUrl, 136, !!l.imageCutout, l.imageFrame)} alt="" />}
+                        {l.imageUrl && <img {...framedPhoto(l.imageUrl, 136, !!l.imageCutout, l.imageFrame, l.itemId)} alt="" />}
                       </div>
                       <div className="co-line__main">
                         <span className="co-line__name">{l.name}</span>

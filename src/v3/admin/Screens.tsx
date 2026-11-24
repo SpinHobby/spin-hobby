@@ -35,6 +35,7 @@ import {
 import { CategorySelect } from "./Categories";
 import { buildTree, indentLabel } from "../categoryTree";
 import { addressLine, customerName, ORDER_STATUS, type AdminData, type Screen } from "./data";
+import { ProductBackgroundSection } from "./ProductBackgrounds";
 import { photo } from "../photo";
 import { Card, DataTable, Drawer, EmptyState, FilterChips, SearchInput, Skeleton, Toolbar, type Column } from "../../components";
 import { FrontRank, MoveArrows } from "./FrontPage";
@@ -1199,6 +1200,7 @@ function ProductDrawer({
           )}
           {!manual && p.state !== "retired" && <SquarePhotos ctx={ctx} p={p} onChanged={(urls) => onSaved({ images: urls })} />}
           {!manual && p.state !== "retired" && <EbayListing ctx={ctx} productId={p.id} />}
+          {manual && <ProductBackgroundSection ctx={ctx} itemId={p.id} images={p.images} cutouts={p.cutouts ?? []} />}
           <section className="ad-where" aria-label="Where this product lives">
             <div className="ad-where__row">
               <span className="ad-label" style={{ margin: 0 }}>
