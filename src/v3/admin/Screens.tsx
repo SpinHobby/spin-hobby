@@ -1687,33 +1687,37 @@ function OrderDrawer({ ctx, o, onClose }: { ctx: Ctx; o: Order; onClose: () => v
 }
 
 // ================================================================ Homepage
+/** An ad's fields as the API names them (spin-hobby-server slide.dto.ts). */
+const SLIDE_FIELDS: Record<string, string> = {
+  headline: "headline",
+  subheading: "subheading",
+  image_url: "imageUrl",
+  link_url: "linkUrl",
+  is_visible: "isVisible",
+  sort_order: "sortOrder",
+  label: "label",
+  button_text: "buttonText",
+  starts_at: "startsAt",
+  ends_at: "endsAt",
+  backdrop: "backdrop",
+  product_ids: "productIds",
+};
 export function HomepageScreen({ ctx }: { ctx: Ctx }) {
   const slides = ctx.data.slides;
   const setSlides = (next: HeroSlide[]) => ctx.setData((d) => ({ ...d, slides: next }));
   const featured = ctx.data.products.filter((p) => p.isFeatured).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
+  // Only the fields that changed are sent, and the list is updated from its latest state. Two saves close together (leaving a text
+  // field by clicking a button saves both) used to each send the whole ad as it was before the other, so one undid the other
+  // (seen on staging 2026-11-24: clearing the label and picking "Product photos" left the old pictures).
   const saveSlide = async (s: HeroSlide, patch: Partial<HeroSlide>) => {
-    const next = { ...s, ...patch };
-    setSlides(slides.map((x) => (x.id === s.id ? next : x)));
+    ctx.setData((d) => ({ ...d, slides: d.slides.map((x) => (x.id === s.id ? { ...x, ...patch } : x)) }));
     if (s.id.startsWith("default-")) return;
+    const sent = Object.fromEntries(
+      Object.entries(patch).flatMap(([key, value]) => (SLIDE_FIELDS[key] ? [[SLIDE_FIELDS[key], value ?? null]] : [])),
+    );
     try {
-      await api(`/admin/homepage/slides/${s.id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          headline: next.headline,
-          subheading: next.subheading,
-          imageUrl: next.image_url,
-          linkUrl: next.link_url,
-          isVisible: next.is_visible,
-          sortOrder: next.sort_order,
-          label: next.label ?? null,
-          buttonText: next.button_text ?? null,
-          startsAt: next.starts_at ?? null,
-          endsAt: next.ends_at ?? null,
-          backdrop: next.backdrop ?? (next.image_url ? "photo" : "products"),
-          productIds: next.product_ids ?? [],
-        }),
-      });
+      await api(`/admin/homepage/slides/${s.id}`, { method: "PUT", body: JSON.stringify(sent) });
       ctx.flash("Ad saved");
     } catch (e) {
       ctx.flash(errMsg(e));

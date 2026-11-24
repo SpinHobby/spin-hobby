@@ -291,8 +291,11 @@ export function framedPhoto(url: string, width: number, cutout = false, frame?: 
  * instead: the point kept in view (x, y: 0-100 % across and down the photo file) and how far in. An admin sets it per photo
  * (Admin > product > Photos > Face, or on a banner ad's picked products); the shop sends it with the product (`focus`). */
 
-/** The frame used when no admin has marked the face: upper middle, where a standing figure's face usually is. A guess. */
-export const GUESSED_FOCUS: PhotoFrame = { x: 50, y: 22, zoom: 1.5 };
+/**
+ * The frame used when no admin has marked the face: the middle of the photo, a little above centre, not zoomed. A zoomed guess at
+ * the upper middle showed plain backdrop on real boxed-figure photos (staging, 2026-11-24), which is worse than no framing.
+ */
+export const GUESSED_FOCUS: PhotoFrame = { x: 50, y: 40, zoom: 1 };
 
 /** Where the face is in `url`: the admin's point, or the guess. */
 export const focusOf = (p: { focus?: Record<string, PhotoFrame> }, url: string | null | undefined): PhotoFrame =>
