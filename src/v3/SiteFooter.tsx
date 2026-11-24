@@ -16,6 +16,7 @@ export default function SiteFooter() {
           <span className="sh-footer__h">Shop</span>
           <a href="/">Back to the store</a>
           <Link to="/events">Events</Link>
+          <Link to="/sold">Sold pieces</Link>
           {SHOW_EBAY_STORE && (
             <a href={EBAY_URL} target="_blank" rel="noreferrer">
               eBay store ↗

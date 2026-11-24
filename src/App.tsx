@@ -21,6 +21,7 @@ const Support = lazy(() => import("./v3/support/Support"));
 const OrderStatus = lazy(() => import("./v3/support/OrderStatus"));
 const Events = lazy(() => import("./v3/events/Events"));
 const About = lazy(() => import("./v3/about/About"));
+const Sold = lazy(() => import("./v3/sold/Sold"));
 const Rewards = lazy(() => import("./v3/rewards/Rewards"));
 const Glossary = lazy(() => import("./v3/glossary/Glossary"));
 const ResetPassword = lazy(() => import("./v3/ResetPassword"));
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/order-status" element={<OrderStatus />} />
           <Route path="/events" element={<Events />} />
           <Route path="/about" element={<About />} />
+          <Route path="/sold" element={<Sold />} />
           {isOn("rewards") && <Route path="/rewards" element={<Rewards />} />}
           <Route path="/glossary" element={<Glossary />} />
         </Route>
