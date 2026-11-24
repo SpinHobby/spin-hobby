@@ -1,10 +1,12 @@
-import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { dayLabel, discountPct, money, monthLabel, relativeAge, shortDate, statusLabel } from "../format";
 import { ProductCard, type CardActions } from "../storefront/ProductViews";
 import { HeroRow } from "../storefront/Storefront";
 import { BACKDROP_PHOTOS, MAX_ADS, MAX_PICKED, adTiming, dealBackdrops, type AdBackdrop } from "../../components/shop/adRules";
-import { resized } from "../photo";
+import { resized, type PhotoFrame } from "../photo";
+import { PhotoFocusEditor } from "./PhotoFocusEditor";
+import { loadFocus } from "./photoFocus";
 import { useEscape } from "../hooks";
 import type { AdminState, Availability, HeroSlide, Order, Product, StoreEvent, StoreSettings } from "../types";
 import { AddProductDrawer, InlineStock, PhotoUploader, StockField } from "./Merch";
@@ -1771,12 +1773,18 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
         .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? ""))),
     [ctx.data.products],
   );
+  // face points marked in this screen, by product, so the preview shows them at once (the shop sends them on the home page)
+  const [faces, setFaces] = useState<Record<string, Record<string, PhotoFrame>>>({});
+  const onFaces = useCallback(
+    (productId: string, focus: Record<string, PhotoFrame>) => setFaces((f) => ({ ...f, [productId]: focus })),
+    [],
+  );
   const visibleSlides = useMemo(() => {
     const shown = liveSlides.length ? liveSlides : ctx.data.previewSlides;
     const dealt = dealBackdrops(shown, ctx.data.products, recent);
-    return shown.map((sl, i) => ({ ...sl, products: dealt[i] }));
+    return shown.map((sl, i) => ({ ...sl, products: dealt[i].map((p) => (faces[p.id] ? { ...p, focus: faces[p.id] } : p)) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slides, ctx.data.previewSlides, ctx.data.products, recent]);
+  }, [slides, ctx.data.previewSlides, ctx.data.products, recent, faces]);
   const { closingSoon, maxDiscountPct: maxOff } = ctx.data.promos;
 
   const moveFeatured = async (i: number, dir: number) => {
@@ -1805,7 +1813,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
         className="ad-preview--hero"
       >
         <HeroRow
-          key={visibleSlides.map((sl) => sl.id).join("|")}
+          key={visibleSlides.map((sl) => sl.id).join("|") + JSON.stringify(faces)}
           slides={visibleSlides}
           closingSoon={closingSoon}
           maxOff={maxOff}
@@ -1844,6 +1852,7 @@ export function HomepageScreen({ ctx }: { ctx: Ctx }) {
               last={i === slides.length - 1}
               onMove={(d) => move(i, d)}
               products={ctx.data.products}
+              onFaces={onFaces}
               onSave={(patch) => saveSlide(s, patch)}
               onRemove={() => removeSlide(s)}
             />
@@ -1922,6 +1931,7 @@ function SlideRow({
   first,
   last,
   products,
+  onFaces,
   onMove,
   onSave,
   onRemove,
@@ -1930,6 +1940,8 @@ function SlideRow({
   first: boolean;
   last: boolean;
   products: Product[];
+  /** Tells the screen a product's face points (loaded, or just saved), for the preview. */
+  onFaces: (productId: string, focus: Record<string, PhotoFrame>) => void;
   onMove: (d: number) => void;
   onSave: (patch: Partial<HeroSlide>) => void;
   onRemove: () => void;
@@ -1955,6 +1967,16 @@ function SlideRow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [words, products, picked.join("|")],
   );
+  // the picked product whose face is being marked; the points already saved for the picked ones are loaded for the preview
+  const [facing, setFacing] = useState<string | null>(null);
+  const pickedKey = picked.join("|");
+  useEffect(() => {
+    if (backdrop !== "chosen") return;
+    for (const id of pickedKey ? pickedKey.split("|") : [])
+      loadFocus(id)
+        .then((focus) => Object.keys(focus).length && onFaces(id, focus))
+        .catch(() => undefined); // without them the preview shows the shop's guess
+  }, [backdrop, pickedKey, onFaces]);
   const timing = adTiming(s);
   const state = !s.is_visible
     ? "Hidden"
@@ -2085,6 +2107,17 @@ function SlideRow({
                       <li key={id} className={i >= BACKDROP_PHOTOS ? "is-extra" : ""}>
                         {p?.images[0] ? <img src={resized(p.images[0], 96)} alt="" /> : <i aria-hidden />}
                         <span title={p?.name}>{p ? p.name : "No longer in the shop"}</span>
+                        {p?.images[0] && (
+                          <button
+                            type="button"
+                            className="ad-ads__face"
+                            aria-pressed={facing === id}
+                            title="Mark the character's face, so the picture behind the ad is framed on it"
+                            onClick={() => setFacing(facing === id ? null : id)}
+                          >
+                            ◎ Face
+                          </button>
+                        )}
                         <button
                           type="button"
                           aria-label={`Take ${p?.name ?? "this product"} off the ad`}
@@ -2096,6 +2129,20 @@ function SlideRow({
                     );
                   })}
                 </ul>
+              )}
+              {facing && byId.get(facing)?.images[0] && (
+                <PhotoFocusEditor
+                  key={facing}
+                  productId={facing}
+                  url={byId.get(facing)!.images[0]}
+                  onSaved={(focus) => onFaces(facing, focus)}
+                  onClose={() => setFacing(null)}
+                />
+              )}
+              {picked.length > 0 && (
+                <span className="ad-muted ad-sm">
+                  Each picture is framed on the character's face. The shop guesses where it is; press ◎ Face to mark it yourself.
+                </span>
               )}
               {picked.length === 0 && (
                 <span className="ad-muted ad-sm">Nothing picked yet: recent product photos show until you pick.</span>

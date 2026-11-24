@@ -23,6 +23,8 @@ export interface Product {
   cutouts?: string[];
   /** Photos an admin moved or zoomed inside their square, by address (the rest sit in the middle). */
   frames?: Record<string, PhotoFrame>;
+  /** Where the face is in a photo, by address: a large, cropped picture of it is framed there (photo.ts focusOf). Home page banner only. */
+  focus?: Record<string, PhotoFrame>;
   priceCents: number;
   compareAtCents: number | null;
   currency: "CAD";

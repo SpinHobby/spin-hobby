@@ -5,6 +5,7 @@ import { api, apiBlob } from "../../lib/api";
 import type { Product } from "../types";
 import { EditorBoundary } from "./EditorBoundary";
 import { PhotoFrameEditor } from "./PhotoFrameEditor";
+import { PhotoFocusEditor } from "./PhotoFocusEditor";
 import { usePhotoFrames } from "./photoFrames";
 import { prepareImage, preparedFromBlob } from "./image";
 import { useBackgrounds } from "./photoBackgrounds";
@@ -53,6 +54,8 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   const [offWebsite, setOffWebsite] = useState<string[]>([]);
   // where each photo sits in its square on the shop (moved or zoomed ones), and the photo being positioned (by address)
   const { frames, framing, setFraming, saving: savingFrame, error: frameError, save: saveFramed } = usePhotoFrames(p.id);
+  // the photo whose face is being marked (PhotoFocusEditor)
+  const [facing, setFacing] = useState<string | null>(null);
   const backgrounds = useBackgrounds();
 
   const apply = useCallback(
@@ -355,6 +358,16 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
                 </button>
                 <button
                   type="button"
+                  onClick={() => setFacing(facing === photo.url ? null : photo.url)}
+                  disabled={!!busy}
+                  title="Face: mark the character's face, for where this photo is shown large and cropped (home page banner)"
+                  aria-label="Mark the face"
+                  aria-pressed={facing === photo.url}
+                >
+                  ◎
+                </button>
+                <button
+                  type="button"
                   onClick={() => openEditor(photo)}
                   disabled={!!busy}
                   title="Edit (saved as a new photo; the original is kept)"
@@ -406,6 +419,15 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
             </div>
           ))}
         </div>
+      )}
+      {facing && shown.some((x) => x.url === facing) && (
+        <PhotoFocusEditor
+          key={facing}
+          productId={p.id}
+          url={facing}
+          onSaved={() => ctx.flash("Face saved. The home page banner uses it on its next load.")}
+          onClose={() => setFacing(null)}
+        />
       )}
       {(() => {
         const photo = framing ? shown.find((x) => x.url === framing) : null;

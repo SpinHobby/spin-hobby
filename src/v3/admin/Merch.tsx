@@ -14,6 +14,7 @@ import { PolishOptions, type PolishChoice } from "./PolishOptions";
 import { polishPhoto, type StickerBox } from "./polish";
 import { useSeriesList } from "./seriesList";
 import { PhotoFrameEditor } from "./PhotoFrameEditor";
+import { PhotoFocusEditor } from "./PhotoFocusEditor";
 import { usePhotoFrames } from "./photoFrames";
 import type { Ctx } from "./Screens";
 
@@ -66,6 +67,8 @@ export function PhotoUploader({
   const limit = single ? 1 : max;
   const frames = usePhotoFrames(framing?.productId);
   const canFrame = (url: string) => !!framing?.saved.includes(url);
+  // the photo whose face is being marked (PhotoFocusEditor)
+  const [facing, setFacing] = useState<string | null>(null);
 
   /** Uploads the edited photo and puts it in place of the one that was opened. */
   const saveEdit = async (index: number, result: GleamResult) => {
@@ -166,6 +169,18 @@ export function PhotoUploader({
                     ⤧
                   </button>
                 )}
+                {canFrame(url) && (
+                  <button
+                    type="button"
+                    onClick={() => setFacing(facing === url ? null : url)}
+                    disabled={!!busy}
+                    title="Face: mark the character's face, for where this photo is shown large and cropped (home page banner)"
+                    aria-label="Mark the face"
+                    aria-pressed={facing === url}
+                  >
+                    ◎
+                  </button>
+                )}
                 <button type="button" onClick={() => setEditing(i)} disabled={!!busy} title="Edit photo" aria-label="Edit photo">
                   ✎
                 </button>
@@ -181,6 +196,9 @@ export function PhotoUploader({
             </div>
           ))}
         </div>
+      )}
+      {facing && framing && canFrame(facing) && (
+        <PhotoFocusEditor key={facing} productId={framing.productId} url={facing} onClose={() => setFacing(null)} />
       )}
       {frames.framing && canFrame(frames.framing) && (
         <PhotoFrameEditor

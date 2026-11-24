@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { productPhoto } from "../../v3/photo";
+import { focusPhoto } from "../../v3/photo";
 import { productPath } from "../../v3/storefront/data";
 import { backdropOf, type BannerAd } from "./adRules";
 
@@ -34,7 +34,7 @@ function Backdrop({ ad, leaving = false }: { ad: BannerAd; leaving?: boolean }) 
               tabIndex={leaving ? -1 : undefined}
               style={{ "--i": i } as React.CSSProperties}
             >
-              <img {...productPhoto(p, p.images[0], 360)} alt={p.name} />
+              <img {...focusPhoto(p, p.images[0], 480)} alt={p.name} />
             </a>
           ))}
         </div>
