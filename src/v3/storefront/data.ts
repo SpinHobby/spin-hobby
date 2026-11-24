@@ -77,7 +77,8 @@ export interface Filters {
 export const ALL = "All categories";
 // Sold-out items are hidden until a shopper ticks "Sold out": most of the catalog is out of stock, and the shop should lead with what can be bought.
 export const DEFAULT_AVAIL: Filters["avail"] = { "In stock": true, "Pre-order": true, "Sold out": false };
-const PAGE = 24;
+// 30, not 24: the shop page shows more before "Show more" (the owner, 2026-11-24), and 30 fills whole rows at 2, 3, 5 and 6 a row
+const PAGE = 30;
 
 function toQuery(f: Filters, wishlistIds: string[] | null) {
   const q = new URLSearchParams({ limit: String(PAGE), sort: f.sort });
