@@ -54,6 +54,8 @@ export interface Product {
   // Admin catalog list (/admin/catalog) only.
   state?: AdminState;
   manufacturer?: string | null;
+  /** The product line ("Relax Time", "Luminasta"). */
+  productLine?: string | null;
   isActive?: boolean;
   isVisible?: boolean;
   sellable?: boolean;

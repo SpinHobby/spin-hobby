@@ -1026,6 +1026,8 @@ function ProductDrawer({
     compareAt: p.compareAtCents ? (p.compareAtCents / 100).toFixed(2) : "",
     maxPer: p.maxPerCustomer ? String(p.maxPerCustomer) : "",
     series: p.series ?? "",
+    maker: p.manufacturer ?? "",
+    line: p.productLine ?? "",
     jan: p.janCode ?? "",
     categoryId: p.categoryId ?? "",
   });
@@ -1080,6 +1082,8 @@ function ProductDrawer({
         compare_at_cents: compare ?? "",
         max_per_customer: maxPer ?? "",
         series: form.series.trim(),
+        manufacturer: form.maker.trim(),
+        product_line: form.line.trim(),
         jan_code: form.jan.trim(),
         category_id: form.categoryId || null,
       });
@@ -1090,6 +1094,8 @@ function ProductDrawer({
         compareAtCents: compare,
         maxPerCustomer: maxPer,
         series: form.series.trim() || null,
+        manufacturer: form.maker.trim() || null,
+        productLine: form.line.trim() || null,
         janCode: form.jan.trim() || null,
         categoryId: form.categoryId || null,
       });
@@ -1355,6 +1361,14 @@ function ProductDrawer({
               <input className="sh-input" inputMode="numeric" placeholder="No limit" value={form.maxPer} onChange={set("maxPer")} />
             </label>
             <SeriesSelect value={form.series} onChange={(name) => setForm((f) => ({ ...f, series: name }))} list={seriesList} />
+            <label className="ad-field">
+              Maker
+              <input className="sh-input" maxLength={120} placeholder="e.g. Banpresto" value={form.maker} onChange={set("maker")} />
+            </label>
+            <label className="ad-field">
+              Product line
+              <input className="sh-input" maxLength={120} placeholder="e.g. Relax Time" value={form.line} onChange={set("line")} />
+            </label>
             <label className="ad-field">
               JAN code
               <input className="sh-input" inputMode="numeric" value={form.jan} onChange={set("jan")} />

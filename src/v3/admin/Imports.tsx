@@ -47,6 +47,9 @@ interface Draft {
     quality?: { cutout: number; cutoutReasons: string[]; original: number } | null;
     /** Gleamshelf's listing health: a score out of 100 and the top fixes. */
     health?: { score: number; level: "good" | "fair" | "poor"; fixes: string[] } | null;
+    /** The maker and product line read off the box or a product page (none when Gleamshelf could not tell: nothing is guessed). */
+    maker?: string | null;
+    line?: string | null;
   };
 }
 interface ProductMatch {
@@ -443,6 +446,8 @@ function DraftCard({
   const tree = useMemo(() => buildTree(ctx.data.categories as ShopCategory[]), [ctx.data.categories]);
   const [categoryId, setCategoryId] = useState(draft.categoryId ?? "");
   const [seriesName, setSeriesName] = useState(draft.series ?? "");
+  const [maker, setMaker] = useState(draft.details.maker ?? "");
+  const [line, setLine] = useState(draft.details.line ?? "");
   const [price, setPrice] = useState("");
   // one in stock and on the website straight away: the shop adds what it has in hand (tick "Keep off the website" to check it first)
   const [stock, setStock] = useState("1");
@@ -500,6 +505,8 @@ function DraftCard({
           categoryId: categoryId || null,
           category: tree.byId.get(categoryId)?.name ?? null,
           series: seriesName.trim() || null,
+          manufacturer: maker.trim() || null,
+          productLine: line.trim() || null,
           priceCents: cents,
           stockCount: stockNum,
           hidden,
@@ -605,6 +612,30 @@ function DraftCard({
             </select>
           </label>
           <SeriesSelect value={seriesName} onChange={setSeriesName} list={series} />
+        </div>
+        <div className="ad-imports__row">
+          <label className="ad-field">
+            <span className="ad-field__top">
+              Maker <small className="ad-muted">not the licensor</small>
+            </span>
+            <input
+              className="sh-input"
+              value={maker}
+              maxLength={120}
+              placeholder="e.g. Banpresto"
+              onChange={(e) => setMaker(e.target.value)}
+            />
+          </label>
+          <label className="ad-field">
+            <span className="ad-field__top">Product line</span>
+            <input
+              className="sh-input"
+              value={line}
+              maxLength={120}
+              placeholder="e.g. Relax Time"
+              onChange={(e) => setLine(e.target.value)}
+            />
+          </label>
         </div>
         {!categoryId && (
           <NewCategory
