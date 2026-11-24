@@ -1,3 +1,5 @@
+import { PRODUCT_TYPES_LIST } from "../productTypes";
+import { ProductTypeOptions } from "../ProductTypeOptions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { inUse } from "./inUse";
 import { api } from "../../lib/api";
@@ -50,6 +52,8 @@ interface Draft {
     /** The maker and product line read off the box or a product page (none when Gleamshelf could not tell: nothing is guessed). */
     maker?: string | null;
     line?: string | null;
+    /** What kind of product it is ("Prize Figure", "Plush"), worked out by Gleamshelf; none when it could not tell. */
+    productType?: string | null;
   };
 }
 interface ProductMatch {
@@ -448,6 +452,7 @@ function DraftCard({
   const [seriesName, setSeriesName] = useState(draft.series ?? "");
   const [maker, setMaker] = useState(draft.details.maker ?? "");
   const [line, setLine] = useState(draft.details.line ?? "");
+  const [productType, setProductType] = useState(draft.details.productType ?? "");
   const [price, setPrice] = useState("");
   // one in stock and on the website straight away: the shop adds what it has in hand (tick "Keep off the website" to check it first)
   const [stock, setStock] = useState("1");
@@ -507,6 +512,7 @@ function DraftCard({
           series: seriesName.trim() || null,
           manufacturer: maker.trim() || null,
           productLine: line.trim() || null,
+          productType: productType.trim() || null,
           priceCents: cents,
           stockCount: stockNum,
           hidden,
@@ -635,6 +641,18 @@ function DraftCard({
               placeholder="e.g. Relax Time"
               onChange={(e) => setLine(e.target.value)}
             />
+          </label>
+          <label className="ad-field">
+            <span className="ad-field__top">Product type (Gleamshelf fills it in; change it if it is wrong)</span>
+            <input
+              className="sh-input"
+              value={productType}
+              maxLength={60}
+              list={PRODUCT_TYPES_LIST}
+              placeholder="e.g. Prize Figure"
+              onChange={(e) => setProductType(e.target.value)}
+            />
+            <ProductTypeOptions />
           </label>
         </div>
         {!categoryId && (

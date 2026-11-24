@@ -916,6 +916,7 @@ function Details({ p, currency }: { p: Product; currency: Currency }) {
     ["Character", p.character ?? ""],
     ["Maker", p.manufacturer ?? ""],
     ["Product line", p.productLine ?? ""],
+    ["Type", p.productType ?? ""],
     ["Category", p.category ?? ""],
     ["Release", p.releaseMonth ? monthLabel(p.releaseMonth) : ""],
     ["Order by", normalizeStatus(p.status) === "pre" && p.orderByDate ? dayLabel(p.orderByDate) : ""],
