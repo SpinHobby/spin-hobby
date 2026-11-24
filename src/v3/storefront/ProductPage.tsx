@@ -1,3 +1,4 @@
+import { AskToFind } from "../../components/shop/AskToFind";
 import { track } from "../../lib/analytics";
 import { isOn } from "../../features";
 import { ProductPointsLine } from "../rewards/ProductPointsLine";
@@ -790,6 +791,7 @@ function BuyBox({
             <button type="button" className="sf-buy sf-pp__cta" onClick={() => a.onNotify(p)}>
               Notify me when it's back
             </button>
+            <AskToFind product={p} className="sf-pp__ask" />
           </div>
         ) : room === 0 && !justAdded ? (
           <div className="sf-pp__notice">

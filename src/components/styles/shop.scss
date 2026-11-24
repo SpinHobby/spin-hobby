@@ -409,3 +409,127 @@ $ad-leave: 0.32s; // keep in step with LEAVE_MS in BannerAds.tsx
     display: none;
   }
 }
+
+// ---- sold items (components/shop/RecentlySold.tsx, AskToFind.tsx): what sold lately, greyed, with "Ask us to find one"
+.sf-sold__hint {
+  font-size: 13px;
+}
+.sf-sold__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+.sf-sold__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.sf-sold__photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  .sf-img img {
+    filter: grayscale(0.85);
+    opacity: 0.75;
+    transition:
+      filter 0.2s,
+      opacity 0.2s;
+  }
+  &:hover .sf-img img,
+  &:focus-visible .sf-img img {
+    filter: none;
+    opacity: 1;
+  }
+}
+.sf-sold__tag {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--block);
+  color: var(--on-block);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sf-sold__name {
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf-ask__open {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  &:hover,
+  &:focus-visible {
+    border-color: var(--primary);
+    background: var(--surface);
+  }
+}
+.sf-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  font-size: 13px;
+  animation: sh-fade 0.2s;
+  .sh-input {
+    width: 100%;
+    font-size: 16px; // a phone zooms the page in on a smaller field
+    padding: 7px 10px;
+  }
+}
+.sf-ask__line {
+  margin: 0;
+  color: var(--text2);
+}
+.sf-ask__error {
+  color: var(--red);
+  font-weight: 600;
+}
+.sf-ask__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sf-ask--done {
+  margin: 0;
+  color: var(--teal);
+  font-weight: 700;
+}
+// on the product page the button sits under "Notify me", full width like it
+.sf-pp__ask {
+  margin-top: 8px;
+}
+@media (max-width: 900px) {
+  .sf-sold__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .sf-sold__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}

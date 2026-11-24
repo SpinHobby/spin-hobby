@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Card } from "../layout/Card";
 import { CardAction, MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "../shop/ProductCards";
 import { BannerAds } from "../shop/BannerAds";
+import { RecentlySold } from "../shop/RecentlySold";
 import type { BannerAd } from "../shop/adRules";
 import type { Product } from "../../v3/types";
 
@@ -212,6 +213,19 @@ export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
         <div className="sf-hero" id="ads">
           <BannerAds ads={ADS} />
         </div>
+      </Sample>
+
+      <Sample
+        name="RecentlySold (with AskToFind)"
+        note={
+          <>
+            Sold items, greyed, each with <code>AskToFind</code>: the shopper leaves an email and an optional note, with no payment and no
+            promise. The shop answers in Admin &gt; Requests. These are made-up products, so sending the form here shows the shop's "not
+            found" message.
+          </>
+        }
+      >
+        <RecentlySold items={PRODUCTS.slice(0, 3).map((p) => ({ ...p, id: `sold-${p.id}`, status: "out" }))} />
       </Sample>
 
       <Sample

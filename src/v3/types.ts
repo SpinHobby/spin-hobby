@@ -146,6 +146,8 @@ export interface Homepage {
   preorders: Product[];
   ranking: Product[];
   newInStock: Product[];
+  /** What sold lately, with a photo ("Recently sold"); absent from a shop older than it. */
+  recentlySold?: Product[];
   events: StoreEvent[];
   categories?: ShopCategory[];
   /** Two numbers for the promo cards beside the hero, worked out by the server over the whole catalog. */

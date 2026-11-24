@@ -14,6 +14,7 @@ import { ScrollRow } from "../../components/layout/ScrollRow";
 import { useDocumentHead } from "../seo";
 import type { Product } from "../types";
 import { BannerAds } from "../../components/shop/BannerAds";
+import { RecentlySold } from "../../components/shop/RecentlySold";
 import type { BannerAd } from "../../components/shop/adRules";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import { DEFAULT_LAYOUT, layoutAttrs, type LayoutSection, type ProductView, type StorefrontLayout } from "./layout";
@@ -482,6 +483,7 @@ export default function Storefront() {
       </section>
     ),
     recent: homeReady && <RecentlyViewed a={actions} />,
+    sold: homeReady && !!home?.recentlySold?.length && <RecentlySold items={home.recentlySold} />,
     shop: (
       <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
         <div className="sf-shop__head">
