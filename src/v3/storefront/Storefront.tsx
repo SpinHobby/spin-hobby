@@ -13,6 +13,8 @@ import "../../components/styles/motion.scss";
 import { ScrollRow } from "../../components/layout/ScrollRow";
 import { useDocumentHead } from "../seo";
 import type { Product } from "../types";
+import { BannerAds } from "../../components/shop/BannerAds";
+import type { BannerAd } from "../../components/shop/adRules";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import { DEFAULT_LAYOUT, layoutAttrs, type LayoutSection, type ProductView, type StorefrontLayout } from "./layout";
 import {
@@ -1136,74 +1138,17 @@ export function HeroRow({
   onSale,
 }: {
   heading?: string;
-  slides: { id: string; headline: string; subheading: string | null; image_url: string | null; link_url: string | null }[];
+  slides: BannerAd[];
   closingSoon: number;
   maxOff: number;
   onPreorders: () => void;
   onSale: () => void;
 }) {
-  const [index, setIndex] = useState(0);
-  const [autoplay, setAutoplay] = useState(true);
-  const [hovered, setHovered] = useState(false);
-  const count = slides.length;
-
-  useEffect(() => {
-    if (!autoplay || hovered || count < 2) return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => setIndex((i) => (i + 1) % count), 7000);
-    return () => window.clearInterval(timer);
-  }, [autoplay, hovered, count]);
-
-  const slide = slides[Math.min(index, count - 1)];
-  if (!slide) return null;
-  const Banner = slide.link_url ? "a" : "div";
+  if (!slides.length) return null;
 
   return (
     <div className="sf-hero">
-      <Banner
-        className="sf-hero__banner"
-        {...(slide.link_url ? { href: slide.link_url } : {})}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        aria-roledescription="carousel"
-      >
-        {slide.image_url ? (
-          <img key={slide.id} className="sf-hero__photo" src={slide.image_url} alt="" />
-        ) : (
-          <>
-            <div className="sf-hero__sun" />
-            <img className="sf-hero__mascot" src={MASCOT} alt="Spin Hobby mascot" />
-          </>
-        )}
-        <div className="sf-hero__copy" aria-live="polite">
-          {/* the page's one h1: what the shop is, for people and search engines; the slide headline changes */}
-          <h1 className="sf-hero__eyebrow">{heading}</h1>
-          <div key={slide.id} className="sf-hero__text">
-            <h2 className="sh-display">{slide.headline}</h2>
-            {slide.subheading && <p>{slide.subheading}</p>}
-          </div>
-          {count > 1 && (
-            <div className="sf-hero__dots" role="tablist" aria-label="Slides">
-              {slides.map((s, i) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={i === index}
-                  aria-label={`Slide ${i + 1}`}
-                  className={i === index ? "is-active" : ""}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setAutoplay(false);
-                    setIndex(i);
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </Banner>
+      <BannerAds ads={slides} heading={heading} />
       <div className="sf-promos">
         <button type="button" className="sf-promo" onClick={onPreorders}>
           <span className="sf-promo__eyebrow" style={{ color: "var(--blue)" }}>

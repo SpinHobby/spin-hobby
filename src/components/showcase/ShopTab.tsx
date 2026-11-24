@@ -1,6 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Card } from "../layout/Card";
 import { CardAction, MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "../shop/ProductCards";
+import { BannerAds } from "../shop/BannerAds";
+import type { BannerAd } from "../shop/adRules";
 import type { Product } from "../../v3/types";
 
 /** Made-up products: every status a card can show (in stock, low, pre-order, sold out, on sale, ranked). */
@@ -97,6 +99,28 @@ function Sample({ name, note, children }: { name: string; note: ReactNode; child
   );
 }
 
+/** Made-up banner ads: a label and a button, a plain one, and one that is a link as a whole. */
+const ADS: BannerAd[] = [
+  {
+    id: "ad1",
+    label: "Pre-orders",
+    headline: "Spring 2027 figures are open",
+    subheading: "Reserve now, pay when they arrive.",
+    button_text: "See pre-orders",
+    link_url: "#ads",
+    image_url: null,
+  },
+  { id: "ad2", headline: "New arrivals every week", subheading: "Fresh goods added regularly.", link_url: null, image_url: null },
+  {
+    id: "ad3",
+    label: "Events",
+    headline: "Thank you, Calgary",
+    subheading: "See photos from our last booth.",
+    link_url: "#ads",
+    image_url: null,
+  },
+];
+
 /** The same sample products with what the shop may know about each: character, version, product type. */
 const NAMED: Product[] = [
   {
@@ -178,6 +202,15 @@ export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
           {NAMED.map((p) => (
             <ProductCard key={p.id} p={p} a={a} />
           ))}
+        </div>
+      </Sample>
+
+      <Sample
+        name="BannerAds"
+        note="The home page banner: one to ten ads set in Admin > Homepage. Arrows and dots switch between them; it moves on by itself every seven seconds and waits while pointed at. Behind each ad go product photos (they arrive one after another, and each opens its product), one uploaded photo, or the mascot when there is nothing to show, as here. An ad with a button links from the button; one without is a link as a whole. One ad shows no arrows."
+      >
+        <div className="sf-hero" id="ads">
+          <BannerAds ads={ADS} />
         </div>
       </Sample>
 

@@ -101,6 +101,15 @@ export interface HeroSlide {
   link_url: string | null;
   sort_order: number;
   is_visible: boolean;
+  /** Banner ad fields (components/shop/adRules.ts); absent from a shop older than them. */
+  label?: string | null;
+  button_text?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  backdrop?: "products" | "photo" | "chosen";
+  product_ids?: string[];
+  /** The products whose photos show behind the ad (home page only). */
+  products?: Product[];
 }
 
 export interface StoreEvent {
