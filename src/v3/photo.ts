@@ -7,12 +7,26 @@ import { useSyncExternalStore, type CSSProperties, type SyntheticEvent } from "r
  * our own images are used as they are.
  */
 const SQUARE_PHOTOS = /^https:\/\/items-images-[a-z]+\.s3\.[a-z0-9-]+\.amazonaws\.com\//;
+/** Whether a photo is kept by Square (a page of ours cannot read its pixels directly: the admin asks the shop to hand it over). */
+export const isSquarePhoto = (url: string) => SQUARE_PHOTOS.test(url);
 
 /** The shop background: every transparent product photo is shown on it (null: plain white). Set once the store settings arrive. */
 let shopBackground: string | null = null;
 export function setShopBackground(url: string | null) {
   shopBackground = url;
 }
+
+/**
+ * The products that show on a background of their own instead (Admin > Backgrounds, or a product's Photos): product id to the background's
+ * address, null for plain white. A product not listed shows on the shop background. Set with the store settings.
+ */
+let ownBackgrounds: Record<string, string | null> = {};
+export function setProductBackgrounds(items: Record<string, string | null>) {
+  ownBackgrounds = items;
+}
+/** The background behind a product's transparent photos: its own when it has one, else the shop background (null: plain white). */
+export const backgroundOf = (productId: string | null | undefined): string | null =>
+  productId && productId in ownBackgrounds ? ownBackgrounds[productId]! : shopBackground;
 
 /**
  * Where a photo sits in its square. Product photos always fill their square (cropped, never shrunk with a margin); an admin can move one
@@ -251,13 +265,13 @@ export function lookAtUrl(url: string) {
 
 /** The frame an admin gave `url` on this product, if any. */
 /** Props for a product photo: `photo()` plus the photo's frame and cut-out background. */
-export function productPhoto(p: { cutouts?: string[]; frames?: Record<string, PhotoFrame> }, url: string, width: number) {
-  return framedPhoto(url, width, isCutout(p, url), frameOf(p, url));
+export function productPhoto(p: { id?: string; cutouts?: string[]; frames?: Record<string, PhotoFrame> }, url: string, width: number) {
+  return framedPhoto(url, width, isCutout(p, url), frameOf(p, url), p.id);
 }
 
 /** `photo()` with a frame (for a photo known only by its address, like a cart line's). */
-export function framedPhoto(url: string, width: number, cutout = false, frame?: PhotoFrame) {
-  const base = photo(url, width, cutout);
+export function framedPhoto(url: string, width: number, cutout = false, frame?: PhotoFrame, productId?: string | null) {
+  const base = photo(url, width, cutout, productId);
   return {
     ...base,
     style: { ...base.style, ...frameStyle(frame, cutout ? undefined : fitOf(url)) } as CSSProperties,
@@ -331,12 +345,14 @@ export function resized(url: string, width: number): string {
  * Props for an <img> showing a product photo at about `width` pixels wide (use ~2x the size on screen for sharp
  * photos on phones). If the resizing service ever fails, the image falls back to the original photo, so a shopper
  * never sees a broken picture. A transparent cut-out (`cutout`) is drawn on the shop background: the picture's own
- * background shows through its see-through parts only, so changing the shop background changes every such photo.
+ * background shows through its see-through parts only, so changing the shop background changes every such photo. A product with a
+ * background of its own (`productId`) is drawn on that one.
  */
-export function photo(url: string, width: number, cutout = false) {
+export function photo(url: string, width: number, cutout = false, productId?: string | null) {
+  const background = cutout ? backgroundOf(productId) : null;
   return {
     src: resized(url, width),
-    ...(cutout ? { style: { background: `${shopBackground ? `url("${shopBackground}") center / cover no-repeat, ` : ""}#fff` } } : {}),
+    ...(cutout ? { style: { background: `${background ? `url("${background}") center / cover no-repeat, ` : ""}#fff` } } : {}),
     onError: (e: SyntheticEvent<HTMLImageElement>) => {
       if (e.currentTarget.getAttribute("src") !== url) e.currentTarget.src = url;
     },

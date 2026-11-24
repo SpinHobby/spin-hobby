@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { queryClient } from "../lib/query";
 import { storeFormat } from "./format";
-import { setShopBackground } from "./photo";
+import { setProductBackgrounds, setShopBackground } from "./photo";
 import type { StorefrontLayout } from "./storefront/layout";
 
 export interface StoreConfig {
@@ -36,7 +36,12 @@ const storeConfigQuery = {
   queryKey: ["store-config"] as const,
   staleTime: 5 * 60_000,
   queryFn: async (): Promise<StoreConfig> => {
-    const c = await api<StoreConfig & { success: true }>("/checkout/config");
+    // with the settings: which products show on a background of their own (a failure only means they show on the shop background)
+    const [c, own] = await Promise.all([
+      api<StoreConfig & { success: true }>("/checkout/config"),
+      api<{ items: Record<string, string | null> }>("/product-photos/backgrounds").catch(() => null),
+    ]);
+    setProductBackgrounds(own?.items ?? {});
     Object.assign(storeFormat, {
       fxCadUsd: Number(c.fxCadUsd) || storeFormat.fxCadUsd,
       handlingDaysMin: c.handlingDaysMin ?? storeFormat.handlingDaysMin,

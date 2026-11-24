@@ -9,6 +9,8 @@ import { PhotoFocusEditor } from "./PhotoFocusEditor";
 import { usePhotoFrames } from "./photoFrames";
 import { prepareImage, preparedFromBlob } from "./image";
 import { useBackgrounds } from "./photoBackgrounds";
+import { ProductBackgroundPicker } from "./ProductBackgrounds";
+import { useProductBackground } from "./productBackground";
 import { PolishOptions, type PolishChoice } from "./PolishOptions";
 import { polishPhoto } from "./polish";
 import type { Ctx } from "./Screens";
@@ -57,6 +59,9 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
   // the photo whose face is being marked (PhotoFocusEditor)
   const [facing, setFacing] = useState<string | null>(null);
   const backgrounds = useBackgrounds();
+  // what this product's transparent photos show on: its own background, or the shop's
+  const [background, setBackground] = useProductBackground(p.id);
+  const behind = background?.shows.own ? background.shows.url : (backgrounds.shop?.imageUrl ?? null);
 
   const apply = useCallback(
     (next: PhotoLists) => {
@@ -282,14 +287,18 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
                 alt=""
                 style={
                   cutoutOf(photo.id)?.transparent
-                    ? { background: `${backgrounds.shop ? `url("${backgrounds.shop.imageUrl}") center / cover no-repeat, ` : ""}#fff` }
+                    ? { background: `${behind ? `url("${behind}") center / cover no-repeat, ` : ""}#fff` }
                     : undefined
                 }
               />
               {cutoutOf(photo.id)?.transparent && (
                 <span
                   className="ad-photos__clear"
-                  title={`Transparent: shown on the shop background (${backgrounds.shop?.name ?? "white"})`}
+                  title={
+                    background?.shows.own
+                      ? "Transparent: shown on this product's own background (Background, below)"
+                      : `Transparent: shown on the shop background (${backgrounds.shop?.name ?? "white"})`
+                  }
                 >
                   Transparent
                 </span>
@@ -502,6 +511,17 @@ export function SquarePhotos({ ctx, p, onChanged }: { ctx: Ctx; p: Product; onCh
             }}
           />
         </div>
+      )}
+      {/* the background behind its transparent photos: only a product that has one (or box art) shows a background at all */}
+      {background && (shown.some((x) => cutoutOf(x.id)?.transparent) || background.boxArtUrl) && (
+        <ProductBackgroundPicker
+          ctx={ctx}
+          itemId={p.id}
+          state={background}
+          onState={setBackground}
+          backgrounds={backgrounds}
+          photos={shown.filter((x) => !cutoutOf(x.id))}
+        />
       )}
       {hidden.length > 0 && (
         <div className="ad-photos-sq__hidden">

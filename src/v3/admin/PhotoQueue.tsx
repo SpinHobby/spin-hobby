@@ -3,6 +3,7 @@ import { inUse } from "./inUse";
 import { api } from "../../lib/api";
 import { useEscape } from "../hooks";
 import { BackgroundPreview, BackgroundsLibrary } from "./Backgrounds";
+import { ProductBackgroundsPanel } from "./ProductBackgrounds";
 import { useBackgrounds, type Background } from "./photoBackgrounds";
 import { CleanPolishOptions } from "./CleanPolishOptions";
 import { useCleanPolish } from "./cleanPolish";
@@ -318,6 +319,7 @@ export function PhotosScreen({ ctx }: { ctx: Ctx }) {
         </button>
       </div>
       {library && <BackgroundsLibrary ctx={ctx} backgrounds={backgrounds} />}
+      {library && <ProductBackgroundsPanel ctx={ctx} backgrounds={backgrounds} />}
 
       <section className={`ad-card ad-photoq__status ${online.length ? "is-on" : "is-off"}`}>
         <span className="ad-dot" style={{ background: online.length ? "#3fbf92" : "var(--gold)" }} />

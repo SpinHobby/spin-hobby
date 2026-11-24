@@ -105,7 +105,7 @@ export function CartDrawer({
               {lines.map((l) => (
                 <div className="sf-cart-line" key={l.variationId}>
                   <div className={`sh-thumb ${l.imageUrl ? "" : "sh-ph sh-ph--sm"}`} style={{ width: 56, height: 56 }}>
-                    {l.imageUrl && <img {...framedPhoto(l.imageUrl, 112, !!l.imageCutout, l.imageFrame)} alt="" />}
+                    {l.imageUrl && <img {...framedPhoto(l.imageUrl, 112, !!l.imageCutout, l.imageFrame, l.itemId)} alt="" />}
                   </div>
                   <div className="sf-cart-line__main">
                     <div className="sf-cart-line__name">{l.name}</div>

@@ -551,7 +551,17 @@ function Gallery({ p }: { p: Product }) {
           {canPanAny ? "Drag to see more · click to enlarge" : "⤢ Click to enlarge"}
         </span>
       </div>
-      {zoom && <Lightbox images={images} cutouts={p.cutouts} index={i} name={p.name} onIndex={go} onClose={() => setZoom(false)} />}
+      {zoom && (
+        <Lightbox
+          images={images}
+          cutouts={p.cutouts}
+          productId={p.id}
+          index={i}
+          name={p.name}
+          onIndex={go}
+          onClose={() => setZoom(false)}
+        />
+      )}
     </div>
   );
 }
@@ -559,6 +569,7 @@ function Gallery({ p }: { p: Product }) {
 function Lightbox({
   images,
   cutouts,
+  productId,
   index,
   name,
   onIndex,
@@ -566,6 +577,8 @@ function Lightbox({
 }: {
   images: string[];
   cutouts?: string[];
+  /** The product, for the background its transparent photos show on. */
+  productId?: string;
   index: number;
   name: string;
   onIndex: (n: number) => void;
@@ -590,7 +603,7 @@ function Lightbox({
   return (
     <div className="sf-lightbox" role="dialog" aria-modal="true" aria-label={`${name} photos`} onClick={onClose}>
       <img
-        {...photo(images[index], 1600, isCutout({ cutouts }, images[index]))}
+        {...photo(images[index], 1600, isCutout({ cutouts }, images[index]), productId)}
         // the enlarged photo fills up to the whole window: the copy that is sharp at that size on this screen
         {...photoSources(images[index], "min(100vw, 100vh)")}
         alt={`${name}, photo ${index + 1} of ${images.length}`}

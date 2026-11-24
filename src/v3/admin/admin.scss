@@ -2607,6 +2607,38 @@
     font-weight: 700;
   }
 }
+/* a product's own background (its Photos), and every product's at once (the shop background panel) */
+.ad-pbg,
+.ad-pbgall {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ad-pbg {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.ad-pbg__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 13px;
+  select {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+.ad-pbg__art {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: center / cover no-repeat;
+}
 .ad-bglib__older {
   display: flex;
   flex-wrap: wrap;
