@@ -221,11 +221,18 @@
   --on-block: #ffffff;
   --on-block-muted: #c9d6f5;
   --red: #ff6f73;
+  --on-red: #2a0508;
   --teal: #47cf9f;
   --blue: #8fd2ff;
   --ph1: #1f2957;
   --ph2: #263163;
   --shadow-card: 0 12px 28px -16px rgba(4, 8, 28, 0.7);
+}
+// The classic look in light and dark: the logo's amber on the buttons that ask for the sale.
+html[data-shop-theme="classic"] .sh,
+.sh-theme-sample[data-sample="classic"] {
+  --cta: var(--gold);
+  --on-cta: var(--on-gold);
 }
 html[data-theme="dark"][data-shop-theme="classic"] .sh,
 html[data-theme="dark"] .sh-theme-sample[data-sample="classic"] {

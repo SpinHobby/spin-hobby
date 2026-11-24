@@ -4290,3 +4290,139 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   color: var(--text);
   font-weight: 600;
 }
+
+// ------------------------------------------------------------ Redesign (2026-11; mock-up "Redesign B", spin-hobby#119 to #127)
+// The look decided with the owner: the frame stays navy and white, the buttons that ask for the sale are the one bright colour
+// (--cta: amber in the classic look), sale labels are red, cards are rounder with the photo set in, and more cards fit in a row.
+// State changes take 0.2 s. Colours come from the tokens only (tokens.scss, themes.scss).
+.sf-search > button,
+.sf-buy,
+.sf .sf-cart-foot__cta,
+.sf .sf-pp__checkout {
+  background: var(--cta);
+  color: var(--on-cta);
+}
+.sf-buy {
+  transition:
+    filter 0.2s,
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    transform 0.08s;
+  &.is-added {
+    background: var(--teal);
+    color: var(--on-primary);
+  }
+  &.is-out {
+    background: transparent;
+    color: var(--text2);
+  }
+}
+// a card's button always reads as a button (a phone has no "point at the card"), softly; it turns full colour when pointed at
+.sf-buy--card {
+  background: color-mix(in srgb, var(--cta) 18%, var(--surface));
+  color: var(--text);
+  border-color: transparent;
+  .sf-card:hover &:not(.is-added):not(.is-out),
+  &:focus-visible:not(.is-added):not(.is-out) {
+    background: var(--cta);
+    color: var(--on-cta);
+    border-color: var(--cta);
+  }
+}
+.sf-buy--now {
+  background: transparent;
+  color: var(--primary);
+}
+
+// cards: rounder, the photo set into the card with its own corners, the price in the display face
+// (a phone keeps its two cards per row: the rule above for small screens)
+@media (min-width: 641px) {
+  .sf-grid:not(.sf-grid--compact) {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px;
+  }
+}
+.sf-card {
+  border-radius: 18px;
+  padding: 8px 8px 0;
+  &__media {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  &__body {
+    padding: 10px 4px 0;
+  }
+  &__foot {
+    padding: 10px 4px 10px;
+  }
+  &__price strong {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  &__badge,
+  &__off {
+    border-radius: 999px;
+  }
+  // money off is the red label; amber is kept for the buttons
+  &__off {
+    background: var(--red);
+    color: var(--on-red);
+  }
+}
+.sf-grid--compact .sf-card {
+  border-radius: 12px;
+  padding: 5px 5px 0;
+  &__media {
+    border-radius: 8px;
+  }
+  &__price strong {
+    font-size: 15px;
+  }
+}
+.sf-pre {
+  border-radius: 18px;
+}
+.sf-section-head h2,
+.sf-about h2,
+.sf-events__head h2 {
+  font-size: 24px;
+}
+
+// bands: "About the shop" is a navy block like the banner and the footer; the events band is tinted with the label red
+.sf .sf-about {
+  background: var(--block);
+  border-color: transparent;
+  color: var(--on-block);
+  h2 {
+    color: var(--on-block);
+  }
+  p {
+    color: var(--on-block-muted);
+  }
+  .sh-eyebrow {
+    color: var(--gold);
+  }
+}
+.sf-about__links a {
+  background: transparent;
+  border-color: var(--on-block-muted);
+  color: var(--on-block);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+  &:hover {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--on-gold);
+  }
+}
+.sf .sf-events {
+  background: color-mix(in srgb, var(--red) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--red) 22%, var(--surface));
+}
+.sf-event {
+  background: var(--surface);
+}

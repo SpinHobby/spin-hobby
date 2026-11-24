@@ -22,6 +22,12 @@
   --on-block: #ffffff;
   --on-block-muted: #d6dae7;
   --on-gold: #1d2a53;
+  // the one button that asks for the sale (Add to cart, Search, Checkout). The shop's main colour unless a theme gives it its own:
+  // the classic look uses the logo's amber, so that button is the brightest thing on a navy and white page (themes.scss)
+  --cta: var(--primary);
+  --on-cta: var(--on-primary);
+  // text on the red labels
+  --on-red: #ffffff;
   // a picture behind the whole page (themes; none in the classic look)
   --bg-art: none;
   --bg-art-size: auto;
