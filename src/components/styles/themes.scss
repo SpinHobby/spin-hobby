@@ -204,6 +204,34 @@
   --shadow-card: 4px 4px 0 0 #e6e6e6;
 }
 
+// Classic in the dark, on shop pages: the logo's dark navy for the page and its panels, with a much lighter blue for links, the
+// active tab and outlines, so the two stand apart clearly (the owner, 2026-11-24). The Admin keeps the neutral dark of tokens.scss.
+// Flat colours only: no blue fade.
+@mixin classic-dark {
+  --bg: #131a3a;
+  --surface: #1c2550;
+  --surface2: #252f63;
+  --text: #f3f6ff;
+  --text2: #c4cfee;
+  --muted: #98a6d1;
+  --border: #35427c;
+  --primary: #8fd2ff;
+  --on-primary: #0f1634;
+  --block: #1d2a53;
+  --on-block: #ffffff;
+  --on-block-muted: #c9d6f5;
+  --red: #ff6f73;
+  --teal: #47cf9f;
+  --blue: #8fd2ff;
+  --ph1: #1f2957;
+  --ph2: #263163;
+  --shadow-card: 0 12px 28px -16px rgba(4, 8, 28, 0.7);
+}
+html[data-theme="dark"][data-shop-theme="classic"] .sh,
+html[data-theme="dark"] .sh-theme-sample[data-sample="classic"] {
+  @include classic-dark;
+}
+
 // ---------------------------------------------------------------- where they apply
 @mixin theme($id) {
   html[data-shop-theme="#{$id}"] .sh,
