@@ -303,8 +303,8 @@ export const focusStyle = (focus: PhotoFrame): CSSProperties =>
   ({ "--fx": `${focus.x}%`, "--fy": `${focus.y}%`, "--fz": String(focus.zoom) }) as CSSProperties;
 
 /** Props for an <img> that shows a product photo framed on the face. */
-export function focusPhoto(p: { cutouts?: string[]; focus?: Record<string, PhotoFrame> }, url: string, width: number) {
-  const base = photo(url, width, isCutout(p, url));
+export function focusPhoto(p: { id?: string; cutouts?: string[]; focus?: Record<string, PhotoFrame> }, url: string, width: number) {
+  const base = photo(url, width, isCutout(p, url), p.id);
   return { ...base, style: { ...base.style, ...focusStyle(focusOf(p, url)) } as CSSProperties };
 }
 
