@@ -4,12 +4,17 @@ import { AskToFind } from "./AskToFind";
 import { ProductImage } from "./ProductCards";
 import { shortName } from "./productName";
 
+/** Items across on a computer (shop.scss .sf-sold__list). */
+const ROW = 6;
+
 /**
  * "Recently sold": what left the shop lately, greyed, each with "Ask us to find one". It shows the shop really sells, and turns a
  * missed item into a request the shop can answer (Admin > Requests). Nothing shows when nothing has sold.
  */
 export function RecentlySold({ items }: { items: Product[] }) {
   if (!items.length) return null;
+  // whole rows only (six across on a computer): one item alone on a second row looks like a mistake
+  const shown = items.length > ROW ? items.slice(0, Math.floor(items.length / ROW) * ROW) : items;
   return (
     <section className="sf-sold" aria-labelledby="sold-title">
       <div className="sf-section-head">
@@ -19,7 +24,7 @@ export function RecentlySold({ items }: { items: Product[] }) {
         <span className="sf-muted sf-sold__hint">Missed one? Ask, and we'll look for another.</span>
       </div>
       <ul className="sf-sold__list">
-        {items.map((p) => (
+        {shown.map((p) => (
           <li key={p.id} className="sf-sold__item">
             <a href={productPath(p)} className="sf-sold__photo" aria-label={p.name}>
               <ProductImage p={p} label={false} />
