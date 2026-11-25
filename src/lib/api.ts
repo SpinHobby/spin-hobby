@@ -184,6 +184,8 @@ export interface AuthProviders {
   discord: boolean;
   dev?: boolean;
   username?: boolean;
+  /** Staging only: a browser that signed in once with the staging admin password may sign in with one click (quickSignIn). */
+  quick?: boolean;
 }
 
 let providersPromise: Promise<AuthProviders> | null = null;
@@ -194,6 +196,53 @@ export function authProviders(): Promise<AuthProviders> {
 
 export async function signInWithPassword(email: string, password: string) {
   setSession(await request<Session>("/auth/login", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, null));
+  // a name with no "@" is the staging admin's: the server remembers this browser, so next time it is one click
+  if (!email.includes("@")) void rememberStagingDevice();
+}
+
+/* ---------- Staging: one-click sign-in on a remembered device ----------
+ * Staging is public, so there is no open "sign in as owner" button. A browser that has signed in once with the staging admin name
+ * and password is given a device key (kept in this browser only); with it, the sign-in page shows "Sign in as owner / staff". The
+ * server signs the key, forgets every device when the staging password changes, and the key runs out by itself. */
+const DEVICE_KEY = "sh.staging.device";
+
+/** Whether this browser holds a staging device key. */
+export function hasStagingDevice() {
+  try {
+    return Boolean(localStorage.getItem(DEVICE_KEY));
+  } catch {
+    return false;
+  }
+}
+
+async function rememberStagingDevice() {
+  try {
+    const { key } = await api<{ key: string }>("/auth/staging/device", { method: "POST" });
+    localStorage.setItem(DEVICE_KEY, key);
+  } catch {
+    /* not staging, an older server, or storage blocked: sign-in by password still works */
+  }
+}
+
+/** Staging: signs this remembered browser in as the owner or the staff account. A key the server no longer accepts is dropped. */
+export async function quickSignIn(role: "owner" | "staff") {
+  let key: string | null = null;
+  try {
+    key = localStorage.getItem(DEVICE_KEY);
+  } catch {
+    /* storage blocked */
+  }
+  if (!key) throw new Error("This browser is not remembered yet. Sign in with the staging name and password once.");
+  try {
+    setSession(await request<Session>("/auth/staging/quick", { method: "POST", body: JSON.stringify({ key, role }) }, null));
+  } catch (e) {
+    try {
+      localStorage.removeItem(DEVICE_KEY);
+    } catch {
+      /* storage blocked */
+    }
+    throw e;
+  }
 }
 
 /** Creates a customer account and signs straight in; the server emails a 6-digit code to confirm the address (see Welcome). */

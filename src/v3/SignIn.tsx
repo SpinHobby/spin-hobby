@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useState } from "react";
 import PasswordInput from "./PasswordInput";
 import {
   authProviders,
+  hasStagingDevice,
+  quickSignIn,
   requestPasswordReset,
   signIn,
   signInWithPassword,
@@ -38,6 +40,8 @@ export function SignInPanel({
   const [forgot, setForgot] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [exists, setExists] = useState(false);
+  // staging: this browser holds a device key, so it can sign in with one click (api.ts quickSignIn)
+  const [quickReady, setQuickReady] = useState(hasStagingDevice);
 
   useEffect(() => {
     authProviders().then(setProviders);
@@ -227,6 +231,39 @@ export function SignInPanel({
       {!providers.password && oauthOn.length === 0 && <div className="sh-signin__error">Sign-in isn't set up yet.</div>}
       {/* Only when the API runs with the local dev login (npm run dev:local): never on staging or the live site. The accounts
           and the shared password are the local test ones from the server's scripts/dev-local.mjs. */}
+      {/* Staging only (the API says `quick`): this browser signed in once with the staging admin password, so it may sign in with
+          one click. Staging is public, so the buttons never show to a browser that has not. */}
+      {providers.quick && !providers.dev && (
+        <div className="sh-signin__sent sh-signin__dev">
+          <span>Staging only</span>
+          {quickReady ? (
+            (["owner", "staff"] as const).map((role) => (
+              <button
+                key={role}
+                type="button"
+                className="sh-btn sh-btn--ghost"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  setError("");
+                  quickSignIn(role)
+                    .catch((err: Error) => {
+                      setError(err.message);
+                      setQuickReady(hasStagingDevice());
+                    })
+                    .finally(() => setBusy(false));
+                }}
+              >
+                Sign in as {role}
+              </button>
+            ))
+          ) : (
+            <small>
+              Sign in once with the staging admin name and password. After that, this browser signs in as owner or staff with one click.
+            </small>
+          )}
+        </div>
+      )}
       {providers.dev && (
         <div className="sh-signin__sent sh-signin__dev">
           <span>Local only</span>
