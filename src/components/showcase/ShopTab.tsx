@@ -198,7 +198,7 @@ export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
 
       <Sample
         name="shortName(product): the name on a card"
-        note="The series sits on its own line, so a figure whose character the shop knows is named by the character and the version on its box. Other goods are named by the character and what they are. A product whose character or kind is not known keeps its full name: nothing is guessed. Point at a name to see the full one."
+        note="The series sits on its own line, so a figure whose character and version the shop knows is named by both. A figure with no version known keeps its full name, so two figures of one character never read the same. Other goods are named by the character and what they are. A product whose character or kind is not known keeps its full name: nothing is guessed. Point at a name to see the full one."
       >
         <div className="ui-kit-shop-grid">
           {NAMED.map((p) => (

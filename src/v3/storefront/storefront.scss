@@ -4521,3 +4521,92 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     }
   }
 }
+
+// ------------------------------------------------------------ Header, search and product page finish (2026-11; the mock-up)
+// The header stays at the top and lets the page show through, blurred, so the shop feels like one surface. The blur sits on a
+// layer behind the header's content, not on the header itself: a blur on the header would trap anything fixed inside it.
+.sf-header {
+  background: transparent;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(18px) saturate(1.6);
+  }
+}
+// a browser without the blur gets the solid header back
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sf-header::before {
+    background: var(--surface);
+  }
+}
+// the search box is a pill
+.sf-search {
+  border-radius: 999px;
+  select {
+    border-radius: 999px 0 0 999px;
+    padding-left: 16px;
+  }
+  input {
+    padding-left: 16px;
+  }
+  > button {
+    border-radius: 0 999px 999px 0;
+    padding: 0 22px;
+    transition:
+      filter 0.2s,
+      background 0.2s;
+    &:hover {
+      filter: brightness(1.06);
+    }
+  }
+}
+@media (max-width: 640px) {
+  .sf-search input {
+    padding-left: 18px;
+  }
+}
+
+// product page: the photo lifts off the page, and the email sign-up is a navy band with the amber button
+.sf-pp__main {
+  box-shadow: var(--shadow-card);
+}
+.sf-pp__thumbs button {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+.sf .sf-follow {
+  border: 0;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--block);
+  color: var(--on-block);
+  .sf-muted,
+  .sf-follow__small,
+  p {
+    color: var(--on-block-muted);
+  }
+  .sf-follow__title {
+    color: var(--on-block);
+    font-family: var(--font-display);
+    font-size: 18px;
+  }
+  .sf-follow__options input {
+    accent-color: var(--gold);
+  }
+  .sh-btn {
+    background: var(--cta);
+    color: var(--on-cta);
+  }
+  &.is-done {
+    border: 0;
+    color: var(--on-block);
+  }
+}
