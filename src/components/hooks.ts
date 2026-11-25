@@ -137,6 +137,49 @@ export function useScrollFade<T extends HTMLElement>() {
   }, []);
 }
 
+/* ---------- Moving between pages with a shared picture (View Transitions) ----------
+ * Where the browser can (Chrome, Edge, Safari 18+), a change of page is drawn as one motion: the old page fades into the new one,
+ * and an element that carries the same `view-transition-name` on both sides (a product's photo on its card and on its page) moves
+ * and grows from one place to the other. Elsewhere, and for people who ask for less motion, the change just happens. */
+
+let pageTransition = false;
+/** True while a page transition is being drawn: the page's own entrance animation stands down so the two don't fight. */
+export const inPageTransition = () => pageTransition;
+
+type TransitionDocument = Document & {
+  startViewTransition?: (update: () => Promise<void> | void) => { finished: Promise<void> };
+};
+
+/**
+ * Runs `update` (a navigation) as a page transition. `shown` says when the new page is on screen (the router applies a navigation a
+ * moment later); the wait gives up after `limit` ms so a slow page never freezes the old one. Returns once the motion has finished.
+ */
+export function runPageTransition(update: () => void, shown: () => boolean, limit = 400): Promise<void> {
+  const doc = document as TransitionDocument;
+  if (!doc.startViewTransition || prefersReducedMotion()) {
+    update();
+    return Promise.resolve();
+  }
+  pageTransition = true;
+  const transition = doc.startViewTransition(
+    () =>
+      new Promise<void>((resolve) => {
+        update();
+        const started = performance.now();
+        // a timer, not animation frames: the browser draws no frames while it waits for this update
+        const check = () => (shown() || performance.now() - started > limit ? resolve() : window.setTimeout(check, 16));
+        window.setTimeout(check, 0);
+      }),
+  ) as { finished: Promise<void>; ready?: Promise<void>; updateCallbackDone?: Promise<void> };
+  // a transition the browser skips (the tab went to the background, another one started) still changes the page: not an error
+  transition.ready?.catch(() => undefined);
+  transition.updateCallbackDone?.catch(() => undefined);
+  const done = () => {
+    pageTransition = false;
+  };
+  return transition.finished.then(done, done);
+}
+
 /**
  * A short fade-and-rise on the element each time `key` changes (a new page or section), so the change reads as moving somewhere
  * rather than a flash. Put the returned `ref` on the content that changes, not on what stays put (the header, a sidebar). The first
@@ -151,7 +194,7 @@ export function useEnterAnimation<T extends HTMLElement>(key: unknown, rise = 10
       return;
     }
     const el = ref.current;
-    if (!el?.animate || prefersReducedMotion()) return;
+    if (!el?.animate || prefersReducedMotion() || inPageTransition()) return;
     el.animate(
       [
         { opacity: 0, transform: `translateY(${rise}px)` },

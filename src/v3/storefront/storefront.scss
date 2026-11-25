@@ -4610,3 +4610,125 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--on-block);
   }
 }
+
+// ------------------------------------------------------------ Motion between pages, and blends between sections (2026-11)
+// Opening a product: where the browser can (hooks.ts runPageTransition), the page cross-fades and the product's photo travels
+// from its card to the product page, growing as it goes. The card's photo and the page's main photo share one name for that.
+.sf-pp__main {
+  view-transition-name: sf-photo;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.24s;
+  animation-timing-function: ease;
+}
+::view-transition-group(sf-photo) {
+  animation-duration: 0.38s;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+// the photo keeps its shape while it travels: both pictures are cropped the same way, not squashed into each other's box
+::view-transition-old(sf-photo),
+::view-transition-new(sf-photo) {
+  height: 100%;
+  object-fit: cover;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+// Changing category or filter: the cards of the new list come in a touch smaller and settle, one after another (motion.scss
+// ui-stagger gives the order and the fade), and the count beside the title ticks in.
+.sf-grid.ui-stagger > * {
+  transform-origin: 50% 60%;
+}
+.sf-count {
+  display: inline-block;
+  animation: sf-rise 0.3s $sf-ease both;
+}
+// a pressed chip, tab or tree row answers at once
+.sh-chip,
+.sf-nav button,
+.sf-nav a,
+.sf-tree__row {
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    transform 0.12s;
+}
+.sh-chip:active,
+.sf-nav button:active,
+.sf-nav a:active {
+  transform: scale(0.96);
+}
+
+// Blends between sections. Each navy band lets a little of its colour fall onto the page under it, so a band and the section
+// after it read as one page, not stacked boxes. Always the band's own colour fading to nothing: no second hue.
+.sf-ads,
+.sf-series,
+.sf .sf-about,
+.sf .sf-follow {
+  box-shadow: 0 26px 44px -30px color-mix(in srgb, var(--block) 62%, transparent);
+}
+// the navy bands are lit from the top, very slightly, so they have depth without a second colour
+.sf-ads,
+.sf-series,
+.sf .sf-about {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--on-block) 7%, transparent), transparent 46%);
+}
+// a section title sits on a hairline that fades out to the right, tying it to the section before
+.sf-section-head {
+  position: relative;
+  padding-bottom: 8px;
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent 70%);
+  }
+}
+.sf-series .sf-section-head::after {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--on-block) 28%, transparent), transparent 70%);
+}
+// the page's top is tinted with the frame's navy and fades into the page colour, so the header, the banner and the first
+// products share one light
+.sf-main {
+  position: relative;
+  isolation: isolate; // so the tint below stays behind the page's content and in front of the page colour
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -20px -20px auto;
+    height: 360px;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--block) 9%, transparent), transparent);
+    border-radius: 24px;
+  }
+}
+// sections ease in as they are scrolled to, where the browser supports it (a plain page elsewhere)
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .sf-series,
+    .sf-sold,
+    .sf .sf-about,
+    .sf .sf-events {
+      animation: sf-section-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 38%;
+    }
+  }
+}
+@keyframes sf-section-in {
+  from {
+    opacity: 0.35;
+    transform: translateY(22px);
+  }
+}
