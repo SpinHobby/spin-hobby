@@ -4426,3 +4426,98 @@ $sf-music-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 .sf-event {
   background: var(--surface);
 }
+
+// ------------------------------------------------------------ Home page structure (2026-11; the mock-up's order)
+// Products come right after the banner: the banner takes the full width, the two promo boxes become one slim row under it, and the
+// four reasons to trust the shop become a single quiet line instead of four boxes.
+.sf-hero {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+.sf-hero__banner {
+  flex: none;
+  min-height: 250px;
+}
+.sf-promos {
+  flex: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  gap: 10px;
+}
+.sf-promo {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
+  &:hover {
+    transform: translateY(-1px);
+  }
+  &__eyebrow {
+    flex: none;
+  }
+  &__title {
+    font-size: 15px;
+    min-width: 0;
+  }
+}
+.sf-trust {
+  gap: 0;
+  padding: 2px 0;
+  li {
+    padding: 4px 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    border-left: 1px solid var(--border);
+  }
+  li:first-child {
+    border-left: 0;
+    padding-left: 4px;
+  }
+}
+@media (max-width: 900px) {
+  .sf-trust li:nth-child(odd) {
+    border-left: 0;
+    padding-left: 4px;
+  }
+}
+@media (max-width: 640px) {
+  .sf-hero__banner {
+    min-height: 240px;
+  }
+  // a phone has little height before the first product: the two promos share one row (their small labels go), and each reason
+  // to trust the shop keeps its headline only
+  .sf-promos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    gap: 8px;
+  }
+  .sf-promo {
+    padding: 9px 12px;
+    &__eyebrow {
+      display: none;
+    }
+    &__title {
+      font-size: 13px;
+      line-height: 1.25;
+    }
+  }
+  .sf-trust {
+    li {
+      padding: 3px 10px;
+    }
+    div span {
+      display: none;
+    }
+    b {
+      font-size: 12.5px;
+      white-space: normal;
+    }
+  }
+}
