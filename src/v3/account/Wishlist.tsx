@@ -2,6 +2,8 @@ import { Pagination, Button, Dialog, TextareaField, useToast } from "@/component
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CardAction, ProductCard, type CardActions } from "@/components/shop/ProductCards";
+import type { Product } from "@/v3/types";
+import { discountPct, normalizeStatus } from "../format";
 import { useAuth } from "../hooks";
 import { ALL, DEFAULT_AVAIL, productPath, useCart, useProducts, useWishlist, type Filters } from "@/v3/storefront/data";
 import "./wishlist.scss";
@@ -17,6 +19,16 @@ const FILTERS: Filters = {
   query: "",
   series: null,
 };
+
+type FilterKey = "all" | "drops" | "low" | "pre" | "sold";
+
+const FILTER_TABS: { key: FilterKey; label: string; test: (p: Product) => boolean }[] = [
+  { key: "all", label: "All", test: () => true },
+  { key: "drops", label: "Price drops", test: (p) => discountPct(p) > 0 },
+  { key: "low", label: "Low stock", test: (p) => p.status === "low" },
+  { key: "pre", label: "Pre-order", test: (p) => normalizeStatus(p.status) === "pre" },
+  { key: "sold", label: "Sold", test: (p) => normalizeStatus(p.status) === "out" },
+];
 
 export function Wishlist() {
   const navigate = useNavigate();
@@ -35,6 +47,8 @@ export function Wishlist() {
   const { toast, flash } = useToast();
   const [saving, setSaving] = useState(false);
 
+  const [filter, setFilter] = useState<FilterKey>("all");
+
   // the saved ids -> the real products (the same way Storefront.tsx does it)
   const results = useProducts(FILTERS, wishlist.list);
   // keep only items still saved, so a removed item disappears right away
@@ -50,7 +64,19 @@ export function Wishlist() {
     onOpen: (p) => navigate(productPath(p), { state: { product: p } }),
   };
 
-  const visible = items.slice((page - 1) * PAGE, page * PAGE);
+  // const visible = items.slice((page - 1) * PAGE, page * PAGE);
+
+  const activeTab = FILTER_TABS.find((t) => t.key === filter)!;
+  const filtered = items.filter(activeTab.test);
+  const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE));
+  const current = Math.min(page, lastPage);
+  const visible = filtered.slice((current - 1) * PAGE, current * PAGE);
+
+  const pick = (key: FilterKey) => {
+    setFilter(key);
+    setPage(1);
+  };
+
   const totalCents = items.reduce((sum, p) => sum + p.priceCents, 0);
 
   const openNote = (p: { id: string | number; name: string }) => {
@@ -62,7 +88,6 @@ export function Wishlist() {
     if (!noteFor) return;
     setSaving(true);
     try {
-      // await saveWishlistNote(noteFor.id, noteText.trim()); // you write this next
       closeNote();
       flash("Note added");
     } catch {
@@ -87,15 +112,17 @@ export function Wishlist() {
       </div>
       <div className="sf-hcard__actions wishlist-product">
         <div className="ad-chips" role="group" aria-label="Filter by status">
-          <button type="button" className="sh-chip is-active">
-            All · [counts]
-          </button>
-          <button type="button" className="sh-chip">
-            Price drops · [counts]
-          </button>
-          <button type="button" className="sh-chip">
-            Low stock · [counts]
-          </button>
+          {FILTER_TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`sh-chip ${filter === t.key ? "is-active" : ""}`}
+              aria-pressed={filter === t.key}
+              onClick={() => pick(t.key)}
+            >
+              {t.label} · {items.filter(t.test).length}
+            </button>
+          ))}
         </div>
         <div className="sf-hcard__end wishlist-views">
           <button type="button" className={`sh-chip views-grid ${view === "grid" ? "is-active" : ""}`} onClick={() => setView("grid")}>
@@ -107,7 +134,15 @@ export function Wishlist() {
         </div>
       </div>
 
-      {items.length === 0 && <p className="ui-muted">{results.loading ? "Loading…" : "Tap ♡ on any product to save it here."}</p>}
+      {filtered.length === 0 && (
+        <p className="ui-muted">
+          {results.loading
+            ? "Loading…"
+            : items.length === 0
+              ? "These items are currently unavailable, please consider choosing something else."
+              : "All items in your Wishlist are currently available for purchase."}
+        </p>
+      )}
 
       <div className="ui-kit-shop-list">
         {view === "grid" && (
@@ -141,7 +176,7 @@ export function Wishlist() {
           </div>
         )}
       </div>
-      <Pagination page={page} pageSize={PAGE} total={items.length} onPage={setPage} />
+      <Pagination page={current} pageSize={PAGE} total={filtered.length} onPage={setPage} />
       {noteFor && (
         <Dialog
           title={`Add a note to ${noteFor.name}`}
