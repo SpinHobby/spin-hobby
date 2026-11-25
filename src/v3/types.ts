@@ -1,3 +1,4 @@
+import type { TopSeries } from "../components/shop/SeriesTiles";
 import type { StorefrontLayout } from "./storefront/layout";
 import type { PhotoFrame } from "./photo";
 // Mirrors design_handoff_spinhobby_storefront/shared/api-types.ts and the
@@ -148,6 +149,8 @@ export interface Homepage {
   newInStock: Product[];
   /** What sold lately, with a photo ("Recently sold"); absent from a shop older than it. */
   recentlySold?: Product[];
+  /** The series with the most to buy now, each with a photo ("Shop by series"); absent from a shop older than it. */
+  topSeries?: TopSeries[];
   events: StoreEvent[];
   categories?: ShopCategory[];
   /** Two numbers for the promo cards beside the hero, worked out by the server over the whole catalog. */

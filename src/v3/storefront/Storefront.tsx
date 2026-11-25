@@ -15,6 +15,7 @@ import { useDocumentHead } from "../seo";
 import type { Product } from "../types";
 import { BannerAds } from "../../components/shop/BannerAds";
 import { RecentlySold } from "../../components/shop/RecentlySold";
+import { SeriesTiles } from "../../components/shop/SeriesTiles";
 import type { BannerAd } from "../../components/shop/adRules";
 import { freeShippingLabel, useStoreConfig } from "../storeConfig";
 import { DEFAULT_LAYOUT, layoutAttrs, type LayoutSection, type ProductView, type StorefrontLayout } from "./layout";
@@ -483,6 +484,9 @@ export default function Storefront() {
       </section>
     ),
     recent: homeReady && <RecentlyViewed a={actions} />,
+    series: homeReady && !!home?.topSeries?.length && (
+      <SeriesTiles series={home.topSeries} hrefFor={seriesPath} onOpen={(name) => go(seriesPath(name))} />
+    ),
     sold: homeReady && !!home?.recentlySold?.length && <RecentlySold items={home.recentlySold} />,
     shop: (
       <section id="shop" ref={shopRef} className="sf-shop" aria-labelledby="shop-title">
@@ -687,7 +691,10 @@ export default function Storefront() {
       <section id="events" className="sf-panel sf-events" aria-labelledby="events-title">
         <div className="sf-events__head">
           <h2 id="events-title" className="sh-display">
-            Meet us at the con
+            {/* no confirmed event (winter): what is true is where the shop has been, which is the proof it is real */}
+            {upcomingEvents.length || !pastEvents.length
+              ? "Meet us at the con"
+              : `Seen at ${pastEvents.length} convention${pastEvents.length === 1 ? "" : "s"} in ${pastYear}`}
           </h2>
           <Link to="/events" className="sf-events__all">
             See all events →
@@ -706,7 +713,11 @@ export default function Storefront() {
             ))}
           </div>
         ) : (
-          <p className="sf-events__note">No upcoming events right now. New dates are announced on Discord and Instagram.</p>
+          <p className="sf-events__note">
+            {pastEvents.length
+              ? "A real shop you can meet in person. The next dates are announced on Discord and Instagram once they are confirmed."
+              : "No upcoming events right now. New dates are announced on Discord and Instagram."}
+          </p>
         )}
         {pastEvents.length > 0 && (
           <>

@@ -13,6 +13,7 @@
  * - CardAction: a pill (or round icon) button for a horizontal card's `actions` ("Add a note", "Move", share...).
  * - PriceTag, ProductImage, ProductLink: the pieces the cards are made of, for building something new.
  */
+import { runPageTransition } from "../hooks";
 import {
   dayLabel,
   discountPct,
@@ -64,7 +65,16 @@ export function ProductLink({
   const open = (e: MouseEvent) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    a.onOpen(p);
+    // The card's photo carries the shared name for the move to the product page (hooks.ts runPageTransition; storefront.scss
+    // "sf-photo"). Not from a product page: its own main photo already has the name, and two elements may not share it.
+    const card = e.currentTarget.closest("article, li, .sf-card, .sf-pre, .sf-hcard, .sf-row, .sf-mini") ?? e.currentTarget;
+    const picture = card.querySelector<HTMLElement>(".sf-img");
+    const named = picture && !document.querySelector(".sf-pp__main") ? picture : null;
+    if (named) named.style.setProperty("view-transition-name", "sf-photo");
+    void runPageTransition(
+      () => a.onOpen(p),
+      () => location.pathname === productPath(p) && !!document.querySelector(".sf-pp__main") && !named?.isConnected,
+    ).then(() => named?.style.removeProperty("view-transition-name"));
   };
   return (
     <a href={productPath(p)} className={`sf-open ${className}`} onClick={open} aria-label={label}>

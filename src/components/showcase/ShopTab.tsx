@@ -3,6 +3,7 @@ import { Card } from "../layout/Card";
 import { CardAction, MiniRow, PreorderCard, ProductCard, ProductRow, type CardActions } from "../shop/ProductCards";
 import { BannerAds } from "../shop/BannerAds";
 import { RecentlySold } from "../shop/RecentlySold";
+import { SeriesTiles } from "../shop/SeriesTiles";
 import type { BannerAd } from "../shop/adRules";
 import type { Product } from "../../v3/types";
 
@@ -197,7 +198,7 @@ export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
 
       <Sample
         name="shortName(product): the name on a card"
-        note="The series sits on its own line, so a figure whose character the shop knows is named by the character and the version on its box. Other goods are named by the character and what they are. A product whose character or kind is not known keeps its full name: nothing is guessed. Point at a name to see the full one."
+        note="The series sits on its own line, so a figure whose character and version the shop knows is named by both. A figure with no version known keeps its full name, so two figures of one character never read the same. Other goods are named by the character and what they are. A product whose character or kind is not known keeps its full name: nothing is guessed. Point at a name to see the full one."
       >
         <div className="ui-kit-shop-grid">
           {NAMED.map((p) => (
@@ -213,6 +214,21 @@ export function ShopTab({ onDone }: { onDone: (m: string) => void }) {
         <div className="sf-hero" id="ads">
           <BannerAds ads={ADS} />
         </div>
+      </Sample>
+
+      <Sample
+        name="SeriesTiles"
+        note="Shop by series: a navy band of photo tiles, the series with the most to buy first, each framed on the character's face. It shows whole rows only, and nothing with fewer than three series. These tiles have no photos, so only the names show."
+      >
+        <SeriesTiles
+          series={["Vocaloid", "Re:Zero", "Hololive", "Spy × Family", "One Piece", "Frieren"].map((name, i) => ({
+            name,
+            count: 12 - i,
+            productId: `kit-${i}`,
+            image: "",
+          }))}
+          hrefFor={() => "#series"}
+        />
       </Sample>
 
       <Sample
