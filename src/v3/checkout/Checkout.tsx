@@ -5,7 +5,7 @@ import { isOn } from "../../features";
 import { Navigate, useLocation } from "react-router-dom";
 import "../../components/styles/tokens.scss";
 import "./checkout.scss";
-import { track } from "../../lib/analytics";
+import { countCheckoutView } from "../../lib/analytics";
 import { api } from "../../lib/api";
 import { errorMessage } from "../../lib/query";
 import { price } from "../format";
@@ -139,11 +139,13 @@ export default function Checkout() {
   const fullCart = useCart();
   const single = useBuyNow();
   const cart = buyingNow ? single : fullCart;
-  // one anonymous "checkout opened" per visit to this page with something in the cart (src/lib/analytics.ts)
+  // one anonymous "checkout opened" per tab session for the same cart (src/lib/analytics.ts); "now:"/"cart:" keeps
+  // a buy-now checkout from being mistaken for a cart checkout that happens to hold the same item and quantity
   const hasItems = cart.lines.length > 0;
+  const cartKey = `${buyingNow ? "now" : "cart"}:${cart.lines.map((l) => `${l.variationId}:${l.quantity}`).join(",")}`;
   useEffect(() => {
-    if (hasItems) track("checkout_view");
-  }, [hasItems]);
+    if (hasItems) countCheckoutView(cartKey);
+  }, [hasItems, cartKey]);
   const [email, setEmail] = useLocalState("spinhobby-checkout-email", "");
   const [ship, setShip] = useLocalState<Address>("spinhobby-checkout-address", EMPTY_ADDRESS);
   // the courier option picked (an id from the quote's shippingOptions); null until the first quote picks the cheapest
