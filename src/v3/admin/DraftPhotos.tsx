@@ -26,10 +26,25 @@ const LABELS: Record<"clean" | "studio" | "background" | "cropped" | "original" 
   original: { title: "As taken", hint: "your photo exactly as it was uploaded" },
   official: { title: "Official photo", hint: "" },
 };
-/** The name a photo is shown with; the maker's extra photos are numbered ("Official photo 2"). */
-const labelOf = (key: PhotoKey) => {
+/** Where Gleamshelf says the clean photo came from: drawn by its model from the box, the maker's own photo, or a shop's photo. */
+export type CleanFrom = "redraw" | "maker" | "shop";
+/** The clean photo when it is real pixels, not a drawing: it must not be called AI. */
+const REAL_CLEAN: Record<Exclude<CleanFrom, "redraw">, { title: string; hint: string }> = {
+  maker: {
+    title: "Maker's photo",
+    hint: "the maker's own photo of the figure out of its box, cut out onto white: real pixels, nothing drawn by AI. Check it is the same version as yours",
+  },
+  shop: {
+    title: "Shop's photo",
+    hint: "an established shop's photo of the figure, set on white as published: real pixels, nothing drawn by AI. Check it is the same version as yours",
+  },
+};
+/** The name a photo is shown with; the maker's extra photos are numbered ("Official photo 2"). An unsaid clean source is treated as a drawing. */
+const labelOf = (key: PhotoKey, cleanFrom: CleanFrom | null) => {
   const n = /^official(\d+)$/.exec(key)?.[1];
-  return n ? { title: `Official photo ${n}`, hint: "" } : LABELS[key as keyof typeof LABELS];
+  if (n) return { title: `Official photo ${n}`, hint: "" };
+  if (key === "clean" && cleanFrom && cleanFrom !== "redraw") return REAL_CLEAN[cleanFrom];
+  return LABELS[key as keyof typeof LABELS];
 };
 
 /**
@@ -44,6 +59,7 @@ export function DraftPhotos({
   onPicks,
   shopBackground,
   official,
+  cleanFrom = null,
   title,
   busy,
 }: {
@@ -56,6 +72,8 @@ export function DraftPhotos({
   /** The shop background the transparent cut-out is shown on (null: white). */
   shopBackground: Background | null;
   official: { pageUrl: string; site: string } | null;
+  /** Where the clean photo came from (Gleamshelf says so from 0.8); null: not said, labelled as drawn by AI. */
+  cleanFrom?: CleanFrom | null;
   title: string;
   busy: boolean;
 }) {
@@ -141,7 +159,7 @@ export function DraftPhotos({
   return (
     <div className="ad-draftphotos">
       {picks.map((p) => {
-        const label = labelOf(p.key);
+        const label = labelOf(p.key, cleanFrom);
         const src = url(p.key);
         return (
           <div key={p.key} className={`ad-draftphotos__item ${p.square || p.ebay ? "is-picked" : ""}`}>
