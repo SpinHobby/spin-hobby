@@ -3,7 +3,7 @@ import { inUse } from "./inUse";
 import { api } from "../../lib/api";
 import { buildTree, indentLabel } from "../categoryTree";
 import type { ShopCategory } from "../types";
-import { DraftPhotos } from "./DraftPhotos";
+import { DraftPhotos, type CleanFrom } from "./DraftPhotos";
 import { defaultPicks, type OfferedPhoto, type PhotoPick } from "./photoPicks";
 import { useBackgrounds, type Background } from "./photoBackgrounds";
 import { ListingUploads } from "./ListingUploads";
@@ -47,6 +47,8 @@ interface Draft {
     quality?: { cutout: number; cutoutReasons: string[]; original: number } | null;
     /** Gleamshelf's listing health: a score out of 100 and the top fixes. */
     health?: { score: number; level: "good" | "fair" | "poor"; fixes: string[] } | null;
+    /** Where the clean photo came from: drawn by Gleamshelf's model, the maker's own photo, or a shop's photo (null: not said). */
+    cleanFrom?: CleanFrom | null;
   };
 }
 interface ProductMatch {
@@ -583,6 +585,7 @@ function DraftCard({
             onPicks={setPicks}
             shopBackground={shopBackground}
             official={official ? { pageUrl: official.pageUrl, site: official.site } : null}
+            cleanFrom={draft.details.cleanFrom ?? null}
             title={draft.title}
             busy={busy}
           />
