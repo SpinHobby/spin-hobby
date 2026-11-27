@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { api } from "../../lib/api";
+import { useBlended } from "../blend/blend";
 import { prepareImage } from "./image";
 import type { Ctx } from "./Screens";
 import type { Background, useBackgrounds } from "./photoBackgrounds";
@@ -25,6 +26,8 @@ export function BackgroundPreview({
   alt: string;
   onClick?: () => void;
 }) {
+  // the product blended into the background, as shoppers see it once their copy is made (blend/blendCore.ts)
+  const blendedUrl = useBlended(cutoutUrl, background?.imageUrl ?? null, 480, "pad");
   if (!cutoutUrl)
     return fallbackUrl ? (
       <img src={fallbackUrl} alt={alt} loading="lazy" onClick={onClick} />
@@ -39,7 +42,7 @@ export function BackgroundPreview({
       role="img"
       aria-label={`${alt}, on ${background?.name ?? "white"}`}
     >
-      <img src={cutoutUrl} alt="" loading="lazy" />
+      {blendedUrl ? <img className="is-blended" src={blendedUrl} alt="" /> : <img src={cutoutUrl} alt="" loading="lazy" />}
     </div>
   );
 }
