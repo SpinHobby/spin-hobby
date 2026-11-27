@@ -1,8 +1,11 @@
 import { useRef, useState } from "react";
 import { api } from "../../lib/api";
+import { useBlended } from "../blend/blend";
 import { prepareImage } from "./image";
 import type { Ctx } from "./Screens";
 import type { Background, useBackgrounds } from "./photoBackgrounds";
+import { PolyHavenMaker } from "./PolyHavenMaker";
+import { STARTER_BACKGROUNDS, starterUrl, type StarterBackground } from "./starterBackgrounds";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
@@ -23,6 +26,8 @@ export function BackgroundPreview({
   alt: string;
   onClick?: () => void;
 }) {
+  // the product blended into the background, as shoppers see it once their copy is made (blend/blendCore.ts)
+  const blendedUrl = useBlended(cutoutUrl, background?.imageUrl ?? null, 480, "pad");
   if (!cutoutUrl)
     return fallbackUrl ? (
       <img src={fallbackUrl} alt={alt} loading="lazy" onClick={onClick} />
@@ -37,7 +42,7 @@ export function BackgroundPreview({
       role="img"
       aria-label={`${alt}, on ${background?.name ?? "white"}`}
     >
-      <img src={cutoutUrl} alt="" loading="lazy" />
+      {blendedUrl ? <img className="is-blended" src={blendedUrl} alt="" /> : <img src={cutoutUrl} alt="" loading="lazy" />}
     </div>
   );
 }
@@ -92,6 +97,29 @@ export function BackgroundsLibrary({
     }
     if (input.current) input.current.value = "";
   };
+  // a picture added to the library like an upload (the same size and quality)
+  const post = async (name: string, file: File) => {
+    const prepared = await prepareImage(file, 2000, 0.9);
+    await api("/admin/photo-backgrounds", {
+      method: "POST",
+      body: JSON.stringify({ name, contentType: prepared.type, data: prepared.dataUrl }),
+    });
+  };
+  const added = (name: string) => `${name} added: choose "Use for all products" to show it`;
+  const addStarter = (b: StarterBackground) =>
+    run(
+      `Adding ${b.name}…`,
+      async () => {
+        const res = await fetch(starterUrl(b));
+        if (!res.ok) throw new Error(`Could not load ${b.name}`);
+        await post(b.name, new File([await res.blob()], `${b.file}.jpg`, { type: "image/jpeg" }));
+      },
+      added(b.name),
+    );
+  const [making, setMaking] = useState(false);
+  const addMade = (name: string, make: () => Promise<File>) => run(`Making ${name}…`, async () => post(name, await make()), added(name));
+  const inLibrary = new Set(backgrounds.list.map((b) => b.name.trim().toLowerCase()));
+  const starters = STARTER_BACKGROUNDS.filter((b) => !inLibrary.has(b.name.toLowerCase()));
   const rename = (b: Background) => {
     const name = window.prompt("Name of this background", b.name);
     if (name === null || !name.trim() || name.trim() === b.name) return;
@@ -190,8 +218,52 @@ export function BackgroundsLibrary({
       </div>
       {backgrounds.loaded && backgrounds.list.length === 0 && (
         <span className="ad-muted ad-sm">
-          No backgrounds yet. Upload a photo of a table, a backdrop or a seasonal scene (at least 600 pixels on each side).
+          No backgrounds yet. Add a ready-made one below, or upload your own photo of a table, a backdrop or a seasonal scene (at least 600
+          pixels on each side).
         </span>
+      )}
+      {backgrounds.loaded && starters.length > 0 && (
+        <div className="ad-bglib__starters">
+          <div className="ad-label" style={{ margin: 0 }}>
+            Ready-made backgrounds
+          </div>
+          <p className="ad-muted ad-sm" style={{ margin: 0 }}>
+            Real photos of tables and walls, and plain studio tones, free for the shop to use. Add any to your library above; your own
+            uploads go there too.
+          </p>
+          <div className="ad-bglib__grid">
+            {starters.map((b) => (
+              <div key={b.file} className="ad-bglib__item">
+                <div className="ad-bglib__thumb" style={{ backgroundImage: `url("${starterUrl(b, true)}")` }} />
+                <div className="ad-bglib__meta">
+                  <b title={b.name}>{b.name}</b>
+                  <button type="button" className="ad-link" onClick={() => void addStarter(b)} disabled={!!busy}>
+                    + Add to library
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {backgrounds.loaded && (
+        <div className="ad-bglib__starters">
+          <div className="ad-between">
+            <div>
+              <div className="ad-label" style={{ margin: 0 }}>
+                Make one from Poly Haven
+              </div>
+              <p className="ad-muted ad-sm" style={{ margin: "4px 0 0" }}>
+                Hundreds more free rooms, walls and tables from Poly Haven's online library: choose one, turn it and brighten it, then add
+                it to your library.
+              </p>
+            </div>
+            <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setMaking((m) => !m)} aria-expanded={making}>
+              {making ? "Close" : "Open"}
+            </button>
+          </div>
+          {making && <PolyHavenMaker busy={!!busy} add={addMade} />}
+        </div>
       )}
       {older > 0 && (
         <div className="ad-bglib__older" role="status">

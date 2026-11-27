@@ -1,4 +1,5 @@
 import { useSyncExternalStore, type CSSProperties, type SyntheticEvent } from "react";
+import { blendInto } from "./blend/blend";
 
 /**
  * Product photos synced from Square are large originals (about 1920 px, ~500 KB each). Netlify's image service
@@ -279,7 +280,7 @@ export function framedPhoto(url: string, width: number, cutout = false, frame?: 
     onLoad: cutout ? undefined : (e: SyntheticEvent<HTMLImageElement>) => lookAtPhoto(url, e.currentTarget, frame),
     // a photo the browser already had can finish loading before the page listens for it: look at it as soon as it is on the page
     ref: cutout
-      ? undefined
+      ? base.ref
       : (el: HTMLImageElement | null) => {
           if (el?.complete) lookAtPhoto(url, el, frame);
         },
@@ -349,13 +350,20 @@ export function resized(url: string, width: number): string {
  * photos on phones). If the resizing service ever fails, the image falls back to the original photo, so a shopper
  * never sees a broken picture. A transparent cut-out (`cutout`) is drawn on the shop background: the picture's own
  * background shows through its see-through parts only, so changing the shop background changes every such photo. A product with a
- * background of its own (`productId`) is drawn on that one.
+ * background of its own (`productId`) is drawn on that one. Once made, a blended copy replaces it: the product standing in the background
+ * with a contact shadow and matching light (blend/blend.ts); until then, or if it cannot be made, the picture over the background shows.
  */
 export function photo(url: string, width: number, cutout = false, productId?: string | null) {
   const background = cutout ? backgroundOf(productId) : null;
   return {
     src: resized(url, width),
-    ...(cutout ? { style: { background: `${background ? `url("${background}") center / cover no-repeat, ` : ""}#fff` } } : {}),
+    ...(cutout
+      ? {
+          style: { background: `${background ? `url("${background}") center / cover no-repeat, ` : ""}#fff` },
+          // then blended into that background (shadow, light, standing on the table) once a copy is made: blend/blendCore.ts
+          ref: (el: HTMLImageElement | null) => blendInto(el, background, width),
+        }
+      : {}),
     onError: (e: SyntheticEvent<HTMLImageElement>) => {
       if (e.currentTarget.getAttribute("src") !== url) e.currentTarget.src = url;
     },
