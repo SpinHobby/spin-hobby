@@ -4045,3 +4045,120 @@
   font-weight: 700;
   font-size: 13.5px;
 }
+/* making a background from Poly Haven's free library (PolyHavenMaker) */
+.ad-phaven {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ad-phaven__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  button {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    &.is-on {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 1px var(--gold) inset;
+      font-weight: 700;
+    }
+  }
+}
+.ad-phaven__body {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  @media (max-width: 720px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ad-phaven__make,
+.ad-phaven__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.ad-phaven__preview {
+  position: relative;
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2, rgba(127, 127, 127, 0.1));
+  }
+}
+.ad-phaven__note {
+  position: absolute;
+  inset: auto 8px 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: var(--bg, rgba(127, 127, 127, 0.2));
+  color: var(--muted);
+}
+.ad-phaven__slider {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  input {
+    width: 100%;
+  }
+}
+.ad-phaven__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.ad-phaven__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+.ad-phaven__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  min-width: 0;
+  text-align: left;
+  img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 7px;
+  }
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &.is-on {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 1px var(--gold) inset;
+  }
+}

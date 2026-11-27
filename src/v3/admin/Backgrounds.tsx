@@ -3,6 +3,7 @@ import { api } from "../../lib/api";
 import { prepareImage } from "./image";
 import type { Ctx } from "./Screens";
 import type { Background, useBackgrounds } from "./photoBackgrounds";
+import { PolyHavenMaker } from "./PolyHavenMaker";
 import { STARTER_BACKGROUNDS, starterUrl, type StarterBackground } from "./starterBackgrounds";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
@@ -93,22 +94,27 @@ export function BackgroundsLibrary({
     }
     if (input.current) input.current.value = "";
   };
-  // a ready-made background, added to the library like an upload (the same size and quality)
+  // a picture added to the library like an upload (the same size and quality)
+  const post = async (name: string, file: File) => {
+    const prepared = await prepareImage(file, 2000, 0.9);
+    await api("/admin/photo-backgrounds", {
+      method: "POST",
+      body: JSON.stringify({ name, contentType: prepared.type, data: prepared.dataUrl }),
+    });
+  };
+  const added = (name: string) => `${name} added: choose "Use for all products" to show it`;
   const addStarter = (b: StarterBackground) =>
     run(
       `Adding ${b.name}…`,
       async () => {
         const res = await fetch(starterUrl(b));
         if (!res.ok) throw new Error(`Could not load ${b.name}`);
-        const file = new File([await res.blob()], `${b.file}.jpg`, { type: "image/jpeg" });
-        const prepared = await prepareImage(file, 2000, 0.9);
-        await api("/admin/photo-backgrounds", {
-          method: "POST",
-          body: JSON.stringify({ name: b.name, contentType: prepared.type, data: prepared.dataUrl }),
-        });
+        await post(b.name, new File([await res.blob()], `${b.file}.jpg`, { type: "image/jpeg" }));
       },
-      `${b.name} added: choose "Use for all products" to show it`,
+      added(b.name),
     );
+  const [making, setMaking] = useState(false);
+  const addMade = (name: string, make: () => Promise<File>) => run(`Making ${name}…`, async () => post(name, await make()), added(name));
   const inLibrary = new Set(backgrounds.list.map((b) => b.name.trim().toLowerCase()));
   const starters = STARTER_BACKGROUNDS.filter((b) => !inLibrary.has(b.name.toLowerCase()));
   const rename = (b: Background) => {
@@ -235,6 +241,25 @@ export function BackgroundsLibrary({
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {backgrounds.loaded && (
+        <div className="ad-bglib__starters">
+          <div className="ad-between">
+            <div>
+              <div className="ad-label" style={{ margin: 0 }}>
+                Make one from Poly Haven
+              </div>
+              <p className="ad-muted ad-sm" style={{ margin: "4px 0 0" }}>
+                Hundreds more free rooms, walls and tables from Poly Haven's online library: choose one, turn it and brighten it, then add
+                it to your library.
+              </p>
+            </div>
+            <button type="button" className="sh-btn sh-btn--ghost ad-btn-sm" onClick={() => setMaking((m) => !m)} aria-expanded={making}>
+              {making ? "Close" : "Open"}
+            </button>
+          </div>
+          {making && <PolyHavenMaker busy={!!busy} add={addMade} />}
         </div>
       )}
       {older > 0 && (
